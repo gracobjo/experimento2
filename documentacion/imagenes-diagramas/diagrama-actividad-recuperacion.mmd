@@ -1,0 +1,28 @@
+stateDiagram-v2
+    [*] --> SolicitarRecuperacion : Usuario accede a "¿Olvidaste tu contraseña?"
+    SolicitarRecuperacion --> IngresarEmail : Mostrar formulario de email
+    IngresarEmail --> ValidarEmail : Usuario ingresa email y envía
+    ValidarEmail --> EmailValido : Email existe en el sistema
+    ValidarEmail --> EmailInvalido : Email no registrado
+    EmailInvalido --> MostrarError : Mostrar mensaje de error
+    MostrarError --> IngresarEmail
+    EmailValido --> GenerarToken : Generar token de recuperación
+    GenerarToken --> GuardarToken : Guardar token y expiración en BD
+    GuardarToken --> EnviarCorreo : Enviar email con enlace de recuperación
+    EnviarCorreo --> EsperarUsuario : Esperar acción del usuario
+    EsperarUsuario --> AccesoEnlace : Usuario accede al enlace del email
+    AccesoEnlace --> ValidarToken : Validar token y expiración
+    ValidarToken --> TokenValido : Token válido
+    ValidarToken --> TokenInvalido : Token inválido o expirado
+    TokenInvalido --> MostrarErrorToken : Mostrar error de token
+    MostrarErrorToken --> [*]
+    TokenValido --> MostrarFormularioNuevaPass : Mostrar formulario de nueva contraseña
+    MostrarFormularioNuevaPass --> IngresarNuevaPass : Usuario ingresa nueva contraseña
+    IngresarNuevaPass --> ValidarNuevaPass : Validar requisitos de contraseña
+    ValidarNuevaPass --> PassValida : Contraseña válida
+    ValidarNuevaPass --> PassInvalida : Contraseña inválida
+    PassInvalida --> MostrarErrorPass : Mostrar error de validación
+    MostrarErrorPass --> IngresarNuevaPass
+    PassValida --> ActualizarPassword : Actualizar contraseña en BD
+    ActualizarPassword --> ConfirmarCambio : Mostrar confirmación de cambio
+    ConfirmarCambio --> [*] 

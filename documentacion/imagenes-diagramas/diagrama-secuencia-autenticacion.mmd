@@ -1,0 +1,42 @@
+sequenceDiagram
+    participant U as Usuario
+    participant F as Frontend
+    participant A as Auth Service
+    participant DB as Database
+    participant G as JWT Guard
+
+    U->>F: Ingresa credenciales
+    F->>A: POST /auth/login
+    A->>DB: Verificar usuario y contraseña
+    DB-->>A: Datos del usuario
+    A->>A: Generar JWT token
+    A-->>F: Token JWT + datos usuario
+    F->>F: Guardar token en localStorage
+    F-->>U: Redirigir a dashboard
+
+    Note over U,G: Solicitud a endpoint protegido
+    U->>F: Accede a página protegida
+    F->>F: Incluir token en headers
+    F->>G: GET /api/protected-endpoint
+    G->>G: Validar JWT token
+    G->>DB: Verificar usuario existe
+    DB-->>G: Confirmación usuario
+    G-->>F: Autorización concedida
+    F-->>U: Mostrar contenido protegido
+
+    Note over U,G: Token expirado
+    U->>F: Accede con token expirado
+    F->>G: GET /api/protected-endpoint
+    G->>G: Validar JWT token
+    G-->>F: Error 401 - Token expirado
+    F->>F: Eliminar token del localStorage
+    F-->>U: Redirigir a login
+
+    Note over U,G: Refresh token
+    U->>F: Accede con token válido
+    F->>A: POST /auth/refresh
+    A->>A: Validar refresh token
+    A->>A: Generar nuevo JWT
+    A-->>F: Nuevo token JWT
+    F->>F: Actualizar token en localStorage
+    F-->>U: Continuar sesión 

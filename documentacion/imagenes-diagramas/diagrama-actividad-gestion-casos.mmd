@@ -1,0 +1,41 @@
+stateDiagram-v2
+    [*] --> SolicitarCaso : Cliente solicita nuevo caso
+    SolicitarCaso --> CompletarSolicitud : Llenar formulario de solicitud
+    CompletarSolicitud --> ValidarSolicitud : Validar datos de solicitud
+    ValidarSolicitud --> SolicitudValida : Datos completos
+    ValidarSolicitud --> SolicitudInvalida : Datos incompletos
+    SolicitudInvalida --> MostrarErrorSolicitud : Mostrar errores
+    MostrarErrorSolicitud --> CompletarSolicitud
+    SolicitudValida --> CrearExpediente : Crear expediente en sistema
+    CrearExpediente --> AsignarAbogado : Asignar abogado responsable
+    AsignarAbogado --> NotificarAbogado : Notificar al abogado asignado
+    NotificarAbogado --> EstadoAbierto : Expediente en estado "ABIERTO"
+    EstadoAbierto --> RevisarCaso : Abogado revisa el caso
+    RevisarCaso --> SolicitarDocumentos : Solicitar documentos adicionales
+    SolicitarDocumentos --> ClienteSubeDocs : Cliente sube documentos
+    ClienteSubeDocs --> ValidarDocumentos : Validar documentos recibidos
+    ValidarDocumentos --> DocsCompletos : Documentos completos
+    ValidarDocumentos --> DocsIncompletos : Documentos faltantes
+    DocsIncompletos --> SolicitarDocumentos
+    DocsCompletos --> AnalizarCaso : Abogado analiza el caso
+    AnalizarCaso --> EstadoEnProceso : Cambiar a "EN_PROCESO"
+    EstadoEnProceso --> TrabajarCaso : Trabajar en el caso
+    TrabajarCaso --> CrearTareas : Crear tareas pendientes
+    CrearTareas --> AsignarTareas : Asignar tareas a equipo
+    AsignarTareas --> EjecutarTareas : Ejecutar tareas asignadas
+    EjecutarTareas --> TareasCompletadas : Todas las tareas completadas
+    TareasCompletadas --> GenerarDocumentos : Generar documentos legales
+    GenerarDocumentos --> RevisarDocumentos : Revisar documentos generados
+    RevisarDocumentos --> DocsAprobados : Documentos aprobados
+    RevisarDocumentos --> DocsRechazados : Documentos requieren cambios
+    DocsRechazados --> GenerarDocumentos
+    DocsAprobados --> PresentarCaso : Presentar caso ante autoridades
+    PresentarCaso --> SeguimientoCaso : Hacer seguimiento del caso
+    SeguimientoCaso --> CasoResuelto : Caso resuelto exitosamente
+    SeguimientoCaso --> CasoPendiente : Caso aún pendiente
+    CasoPendiente --> SeguimientoCaso
+    CasoResuelto --> EstadoCerrado : Cambiar a "CERRADO"
+    EstadoCerrado --> GenerarFactura : Generar factura por servicios
+    GenerarFactura --> NotificarCliente : Notificar resolución al cliente
+    NotificarCliente --> ArchivarCaso : Archivar expediente
+    ArchivarCaso --> [*] 

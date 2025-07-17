@@ -1,0 +1,2 @@
+$body = @{ email = 'cliente1@test.com'; password = 'password123'; name = 'Cliente de Prueba'; role = 'CLIENTE' } | ConvertTo-Json
+Invoke-RestMethod -Uri 'http://localhost:3000/api/auth/register' -Method POST -ContentType 'application/json' -Body $body 

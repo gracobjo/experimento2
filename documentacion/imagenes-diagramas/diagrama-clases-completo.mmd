@@ -1,0 +1,257 @@
+classDiagram
+    class User {
+        +id: string
+        +name: string
+        +email: string
+        +password: string
+        +role: Role
+        +resetPasswordToken: string?
+        +resetPasswordExpires: DateTime?
+        +createdAt: DateTime
+        +updatedAt: DateTime
+    }
+
+    class Client {
+        +id: string
+        +userId: string
+        +dni: string
+        +phone: string?
+        +address: string?
+        +createdAt: DateTime
+    }
+
+    class Lawyer {
+        +id: string
+        +userId: string
+        +colegiado: string
+        +phone: string?
+        +address: string?
+        +createdAt: DateTime
+    }
+
+    class Expediente {
+        +id: string
+        +title: string
+        +description: string?
+        +status: Status
+        +clientId: string
+        +lawyerId: string
+        +createdAt: DateTime
+    }
+
+    class Document {
+        +id: string
+        +expedienteId: string
+        +filename: string
+        +fileUrl: string
+        +uploadedAt: DateTime
+        +description: string?
+        +fileSize: int
+        +mimeType: string
+        +originalName: string
+        +uploadedBy: string
+    }
+
+    class Appointment {
+        +id: string
+        +clientId: string
+        +lawyerId: string
+        +date: DateTime
+        +location: string?
+        +notes: string?
+    }
+
+    class Task {
+        +id: string
+        +title: string
+        +description: string?
+        +dueDate: DateTime?
+        +priority: string
+        +status: string
+        +expedienteId: string?
+        +clientId: string?
+        +assignedTo: string?
+        +createdBy: string
+        +createdAt: DateTime
+        +updatedAt: DateTime
+    }
+
+    class Invoice {
+        +id: string
+        +numeroFactura: string
+        +fechaFactura: DateTime
+        +tipoFactura: string
+        +emisorId: string
+        +receptorId: string
+        +expedienteId: string?
+        +importeTotal: float
+        +baseImponible: float
+        +cuotaIVA: float
+        +tipoIVA: float
+        +descuento: float?
+        +retencion: float?
+        +aplicarIVA: boolean
+        +regimenIvaEmisor: string
+        +claveOperacion: string
+        +metodoPago: string
+        +fechaOperacion: DateTime
+        +xml: string?
+        +xmlFirmado: string?
+        +estado: string
+        +motivoAnulacion: string?
+        +selloTiempo: DateTime?
+        +externalId: string?
+        +sistemaEnvio: string?
+        +fechaEnvio: DateTime?
+        +createdAt: DateTime
+        +updatedAt: DateTime
+    }
+
+    class InvoiceItem {
+        +id: string
+        +invoiceId: string
+        +description: string
+        +quantity: int
+        +unitPrice: float
+        +total: float
+    }
+
+    class ProvisionFondos {
+        +id: string
+        +clientId: string
+        +expedienteId: string?
+        +invoiceId: string?
+        +amount: float
+        +date: DateTime
+        +description: string?
+        +createdAt: DateTime
+        +updatedAt: DateTime
+    }
+
+    class ChatMessage {
+        +id: string
+        +content: string
+        +senderId: string
+        +receiverId: string
+        +createdAt: DateTime
+    }
+
+    class TeleassistanceSession {
+        +id: string
+        +userId: string
+        +assistantId: string
+        +issueType: string
+        +description: string
+        +remoteTool: string?
+        +status: string
+        +sessionCode: string
+        +resolution: string?
+        +notes: string?
+        +startedAt: DateTime?
+        +completedAt: DateTime?
+        +duration: int?
+        +createdAt: DateTime
+        +updatedAt: DateTime
+    }
+
+    class Contact {
+        +id: string
+        +nombre: string
+        +email: string
+        +telefono: string?
+        +asunto: string
+        +mensaje: string
+        +ip: string?
+        +userAgent: string?
+        +createdAt: DateTime
+        +updatedAt: DateTime
+    }
+
+    class Parametro {
+        +id: string
+        +clave: string
+        +valor: string
+        +etiqueta: string
+        +tipo: string
+        +updatedAt: DateTime
+    }
+
+    class Layout {
+        +id: string
+        +name: string
+        +slug: string
+        +components: Json
+        +version: int
+        +isActive: boolean
+        +createdBy: string
+        +createdAt: DateTime
+        +updatedAt: DateTime
+    }
+
+    class MenuConfig {
+        +id: string
+        +name: string
+        +role: Role
+        +orientation: string
+        +isActive: boolean
+        +createdAt: DateTime
+        +updatedAt: DateTime
+    }
+
+    class MenuItem {
+        +id: string
+        +menuConfigId: string
+        +label: string
+        +url: string
+        +icon: string?
+        +order: int
+        +isVisible: boolean
+        +isExternal: boolean
+        +parentId: string?
+        +createdAt: DateTime
+        +updatedAt: DateTime
+    }
+
+    class SiteConfig {
+        +id: string
+        +key: string
+        +value: string
+        +type: string
+        +category: string
+        +description: string?
+        +isPublic: boolean
+        +createdAt: DateTime
+        +updatedAt: DateTime
+    }
+
+    %% Relaciones principales
+    User "1" *-- "0..1" Client : tiene
+    User "1" *-- "0..1" Lawyer : tiene
+    User "1" *-- "0..*" Expediente : gestiona
+    User "1" *-- "0..*" Document : sube
+    User "1" *-- "0..*" Appointment : tiene
+    User "1" *-- "0..*" Task : asigna
+    User "1" *-- "0..*" Task : crea
+    User "1" *-- "0..*" Invoice : emite
+    User "1" *-- "0..*" Invoice : recibe
+    User "1" *-- "0..*" ChatMessage : envía
+    User "1" *-- "0..*" ChatMessage : recibe
+    User "1" *-- "0..*" TeleassistanceSession : solicita
+    User "1" *-- "0..*" TeleassistanceSession : asiste
+    User "1" *-- "0..*" Layout : crea
+
+    Client "1" *-- "0..*" Expediente : tiene
+    Client "1" *-- "0..*" Appointment : tiene
+    Client "1" *-- "0..*" Task : tiene
+    Client "1" *-- "0..*" ProvisionFondos : tiene
+
+    Expediente "1" *-- "0..*" Document : contiene
+    Expediente "1" *-- "0..*" Task : tiene
+    Expediente "1" *-- "0..*" Invoice : genera
+    Expediente "1" *-- "0..*" ProvisionFondos : tiene
+
+    Invoice "1" *-- "0..*" InvoiceItem : contiene
+    Invoice "1" *-- "0..*" ProvisionFondos : genera
+
+    MenuConfig "1" *-- "0..*" MenuItem : contiene
+    MenuItem "1" *-- "0..*" MenuItem : tiene hijos 

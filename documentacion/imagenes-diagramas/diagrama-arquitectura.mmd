@@ -1,0 +1,88 @@
+graph TB
+    subgraph "Cliente"
+        subgraph "Frontend React"
+            UI[Interfaz de Usuario]
+            Router[React Router]
+            State[Redux/Zustand]
+            Components[Componentes React]
+            API[API Client]
+        end
+    end
+
+    subgraph "Servidor Web"
+        subgraph "Backend NestJS"
+            Auth[Auth Module]
+            Users[Users Module]
+            Cases[Cases Module]
+            Documents[Documents Module]
+            Invoices[Invoices Module]
+            Chat[Chat Module]
+            Notifications[Notifications Module]
+            Facturae[Facturae Module]
+            External[External Systems Module]
+        end
+    end
+
+    subgraph "Microservicios"
+        subgraph "Chatbot FastAPI"
+            NLP[NLP Processor]
+            AI[AI Engine]
+            Context[Context Manager]
+            Response[Response Generator]
+            Training[Training Module]
+        end
+    end
+
+    subgraph "Base de Datos"
+        subgraph "PostgreSQL"
+            UsersDB[(Users DB)]
+            CasesDB[(Cases DB)]
+            DocumentsDB[(Documents DB)]
+            InvoicesDB[(Invoices DB)]
+            ChatDB[(Chat DB)]
+            NotificationsDB[(Notifications DB)]
+        end
+    end
+
+    subgraph "Servicios Externos"
+        Email[Email Service]
+        Storage[File Storage]
+        TSA[TSA Service]
+        OCSP[OCSP Service]
+        AEAT[AEAT API]
+        FACE[FACE API]
+    end
+
+    UI --> Router
+    Router --> Components
+    Components --> State
+    Components --> API
+    API --> Auth
+
+    Auth --> Users
+    Users --> Cases
+    Cases --> Documents
+    Cases --> Invoices
+    Invoices --> Facturae
+    Chat --> External
+    External --> Notifications
+
+    Chat --> NLP
+    NLP --> AI
+    AI --> Context
+    Context --> Response
+    Response --> Training
+
+    Users --> UsersDB
+    Cases --> CasesDB
+    Documents --> DocumentsDB
+    Invoices --> InvoicesDB
+    Chat --> ChatDB
+    Notifications --> NotificationsDB
+
+    Notifications --> Email
+    Documents --> Storage
+    Facturae --> TSA
+    Facturae --> OCSP
+    External --> AEAT
+    External --> FACE 

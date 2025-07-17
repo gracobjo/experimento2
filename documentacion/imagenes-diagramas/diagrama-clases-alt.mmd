@@ -1,0 +1,10 @@
+classDiagram
+    class User {
+        -String id
+        +login()
+    }
+    class Client {
+        -String id
+        +getCases()
+    }
+    User ||--o{ Client

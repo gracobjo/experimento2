@@ -1,0 +1,57 @@
+graph TB
+    subgraph "Actores del Sistema"
+        User[Usuario]
+        Lawyer[Abogado]
+        Admin[Administrador]
+        Chatbot[Chatbot]
+    end
+
+    subgraph "Casos de Uso"
+        Login[Login]
+        ConsultarCasos[Consultar casos]
+        CrearCaso[Crear caso]
+        VerNotificaciones[Ver notificaciones]
+        ChatearChatbot[Chatear con chatbot]
+        EnviarDocumentos[Enviar documentos]
+        GestionarCasos[Gestionar casos]
+        AsignarTareas[Asignar tareas]
+        GestionarUsuarios[Gestionar usuarios]
+        GestionarAbogados[Gestionar abogados]
+        ConfigurarSistema[Configurar sistema]
+        ResponderPreguntas[Responder preguntas]
+        EnviarNotificaciones[Enviar notificaciones]
+    end
+
+    %% Conexiones Usuario
+    User --> Login
+    User --> ConsultarCasos
+    User --> CrearCaso
+    User --> VerNotificaciones
+    User --> ChatearChatbot
+    User --> EnviarDocumentos
+
+    %% Conexiones Abogado
+    Lawyer --> Login
+    Lawyer --> GestionarCasos
+    Lawyer --> VerNotificaciones
+    Lawyer --> ChatearChatbot
+    Lawyer --> EnviarDocumentos
+    Lawyer --> AsignarTareas
+
+    %% Conexiones Administrador
+    Admin --> Login
+    Admin --> GestionarUsuarios
+    Admin --> GestionarAbogados
+    Admin --> GestionarCasos
+    Admin --> VerNotificaciones
+    Admin --> ConfigurarSistema
+
+    %% Conexiones Chatbot
+    Chatbot --> ResponderPreguntas
+    Chatbot --> EnviarNotificaciones
+
+    %% Relaciones de inclusión
+    ChatearChatbot -.-> ResponderPreguntas
+    VerNotificaciones -.-> EnviarNotificaciones
+    GestionarCasos -.-> ConsultarCasos
+    GestionarCasos -.-> CrearCaso

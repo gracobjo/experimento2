@@ -1,0 +1,74 @@
+flowchart TB
+    Cliente((Cliente))
+    Abogado((Abogado))
+    Admin((Admin))
+    FE["Aplicación Web (React)"]
+    BE["API REST (NestJS)"]
+    Auth["Servicio de Autenticación"]
+    Notif["Servicio de Notificaciones"]
+    Fact["Módulo Facturación Electrónica"]
+    Exped["Módulo Expedientes"]
+    Chat["Módulo Chat"]
+    Teleasist["Módulo Teleasistencia"]
+    Bot["Chatbot (Python)"]
+    DB[(PostgreSQL/Prisma)]
+    AEAT["AEAT"]
+    FACE["FACE"]
+    Cert["Certificados Digitales"]
+
+    subgraph Usuarios
+        Cliente
+        Abogado
+        Admin
+    end
+
+    subgraph Frontend [Frontend (React)]
+        FE
+    end
+
+    subgraph Backend [Backend (NestJS)]
+        BE
+        Auth
+        Notif
+        Fact
+        Exped
+        Chat
+        Teleasist
+    end
+
+    subgraph Chatbot [Chatbot (Python)]
+        Bot
+    end
+
+    subgraph DB [Base de Datos]
+        DB
+    end
+
+    subgraph Externos [Servicios Externos]
+        AEAT
+        FACE
+        Cert
+    end
+
+    Cliente-->|Usa|FE
+    Abogado-->|Usa|FE
+    Admin-->|Usa|FE
+
+    FE-->|API REST|BE
+    FE-->|WebSocket|Chat
+    FE-->|Chatbot API|Bot
+
+    BE-->|ORM|DB
+    BE-->|Notificaciones|Notif
+    BE-->|Facturación|Fact
+    BE-->|Expedientes|Exped
+    BE-->|Chat|Chat
+    BE-->|Teleasistencia|Teleasist
+    BE-->|Autenticación|Auth
+
+    Fact-->|Envia/Recibe|AEAT
+    Fact-->|Envia/Recibe|FACE
+    Auth-->|Valida|Cert
+
+    Bot-->|Acceso|DB
+    Bot-->|API|BE 

@@ -1,0 +1,36 @@
+stateDiagram-v2
+    [*] --> CrearFactura : Abogado crea nueva factura
+    CrearFactura --> CompletarDatos : Llenar datos de factura
+    CompletarDatos --> ValidarDatos : Validar información obligatoria
+    ValidarDatos --> DatosValidos : Datos completos y válidos
+    ValidarDatos --> DatosInvalidos : Datos incompletos o inválidos
+    DatosInvalidos --> MostrarError : Mostrar errores de validación
+    MostrarError --> CompletarDatos
+    DatosValidos --> GenerarXML : Generar XML Facturae
+    GenerarXML --> ValidarXML : Validar estructura XML
+    ValidarXML --> XMLValido : XML cumple esquema
+    ValidarXML --> XMLInvalido : XML con errores
+    XMLInvalido --> MostrarErrorXML : Mostrar errores de XML
+    MostrarErrorXML --> CompletarDatos
+    XMLValido --> CargarCertificado : Cargar certificado digital
+    CargarCertificado --> ValidarCertificado : Verificar validez del certificado
+    ValidarCertificado --> CertificadoValido : Certificado válido
+    ValidarCertificado --> CertificadoInvalido : Certificado inválido
+    CertificadoInvalido --> MostrarErrorCert : Mostrar error de certificado
+    MostrarErrorCert --> [*]
+    CertificadoValido --> FirmarXML : Firmar XML digitalmente
+    FirmarXML --> ValidarFirma : Verificar firma digital
+    ValidarFirma --> FirmaValida : Firma válida
+    ValidarFirma --> FirmaInvalida : Firma inválida
+    FirmaInvalida --> MostrarErrorFirma : Mostrar error de firma
+    MostrarErrorFirma --> FirmarXML
+    FirmaValida --> GuardarFactura : Guardar factura en BD
+    GuardarFactura --> EnviarExterno : Enviar a sistema externo
+    EnviarExterno --> ValidarEnvio : Verificar envío exitoso
+    ValidarEnvio --> EnvioExitoso : Envío confirmado
+    ValidarEnvio --> EnvioFallido : Error en envío
+    EnvioFallido --> ReintentarEnvio : Reintentar envío
+    ReintentarEnvio --> EnviarExterno
+    EnvioExitoso --> ActualizarEstado : Marcar como enviada
+    ActualizarEstado --> NotificarCliente : Enviar notificación
+    NotificarCliente --> [*] 

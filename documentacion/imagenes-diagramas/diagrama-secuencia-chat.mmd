@@ -1,0 +1,37 @@
+sequenceDiagram
+    participant U as Usuario
+    participant F as Frontend
+    participant B as Backend
+    participant DB as Base de Datos
+    participant AI as Microservicio IA
+    participant N as Notificaciones
+
+    U->>F: Abrir chat
+    F->>B: GET /chat/session
+    B->>DB: Buscar sesión existente
+    DB-->>B: Sesión encontrada/creada
+    B-->>F: Datos de sesión
+    F-->>U: Mostrar chat
+
+    U->>F: Escribir mensaje
+    F->>F: Validar entrada
+    F->>B: POST /chat/message
+    Note over F,B: {message: "texto", sessionId: "xxx"}
+
+    B->>B: Autenticar usuario
+    B->>DB: Guardar mensaje del usuario
+    DB-->>B: Mensaje guardado
+
+    B->>AI: POST /ai/process
+    Note over B,AI: {message: "texto", context: "datos_usuario", sessionId: "xxx"}
+
+    AI->>AI: Analizar contexto
+    AI->>AI: Generar respuesta
+    AI->>AI: Validar respuesta
+    AI-->>B: Respuesta generada
+    Note over AI,B: {response: "respuesta", confidence: 0.95, suggestions: [...]}
+
+    B->>DB: Guardar respuesta del bot
+    DB-->>B: Respuesta guardada
+
+    B->>N: Crear notificación (si es necesario) 

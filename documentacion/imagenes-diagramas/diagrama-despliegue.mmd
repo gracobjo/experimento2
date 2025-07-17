@@ -1,0 +1,67 @@
+graph TB
+    subgraph "Internet"
+        LB[Load Balancer\nPuerto 80/443]
+    end
+
+    subgraph "Servidor Web"
+        subgraph "Frontend Container"
+            subgraph "React App"
+                FE[Frontend React\nPuerto 5173]
+            end
+        end
+        
+        subgraph "Backend Container"
+            subgraph "NestJS App"
+                BE[Backend NestJS\nPuerto 3000]
+            end
+        end
+        
+        subgraph "Microservicio Container"
+            subgraph "FastAPI App"
+                AI[Microservicio IA\nPuerto 8000]
+            end
+        end
+    end
+
+    subgraph "Servidor Base de Datos"
+        subgraph "PostgreSQL Container"
+            DB[(PostgreSQL\nPuerto 5432)]
+        end
+        
+        subgraph "Redis Container"
+            RD[(Redis Cache\nPuerto 6379)]
+        end
+        
+        subgraph "MinIO Container"
+            ST[(MinIO Storage\nPuerto 9000)]
+        end
+    end
+
+    subgraph "Servicios Externos"
+        EMAIL[Email Service]
+        TSA[TSA Service]
+        OCSP[OCSP Service]
+        AEAT[AEAT API]
+        FACE[FACE API]
+    end
+
+    %% Conexiones principales
+    LB --> FE
+    LB --> BE
+    LB --> AI
+    
+    FE --> BE
+    BE --> AI
+    BE --> DB
+    BE --> RD
+    BE --> ST
+    
+    AI --> DB
+    AI --> RD
+    
+    %% Conexiones externas
+    BE --> EMAIL
+    BE --> TSA
+    BE --> OCSP
+    BE --> AEAT
+    BE --> FACE 

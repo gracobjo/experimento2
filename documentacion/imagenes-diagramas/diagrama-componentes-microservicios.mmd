@@ -1,0 +1,141 @@
+graph TB
+    subgraph "Frontend Layer"
+        UI[React Frontend]
+        Router[React Router]
+        State[State Management]
+        API[API Client]
+    end
+
+    subgraph "API Gateway"
+        Gateway[API Gateway]
+        LoadBalancer[Load Balancer]
+        RateLimit[Rate Limiter]
+        CORS[CORS Handler]
+    end
+
+    subgraph "Backend Services"
+        subgraph "Auth Service"
+            AuthController[Auth Controller]
+            AuthService[Auth Service]
+            JWTGuard[JWT Guard]
+            PasswordService[Password Service]
+        end
+
+        subgraph "User Service"
+            UserController[User Controller]
+            UserService[User Service]
+            ProfileService[Profile Service]
+        end
+
+        subgraph "Case Service"
+            CaseController[Case Controller]
+            CaseService[Case Service]
+            DocumentService[Document Service]
+            TaskService[Task Service]
+        end
+
+        subgraph "Invoice Service"
+            InvoiceController[Invoice Controller]
+            InvoiceService[Invoice Service]
+            FacturaeService[Facturae Service]
+            ExternalAPIService[External API Service]
+        end
+
+        subgraph "Chat Service"
+            ChatController[Chat Controller]
+            ChatService[Chat Service]
+            WebSocketGateway[WebSocket Gateway]
+        end
+
+        subgraph "Notification Service"
+            NotificationController[Notification Controller]
+            NotificationService[Notification Service]
+            EmailService[Email Service]
+        end
+    end
+
+    subgraph "External Services"
+        ChatbotAPI[Chatbot API]
+        TSA[TSA Service]
+        OCSP[OCSP Service]
+        AEAT[AEAT API]
+        FACE[FACE API]
+        EmailProvider[Email Provider]
+        StorageService[File Storage]
+    end
+
+    subgraph "Data Layer"
+        subgraph "Primary Database"
+            PostgreSQL[(PostgreSQL)]
+            Redis[(Redis Cache)]
+        end
+        subgraph "File Storage"
+            MinIO[(MinIO Storage)]
+        end
+    end
+
+    %% Frontend connections
+    UI --> Router
+    Router --> State
+    State --> API
+    API --> Gateway
+
+    %% Gateway connections
+    Gateway --> LoadBalancer
+    LoadBalancer --> RateLimit
+    RateLimit --> CORS
+
+    %% Service connections
+    CORS --> AuthController
+    CORS --> UserController
+    CORS --> CaseController
+    CORS --> InvoiceController
+    CORS --> ChatController
+    CORS --> NotificationController
+
+    %% Internal service dependencies
+    AuthController --> AuthService
+    AuthService --> JWTGuard
+    AuthService --> PasswordService
+
+    UserController --> UserService
+    UserService --> ProfileService
+
+    CaseController --> CaseService
+    CaseService --> DocumentService
+    CaseService --> TaskService
+
+    InvoiceController --> InvoiceService
+    InvoiceService --> FacturaeService
+    InvoiceService --> ExternalAPIService
+
+    ChatController --> ChatService
+    ChatService --> WebSocketGateway
+
+    NotificationController --> NotificationService
+    NotificationService --> EmailService
+
+    %% Database connections
+    AuthService --> PostgreSQL
+    UserService --> PostgreSQL
+    CaseService --> PostgreSQL
+    InvoiceService --> PostgreSQL
+    ChatService --> PostgreSQL
+    NotificationService --> PostgreSQL
+
+    %% Cache connections
+    UserService --> Redis
+    CaseService --> Redis
+    InvoiceService --> Redis
+
+    %% File storage
+    DocumentService --> MinIO
+
+    %% External service connections
+    FacturaeService --> TSA
+    FacturaeService --> OCSP
+    ExternalAPIService --> AEAT
+    ExternalAPIService --> FACE
+    EmailService --> EmailProvider
+    DocumentService --> StorageService
+    WebSocketGateway --> ChatbotAPI 
