@@ -2,6 +2,24 @@ import { PrismaClient, Role } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+interface MenuItem {
+  label: string;
+  url: string;
+  icon: string;
+  order: number;
+  isVisible: boolean;
+  isExternal: boolean;
+  children?: MenuItem[];
+}
+
+interface MenuData {
+  name: string;
+  role: Role;
+  orientation: string;
+  isActive: boolean;
+  items: MenuItem[];
+}
+
 async function initializeSiteConfigs() {
   console.log('🔧 Inicializando configuraciones del sitio...');
 
@@ -224,7 +242,7 @@ async function initializeMenuConfigs() {
     return;
   }
 
-  const defaultMenus = [
+  const defaultMenus: MenuData[] = [
     {
       name: 'Menú Principal - Admin',
       role: Role.ADMIN,
@@ -253,7 +271,18 @@ async function initializeMenuConfigs() {
         { label: 'Tareas', url: '/lawyer/tasks', icon: '✅', order: 3, isVisible: true, isExternal: false },
         { label: 'Chat', url: '/lawyer/chat', icon: '💬', order: 4, isVisible: true, isExternal: false },
         { label: 'Reportes', url: '/lawyer/reports', icon: '📊', order: 5, isVisible: true, isExternal: false },
-        { label: 'Facturación', url: '#', icon: '🧾', order: 6, isVisible: true, isExternal: false }
+        { 
+          label: 'Facturación', 
+          url: '#', 
+          icon: '🧾', 
+          order: 6, 
+          isVisible: true, 
+          isExternal: false,
+          children: [
+            { label: 'Provisión de Fondos', url: '/lawyer/provisiones', icon: '💰', order: 0, isVisible: true, isExternal: false },
+            { label: 'Facturación Electrónica', url: '/lawyer/facturacion', icon: '📄', order: 1, isVisible: true, isExternal: false }
+          ]
+        }
       ]
     },
     {
@@ -280,6 +309,7 @@ async function initializeMenuConfigs() {
     });
 
     if (!existingMenu) {
+      // Crear el menú principal
       const menuConfig = await prisma.menuConfig.create({
         data: {
           name: menuData.name,
@@ -296,8 +326,32 @@ async function initializeMenuConfigs() {
               isExternal: item.isExternal
             }))
           }
+        },
+        include: {
+          items: true
         }
       });
+
+      // Crear los children para los items que los tengan
+      for (const item of menuData.items) {
+        if (item.children && item.children.length > 0) {
+          const parentItem = menuConfig.items.find(i => i.label === item.label);
+          if (parentItem) {
+            await prisma.menuItem.createMany({
+              data: item.children.map((child, childIndex) => ({
+                menuConfigId: menuConfig.id,
+                parentId: parentItem.id,
+                label: child.label,
+                url: child.url,
+                icon: child.icon,
+                order: child.order || childIndex,
+                isVisible: child.isVisible,
+                isExternal: child.isExternal
+              }))
+            });
+          }
+        }
+      }
 
       console.log(`✅ Menú creado: ${menuData.name}`);
     } else {

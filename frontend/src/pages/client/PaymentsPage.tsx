@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../api/axios';
 import { Link } from 'react-router-dom';
 
 interface Invoice {
@@ -28,7 +28,7 @@ const PaymentsPage = () => {
     const fetchLawyers = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('/api/users/lawyers', { headers: { Authorization: `Bearer ${token}` } });
+        const res = await api.get('/users/lawyers');
         setLawyers(res.data);
       } catch {}
     };
@@ -43,8 +43,7 @@ const PaymentsPage = () => {
         const params: any = {};
         if (selectedLawyer) params.lawyerId = selectedLawyer;
         if (selectedDate) params.paymentDate = selectedDate;
-        const response = await axios.get('/api/invoices/my', {
-          headers: { Authorization: `Bearer ${token}` },
+        const response = await api.get('/invoices/my', {
           params,
         });
         setInvoices(response.data);

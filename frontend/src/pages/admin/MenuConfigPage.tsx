@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import axios from '../../api/axios';
+import api from '../../api/axios';
 
 interface MenuItem {
   id?: string;
@@ -47,7 +47,7 @@ const MenuConfigPage: React.FC = () => {
   const fetchMenuConfigs = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/menu-config');
+              const response = await api.get('/menu-config');
       setMenuConfigs(response.data);
     } catch (error) {
       console.error('Error fetching menu configs:', error);
@@ -58,7 +58,7 @@ const MenuConfigPage: React.FC = () => {
 
   const handleCreateMenu = async () => {
     try {
-      await axios.post('/api/menu-config', newMenu);
+              await api.post('/menu-config', newMenu);
       setShowCreateForm(false);
       setNewMenu({
         name: '',
@@ -77,7 +77,7 @@ const MenuConfigPage: React.FC = () => {
     if (!editingMenu) return;
     
     try {
-      await axios.patch(`/api/menu-config/${editingMenu.id}`, editingMenu);
+              await api.patch(`/menu-config/${editingMenu.id}`, editingMenu);
       setEditingMenu(null);
       fetchMenuConfigs();
     } catch (error) {
@@ -89,7 +89,7 @@ const MenuConfigPage: React.FC = () => {
     if (!confirm('¿Estás seguro de que quieres eliminar este menú?')) return;
     
     try {
-      await axios.delete(`/api/menu-config/${id}`);
+              await api.delete(`/menu-config/${id}`);
       fetchMenuConfigs();
     } catch (error) {
       console.error('Error deleting menu:', error);

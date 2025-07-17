@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import axios from '../../api/axios';
+import api from '../../api/axios';
 
 interface SiteConfig {
   id: string;
@@ -41,7 +41,7 @@ const SiteConfigPage: React.FC = () => {
   const fetchConfigs = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/site-config/categories');
+              const response = await api.get('/site-config/categories');
       setConfigs(response.data);
     } catch (error) {
       console.error('Error fetching site configs:', error);
@@ -52,7 +52,7 @@ const SiteConfigPage: React.FC = () => {
 
   const handleCreateConfig = async () => {
     try {
-      await axios.post('/api/site-config', newConfig);
+              await api.post('/site-config', newConfig);
       setShowCreateForm(false);
       setNewConfig({
         key: '',
@@ -72,7 +72,7 @@ const SiteConfigPage: React.FC = () => {
     if (!editingConfig) return;
     
     try {
-      await axios.patch(`/api/site-config/${editingConfig.id}`, editingConfig);
+              await api.patch(`/site-config/${editingConfig.id}`, editingConfig);
       setEditingConfig(null);
       fetchConfigs();
     } catch (error) {
@@ -84,7 +84,7 @@ const SiteConfigPage: React.FC = () => {
     if (!confirm('¿Estás seguro de que quieres eliminar esta configuración?')) return;
     
     try {
-      await axios.delete(`/api/site-config/${id}`);
+              await api.delete(`/site-config/${id}`);
       fetchConfigs();
     } catch (error) {
       console.error('Error deleting config:', error);
@@ -93,7 +93,7 @@ const SiteConfigPage: React.FC = () => {
 
   const handleQuickUpdate = async (key: string, value: string) => {
     try {
-      await axios.patch(`/api/site-config/key/${key}`, { value });
+                      await api.patch(`/site-config/key/${key}`, { value });
       fetchConfigs();
     } catch (error) {
       console.error('Error updating config:', error);
@@ -216,7 +216,7 @@ const SiteConfigPage: React.FC = () => {
           <button
             onClick={async () => {
               try {
-                await axios.post('/api/site-config/initialize');
+                                  await api.post('/site-config/initialize');
                 fetchConfigs();
                 alert('Configuraciones por defecto inicializadas');
               } catch (error) {

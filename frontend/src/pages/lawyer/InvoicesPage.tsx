@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { getInvoices, createInvoice, signInvoice, deleteInvoice, updateInvoice } from '../../api/invoices';
 import { getClients } from '../../api/clients';
 import { useAuth } from '../../context/AuthContext';
@@ -53,6 +53,21 @@ const InvoicesPage = () => {
   const [viewingInvoice, setViewingInvoice] = useState<any>(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
+  // Refs para enfoque automático
+  const clienteRef = useRef<HTMLSelectElement | null>(null);
+  const expedienteRef = useRef<HTMLSelectElement | null>(null);
+  const fechaOperacionRef = useRef<HTMLInputElement | null>(null);
+  // Array de refs para los items
+  const itemRefs = useRef<any[]>([]);
+
+  // Estado para campos con error
+  const [errorFields, setErrorFields] = useState<{
+    cliente?: boolean;
+    expediente?: boolean;
+    fechaOperacion?: boolean;
+    items?: { [key: number]: { description?: boolean; quantity?: boolean; unitPrice?: boolean } };
+  }>({});
+
   // Encuentra el perfil de cliente seleccionado
   const selectedClient = clients.find((c: any) => c.user.id === form.receptorId);
   const clientProfileId = selectedClient?.id;
@@ -60,6 +75,13 @@ const InvoicesPage = () => {
   // Añadir estados para filtros
   const [selectedClientFilter, setSelectedClientFilter] = useState('');
   const [selectedPaymentDate, setSelectedPaymentDate] = useState('');
+
+  // Función helper para formatear fechas al formato yyyy-MM-dd que espera el backend
+  const formatDateForBackend = (dateString: string) => {
+    if (!dateString) return undefined;
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0]; // Formato yyyy-MM-dd
+  };
 
   useEffect(() => {
     fetchInvoices();
@@ -187,6 +209,11 @@ const InvoicesPage = () => {
   const handleFormChange = (e: any) => {
     const { name, value } = e.target;
     setForm((prev: any) => ({ ...prev, [name]: value }));
+    
+    // Limpiar error del campo cuando el usuario empiece a escribir
+    if (errorFields[name as keyof typeof errorFields]) {
+      setErrorFields(prev => ({ ...prev, [name]: false }));
+    }
   };
 
   const handleClientChange = async (e: any) => {
@@ -214,6 +241,20 @@ const InvoicesPage = () => {
       items[idx].total = items[idx].quantity * items[idx].unitPrice;
       return { ...prev, items };
     });
+    
+    // Limpiar error del campo del item cuando el usuario empiece a escribir
+    if (errorFields.items?.[idx]?.[field as keyof typeof errorFields.items[typeof idx]]) {
+      setErrorFields(prev => ({
+        ...prev,
+        items: {
+          ...prev.items,
+          [idx]: {
+            ...prev.items?.[idx],
+            [field]: false
+          }
+        }
+      }));
+    }
   };
 
   const handleAddItem = () => {
@@ -239,7 +280,8 @@ const InvoicesPage = () => {
     try {
       // El backend calculará automáticamente los totales basándose en los items
       const { emisorId, fechaFactura, importeTotal, baseImponible, cuotaIVA, ...facturaDataSinCalculos } = form;
-      // --- Normalización de campos numéricos y estado ---
+      
+      // Formatear fechas al formato yyyy-MM-dd que espera el backend
       const facturaData = {
         ...facturaDataSinCalculos,
         descuento: form.descuento === '' || form.descuento == null ? 0 : Number(form.descuento),
@@ -247,6 +289,9 @@ const InvoicesPage = () => {
         tipoIVA: form.tipoIVA === '' || form.tipoIVA == null ? 21 : Number(form.tipoIVA),
         estado: form.estado || 'emitida',
         provisionIds: provisionesSeleccionadas,
+        // Formatear fechas correctamente
+        fechaOperacion: formatDateForBackend(form.fechaOperacion),
+        paymentDate: form.paymentDate ? formatDateForBackend(form.paymentDate) : undefined,
       };
       console.log('FRONTEND - provisionesSeleccionadas:', provisionesSeleccionadas);
       console.log('FRONTEND - facturaData a enviar:', facturaData);
@@ -257,63 +302,196 @@ const InvoicesPage = () => {
       // Limpiar el mensaje después de 5 segundos
       setTimeout(() => setSuccessMsg(null), 5000);
     } catch (err) {
+      console.error('Error al crear factura:', err);
       setFormError('❌ Error al crear la factura. Verifica los datos e intenta de nuevo.');
     } finally {
       setCreating(false);
     }
   };
 
+  // Modifica handleUpdate para enfoque automático
   const handleUpdate = async (e: any) => {
     e.preventDefault();
     setFormError(null);
     setSuccessMsg(null);
+    setErrorFields({}); // Limpiar errores previos
     setCreating(true);
     
     // Validaciones mínimas
-    if (!form.receptorId || !form.fechaOperacion || !form.items.length) {
-      setFormError('Completa todos los campos obligatorios.');
+    if (!form.receptorId) {
+      setFormError('Debes seleccionar un cliente.');
+      setErrorFields({ cliente: true });
+      setCreating(false);
+      setTimeout(() => clienteRef.current?.focus(), 100);
+      return;
+    }
+    if (!form.expedienteId) {
+      setFormError('Debes seleccionar un expediente.');
+      setErrorFields({ expediente: true });
+      setCreating(false);
+      setTimeout(() => expedienteRef.current?.focus(), 100);
+      return;
+    }
+    if (!form.fechaOperacion) {
+      setFormError('Debes indicar la fecha de operación.');
+      setErrorFields({ fechaOperacion: true });
+      setCreating(false);
+      setTimeout(() => fechaOperacionRef.current?.focus(), 100);
+      return;
+    }
+    if (!form.items.length) {
+      setFormError('Debes añadir al menos un concepto.');
       setCreating(false);
       return;
     }
-    if (form.items.some((i: any) => !i.description || i.quantity <= 0 || i.unitPrice === undefined)) {
-      setFormError('Todos los conceptos deben tener descripción, cantidad y precio válidos.');
-      setCreating(false);
-      return;
+    // Validar items
+    for (let i = 0; i < form.items.length; i++) {
+      const item = form.items[i];
+      if (!item.description) {
+        setFormError('Todos los conceptos deben tener descripción.');
+        setErrorFields({ 
+          items: { 
+            [i]: { description: true } 
+          } 
+        });
+        setCreating(false);
+        setTimeout(() => itemRefs.current[i]?.description?.focus(), 100);
+        return;
+      }
+      if (!item.quantity || item.quantity <= 0) {
+        setFormError('Todos los conceptos deben tener cantidad válida.');
+        setErrorFields({ 
+          items: { 
+            [i]: { quantity: true } 
+          } 
+        });
+        setCreating(false);
+        setTimeout(() => itemRefs.current[i]?.quantity?.focus(), 100);
+        return;
+      }
+      if (item.unitPrice === undefined || item.unitPrice === null) {
+        setFormError('Todos los conceptos deben tener precio unitario.');
+        setErrorFields({ 
+          items: { 
+            [i]: { unitPrice: true } 
+          } 
+        });
+        setCreating(false);
+        setTimeout(() => itemRefs.current[i]?.unitPrice?.focus(), 100);
+        return;
+      }
     }
     
     try {
-      // Solo enviar los campos editables, excluyendo campos que no se pueden actualizar
+      // Limpiar completamente el objeto, excluyendo TODOS los campos que el backend no acepta
       const {
         id, emisorId, fechaFactura, importeTotal, baseImponible, cuotaIVA,
-        xml, xmlFirmado, estado, selloTiempo, createdAt, updatedAt,
+        xml, xmlFirmado, selloTiempo, createdAt, updatedAt,
         emisor, receptor, expediente, provisionFondos,
+        numeroFactura, tipoFactura, qrData, // Campos explícitamente prohibidos
         ...facturaDataSinCalculos
       } = form;
       
-      // También limpiar los IDs de los items que no se pueden enviar
+      // Limpiar los items, eliminando campos que el backend no acepta
       const itemsLimpios = facturaDataSinCalculos.items.map((item: any) => {
-        const { id: itemId, invoiceId, ...itemLimpio } = item;
+        const { id: itemId, invoiceId, total, ...itemLimpio } = item;
         return itemLimpio;
       });
       
+      // Construir el objeto final solo con campos permitidos por UpdateInvoiceDto
       const facturaData = {
-        ...facturaDataSinCalculos,
-        items: itemsLimpios,
-        provisionIds: provisionesSeleccionadas,
+        receptorId: facturaDataSinCalculos.receptorId,
+        expedienteId: facturaDataSinCalculos.expedienteId,
+        fechaOperacion: formatDateForBackend(form.fechaOperacion),
+        metodoPago: facturaDataSinCalculos.metodoPago?.toLowerCase() || 'transferencia',
+        regimenIvaEmisor: facturaDataSinCalculos.regimenIvaEmisor,
+        claveOperacion: facturaDataSinCalculos.claveOperacion,
+        tipoIVA: form.tipoIVA === '' || form.tipoIVA == null ? 21 : Number(form.tipoIVA),
+        aplicarIVA: facturaDataSinCalculos.aplicarIVA !== false,
         descuento: form.descuento === '' || form.descuento == null ? 0 : Number(form.descuento),
         retencion: form.retencion === '' || form.retencion == null ? 0 : Number(form.retencion),
-        tipoIVA: form.tipoIVA === '' || form.tipoIVA == null ? 21 : Number(form.tipoIVA),
+        items: itemsLimpios,
+        provisionIds: provisionesSeleccionadas,
         estado: form.estado || 'emitida',
+        motivoAnulacion: facturaDataSinCalculos.motivoAnulacion || null,
+        paymentDate: form.paymentDate ? formatDateForBackend(form.paymentDate) : undefined,
       };
+      
+      console.log('Datos a enviar al backend:', facturaData);
+      console.log('Datos originales del form:', form);
+      console.log('Items limpios:', itemsLimpios);
       
       await updateInvoice(form.id, facturaData, token ?? '');
       setSuccessMsg('✅ Factura actualizada correctamente.');
-      setShowModal(false);
+      setFormError(null); // Limpiar errores previos
       fetchInvoices();
-      // Limpiar el mensaje después de 5 segundos
-      setTimeout(() => setSuccessMsg(null), 5000);
-    } catch (err) {
-      setFormError('❌ Error al actualizar la factura. Verifica los datos e intenta de nuevo.');
+      
+      // Mantener el mensaje visible por 3 segundos antes de cerrar el modal
+      setTimeout(() => {
+        setSuccessMsg(null);
+        setShowModal(false);
+      }, 3000);
+    } catch (err: any) {
+      console.error('Error al actualizar factura:', err);
+      setSuccessMsg(null); // Limpiar mensaje de éxito si hay error
+      
+      // Mostrar error específico del backend si está disponible
+      if (err.response && err.response.data && err.response.data.message) {
+        const errorMessages = Array.isArray(err.response.data.message) 
+          ? err.response.data.message 
+          : [err.response.data.message];
+        
+        // Crear mensaje de error amigable
+        let errorText = '❌ Error al actualizar la factura:\n\n';
+        let suggestions: string[] = [];
+        
+        errorMessages.forEach((msg: string) => {
+          if (msg.includes('numeroFactura should not exist')) {
+            errorText += '• No puedes editar el número de factura\n';
+            suggestions.push('El número de factura se asigna automáticamente');
+          } else if (msg.includes('tipoFactura should not exist')) {
+            errorText += '• No puedes editar el tipo de factura\n';
+            suggestions.push('El tipo de factura no se puede modificar después de la creación');
+          } else if (msg.includes('qrData should not exist')) {
+            errorText += '• El código QR se genera automáticamente\n';
+            suggestions.push('El código QR se calcula automáticamente');
+          } else if (msg.includes('total should not exist')) {
+            errorText += '• Los totales de los conceptos se calculan automáticamente\n';
+            suggestions.push('No edites manualmente los totales de los conceptos');
+          } else {
+            errorText += `• ${msg}\n`;
+          }
+        });
+        
+        if (suggestions.length > 0) {
+          errorText += '\n💡 Sugerencias:\n';
+          suggestions.forEach(suggestion => {
+            errorText += `• ${suggestion}\n`;
+          });
+        }
+        
+        setFormError(errorText);
+      } else {
+        setFormError('❌ Error al actualizar la factura. Verifica los datos e intenta de nuevo.');
+      }
+             // Enfocar campo según error del backend si es posible
+       if (err.response && err.response.data && err.response.data.message) {
+         const errorMessages = Array.isArray(err.response.data.message) 
+           ? err.response.data.message 
+           : [err.response.data.message];
+         
+         // Determinar qué campo tiene error y enfocarlo
+         if (errorMessages.some((msg: string) => msg.includes('fechaOperacion'))) {
+           setErrorFields({ fechaOperacion: true });
+           setTimeout(() => fechaOperacionRef.current?.focus(), 100);
+         } else if (errorMessages.some((msg: string) => msg.includes('receptorId'))) {
+           setErrorFields({ cliente: true });
+           setTimeout(() => clienteRef.current?.focus(), 100);
+         } else if (errorMessages.some((msg: string) => msg.includes('expedienteId'))) {
+           setErrorFields({ expediente: true });
+           setTimeout(() => expedienteRef.current?.focus(), 100);
+         }
+       }
     } finally {
       setCreating(false);
     }
@@ -442,13 +620,18 @@ const InvoicesPage = () => {
     console.log('EDITANDO FACTURA:', inv);
     console.log('PROVISIONES DE LA FACTURA:', inv.provisionFondos);
     
-    setForm({
+    // Formatear las fechas para los inputs de tipo date
+    const formattedInvoice = {
       ...inv,
       items: inv.items || [],
       aplicarIVA: inv.aplicarIVA !== false, // default true si no existe
       retencion: inv.retencion ?? '',
       descuento: inv.descuento ?? '',
-    });
+      // Formatear fechaOperacion para el input de tipo date (yyyy-MM-dd)
+      fechaOperacion: inv.fechaOperacion ? inv.fechaOperacion.slice(0, 10) : '',
+    };
+    
+    setForm(formattedInvoice);
     setShowModal(true);
     
     // Si la factura tiene un cliente, cargar sus expedientes
@@ -701,10 +884,28 @@ const InvoicesPage = () => {
       }
     };
 
-    const handleDownloadPDF = () => {
-      // Por ahora usamos la misma funcionalidad que imprimir
-      // En el futuro se puede implementar generación de PDF real con jsPDF o similar
-      handlePrint();
+    const handleDownloadPDF = async () => {
+      try {
+        // Descargar el PDF de la factura con QR desde el backend
+        const response = await api.get(`/invoices/${invoice.id}/pdf-qr`, {
+          responseType: 'blob'
+        });
+        
+        // Crear blob y descargar
+        const blob = response.data;
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `factura_${invoice.numeroFactura || invoice.id}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+      } catch (error) {
+        console.error('Error downloading PDF:', error);
+        alert('Error al descargar el PDF de la factura');
+      }
     };
 
     const formatDate = (dateString: string) => {
@@ -911,6 +1112,74 @@ const InvoicesPage = () => {
     );
   };
 
+  // Función de prueba para verificar datos
+  const testUpdateData = () => {
+    const testForm: any = {
+      id: 'fac-c1-001',
+      numeroFactura: 'FAC-C1-001',
+      tipoFactura: 'F',
+      qrData: 'test',
+      items: [
+        { description: 'Test', quantity: 1, unitPrice: 100, total: 100 }
+      ],
+      receptorId: 'test',
+      expedienteId: 'test',
+      fechaOperacion: '2025-07-15',
+      metodoPago: 'transferencia',
+      regimenIvaEmisor: 'General',
+      claveOperacion: '01',
+      tipoIVA: 21,
+      aplicarIVA: true,
+      descuento: 0,
+      retencion: 0,
+      estado: 'emitida',
+      provisionIds: []
+    };
+
+    // Limpiar datos como en handleUpdate
+    const {
+      id, emisorId, fechaFactura, importeTotal, baseImponible, cuotaIVA,
+      xml, xmlFirmado, selloTiempo, createdAt, updatedAt,
+      emisor, receptor, expediente, provisionFondos,
+      numeroFactura, tipoFactura, qrData,
+      ...facturaDataSinCalculos
+    } = testForm;
+    
+    const itemsLimpios = facturaDataSinCalculos.items.map((item: any) => {
+      const { id: itemId, invoiceId, total, ...itemLimpio } = item;
+      return itemLimpio;
+    });
+    
+    const facturaData = {
+      receptorId: facturaDataSinCalculos.receptorId,
+      expedienteId: facturaDataSinCalculos.expedienteId,
+      fechaOperacion: formatDateForBackend(testForm.fechaOperacion),
+      metodoPago: facturaDataSinCalculos.metodoPago?.toLowerCase() || 'transferencia',
+      regimenIvaEmisor: facturaDataSinCalculos.regimenIvaEmisor,
+      claveOperacion: facturaDataSinCalculos.claveOperacion,
+      tipoIVA: testForm.tipoIVA === '' || testForm.tipoIVA == null ? 21 : Number(testForm.tipoIVA),
+      aplicarIVA: facturaDataSinCalculos.aplicarIVA !== false,
+      descuento: testForm.descuento === '' || testForm.descuento == null ? 0 : Number(testForm.descuento),
+      retencion: testForm.retencion === '' || testForm.retencion == null ? 0 : Number(testForm.retencion),
+      items: itemsLimpios,
+      provisionIds: testForm.provisionIds,
+      estado: testForm.estado || 'emitida',
+      motivoAnulacion: facturaDataSinCalculos.motivoAnulacion || null,
+      paymentDate: testForm.paymentDate ? formatDateForBackend(testForm.paymentDate) : undefined,
+    };
+
+    console.log('=== PRUEBA DE LIMPIEZA DE DATOS ===');
+    console.log('Datos originales:', testForm);
+    console.log('Datos limpios:', facturaData);
+    console.log('Items originales:', testForm.items);
+    console.log('Items limpios:', itemsLimpios);
+  };
+
+  // Llamar la función de prueba al cargar el componente
+  useEffect(() => {
+    testUpdateData();
+  }, []);
+
   return (
     <div className="py-6 max-w-5xl mx-auto">
       <InfoPanel />
@@ -1048,7 +1317,51 @@ const InvoicesPage = () => {
             <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-800" onClick={() => setShowModal(false)}>&times;</button>
             <h2 className="text-xl font-bold mb-4">{form.id ? 'Editar factura' : 'Nueva factura'}</h2>
             <form onSubmit={form.id ? handleUpdate : handleCreate} className="space-y-4">
-            {formError && <div className="mb-2 text-red-600">{formError}</div>}
+            {/* Mensaje de éxito */}
+            {successMsg && (
+              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-green-800">{successMsg}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSuccessMsg(null);
+                      setShowModal(false);
+                    }}
+                    className="text-green-400 hover:text-green-600"
+                    title="Cerrar"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Mensaje de error */}
+            {formError && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-red-800 whitespace-pre-line">{formError}</p>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="mb-2">
                 <label className="block text-sm font-medium mb-1">Nº Factura</label>
                 <input
@@ -1071,7 +1384,14 @@ const InvoicesPage = () => {
               )}
             <div className="mb-2">
                 <label className="block text-sm font-medium mb-1">Cliente</label>
-                <select name="receptorId" value={form.receptorId} onChange={handleClientChange} className="border px-2 py-1 rounded w-full" required>
+                <select 
+                  ref={clienteRef}
+                  name="receptorId" 
+                  value={form.receptorId} 
+                  onChange={handleClientChange} 
+                  className={`border px-2 py-1 rounded w-full ${errorFields.cliente ? 'border-red-500 bg-red-50' : ''}`} 
+                  required
+                >
                 <option value="">Selecciona un cliente</option>
                 {clients.map((c: any) => (
                   <option key={c.user.id} value={c.user.id}>{c.user.name} ({c.dni})</option>
@@ -1081,7 +1401,14 @@ const InvoicesPage = () => {
             {form.receptorId && (
               <div className="mb-2">
                   <label className="block text-sm font-medium mb-1">Expediente</label>
-                  <select name="expedienteId" value={form.expedienteId} onChange={handleFormChange} className="border px-2 py-1 rounded w-full" required>
+                  <select 
+                    ref={expedienteRef}
+                    name="expedienteId" 
+                    value={form.expedienteId} 
+                    onChange={handleFormChange} 
+                    className={`border px-2 py-1 rounded w-full ${errorFields.expediente ? 'border-red-500 bg-red-50' : ''}`} 
+                    required
+                  >
                   <option value="">Selecciona un expediente</option>
                   {expedientesCliente.map((exp: any) => (
                     <option key={exp.id} value={exp.id}>{exp.title} (ID: {exp.id})</option>
@@ -1148,7 +1475,15 @@ const InvoicesPage = () => {
             </div>
             <div className="mb-2">
                 <label className="block text-sm font-medium mb-1">Fecha Operación</label>
-                <input name="fechaOperacion" type="date" value={form.fechaOperacion} onChange={handleFormChange} className="border px-2 py-1 rounded w-full" required />
+                <input 
+                  ref={fechaOperacionRef} 
+                  name="fechaOperacion" 
+                  type="date" 
+                  value={form.fechaOperacion} 
+                  onChange={handleFormChange} 
+                  className={`border px-2 py-1 rounded w-full ${errorFields.fechaOperacion ? 'border-red-500 bg-red-50' : ''}`} 
+                  required 
+                />
             </div>
             <div className="mb-2">
                 <label className="block text-sm font-medium mb-1">Método de Pago</label>
@@ -1211,13 +1546,36 @@ const InvoicesPage = () => {
             </div>
             <div className="mb-2">
                 <label className="block text-sm font-bold mb-1">Conceptos</label>
-              {form.items.map((item: any, idx: number) => (
+                            {form.items.map((item: any, idx: number) => (
                   <div key={idx} className="flex flex-wrap gap-2 mb-1">
-                    <input placeholder="Descripción" value={item.description} onChange={e => handleItemChange(idx, 'description', e.target.value)} className="border px-2 py-1 rounded w-full sm:w-1/2" required />
-                    <input type="number" placeholder="Cantidad" value={item.quantity} onChange={e => handleItemChange(idx, 'quantity', Number(e.target.value))} className="border px-2 py-1 rounded w-full sm:w-1/4" required />
-                    <input type="number" placeholder="Precio unitario" value={item.unitPrice} onChange={e => handleItemChange(idx, 'unitPrice', Number(e.target.value))} className="border px-2 py-1 rounded w-full sm:w-1/4" required />
-                  <span className="px-2">Total: {item.total}</span>
-                </div>
+                    <input 
+                      ref={el => (itemRefs.current[idx] = { ...(itemRefs.current[idx] || {}), description: el })} 
+                      placeholder="Descripción" 
+                      value={item.description} 
+                      onChange={e => handleItemChange(idx, 'description', e.target.value)} 
+                      className={`border px-2 py-1 rounded w-full sm:w-1/2 ${errorFields.items?.[idx]?.description ? 'border-red-500 bg-red-50' : ''}`} 
+                      required 
+                    />
+                    <input 
+                      ref={el => (itemRefs.current[idx] = { ...(itemRefs.current[idx] || {}), quantity: el })} 
+                      type="number" 
+                      placeholder="Cantidad" 
+                      value={item.quantity} 
+                      onChange={e => handleItemChange(idx, 'quantity', Number(e.target.value))} 
+                      className={`border px-2 py-1 rounded w-full sm:w-1/4 ${errorFields.items?.[idx]?.quantity ? 'border-red-500 bg-red-50' : ''}`} 
+                      required 
+                    />
+                    <input 
+                      ref={el => (itemRefs.current[idx] = { ...(itemRefs.current[idx] || {}), unitPrice: el })} 
+                      type="number" 
+                      placeholder="Precio unitario" 
+                      value={item.unitPrice} 
+                      onChange={e => handleItemChange(idx, 'unitPrice', Number(e.target.value))} 
+                      className={`border px-2 py-1 rounded w-full sm:w-1/4 ${errorFields.items?.[idx]?.unitPrice ? 'border-red-500 bg-red-50' : ''}`} 
+                      required 
+                    />
+                    <span className="px-2">Total: {item.total}</span>
+                  </div>
               ))}
               <button type="button" className="text-blue-600 underline mt-1" onClick={handleAddItem}>Añadir concepto</button>
             </div>

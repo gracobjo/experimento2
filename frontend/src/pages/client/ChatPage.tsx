@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
-import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { io, Socket } from 'socket.io-client';
+import api from '../../api/axios';
 
 interface Message {
   id: string;
@@ -148,8 +148,8 @@ const ChatPage = () => {
         }
         
         const [lawyersRes, conversationsRes] = await Promise.all([
-          axios.get('/api/users/lawyers', { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get('/api/chat/conversations', { headers: { Authorization: `Bearer ${token}` } })
+          api.get('/users/lawyers'),
+          api.get('/chat/conversations')
         ]);
         
         console.log('Lawyers response:', lawyersRes.data);
@@ -192,9 +192,7 @@ const ChatPage = () => {
   const fetchMessagesWithUser = async (userId: string) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/chat/messages/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get(`/chat/messages/${userId}`);
       setMessages(response.data);
     } catch (err: any) {
       console.error('Error fetching messages:', err);

@@ -236,23 +236,45 @@ export class PdfGeneratorService {
       template = template.replace(/{{#if expediente}}[\s\S]*?{{\/if}}/g, '');
     }
 
-    // Reemplazar items
+    // Reemplazar items - ARREGLADO para manejar correctamente la sintaxis de Handlebars
     if (data.items && data.items.length > 0) {
-      const itemsHtml = data.items.map((item: any) => `
-        <tr>
-          <td>${item.descripcion}</td>
-          <td class="text-center">${item.cantidad}</td>
-          <td class="text-right">${item.precioUnitario} €</td>
-          <td class="text-right">${item.total} €</td>
-        </tr>
-      `).join('');
+      this.logger.log(`[TEMPLATE-VARS] Procesando ${data.items.length} items`);
       
-      // Reemplazar el contenido dentro del each
-      template = template.replace(/{{#each items}}([\s\S]*?){{\/each}}/g, (match, content) => {
-        return itemsHtml;
-      });
-      template = template.replace(/{{#if items}}([\s\S]*?){{\/if}}/g, '$1');
+      // Buscar la sección de items en el template
+      const itemsMatch = template.match(/{{#if items}}([\s\S]*?){{\/if}}/);
+      if (itemsMatch) {
+        const itemsSection = itemsMatch[1];
+        this.logger.log(`[TEMPLATE-VARS] Sección de items encontrada, longitud: ${itemsSection.length}`);
+        
+        // Buscar el each dentro de la sección de items
+        const eachMatch = itemsSection.match(/{{#each items}}([\s\S]*?){{\/each}}/);
+        if (eachMatch) {
+          const itemTemplate = eachMatch[1];
+          this.logger.log(`[TEMPLATE-VARS] Template de item encontrado, longitud: ${itemTemplate.length}`);
+          
+          // Generar HTML para cada item
+          const itemsHtml = data.items.map((item: any) => {
+            let itemHtml = itemTemplate;
+            itemHtml = itemHtml.replace(/{{descripcion}}/g, item.descripcion || '');
+            itemHtml = itemHtml.replace(/{{cantidad}}/g, item.cantidad || 0);
+            itemHtml = itemHtml.replace(/{{precioUnitario}}/g, item.precioUnitario || '0.00');
+            itemHtml = itemHtml.replace(/{{total}}/g, item.total || '0.00');
+            return itemHtml;
+          }).join('');
+          
+          this.logger.log(`[TEMPLATE-VARS] HTML de items generado, longitud: ${itemsHtml.length}`);
+          
+          // Reemplazar la sección completa
+          const newItemsSection = itemsSection.replace(/{{#each items}}[\s\S]*?{{\/each}}/, itemsHtml);
+          template = template.replace(/{{#if items}}[\s\S]*?{{\/if}}/, newItemsSection);
+        } else {
+          this.logger.warn(`[TEMPLATE-VARS] No se encontró {{#each items}} en la sección de items`);
+        }
+      } else {
+        this.logger.warn(`[TEMPLATE-VARS] No se encontró la sección {{#if items}}`);
+      }
     } else {
+      this.logger.log(`[TEMPLATE-VARS] No hay items, eliminando sección de items`);
       template = template.replace(/{{#if items}}[\s\S]*?{{\/if}}/g, '');
     }
 
@@ -263,18 +285,28 @@ export class PdfGeneratorService {
       template = template.replace(/{{#if descuento}}[\s\S]*?{{\/if}}/g, '');
     }
 
-    // Reemplazar provisiones
+    // Reemplazar provisiones - ARREGLADO para manejar correctamente la sintaxis de Handlebars
     if (data.provisiones && data.provisiones.length > 0) {
-      const provisionesHtml = data.provisiones.map((provision: any) => `
-        <tr>
-          <td>${provision.descripcion}</td>
-          <td class="text-center">${provision.fecha}</td>
-          <td class="text-right">${provision.importe} €</td>
-        </tr>
-      `).join('');
+      this.logger.log(`[TEMPLATE-VARS] Procesando ${data.provisiones.length} provisiones`);
       
-      template = template.replace(/{{#each provisiones}}([\s\S]*?){{\/each}}/g, provisionesHtml);
-      template = template.replace(/{{#if provisiones}}([\s\S]*?){{\/if}}/g, '$1');
+      const provisionesMatch = template.match(/{{#if provisiones}}([\s\S]*?){{\/if}}/);
+      if (provisionesMatch) {
+        const provisionesSection = provisionesMatch[1];
+        const eachMatch = provisionesSection.match(/{{#each provisiones}}([\s\S]*?){{\/each}}/);
+        if (eachMatch) {
+          const provisionTemplate = eachMatch[1];
+          const provisionesHtml = data.provisiones.map((provision: any) => {
+            let provisionHtml = provisionTemplate;
+            provisionHtml = provisionHtml.replace(/{{descripcion}}/g, provision.descripcion || '');
+            provisionHtml = provisionHtml.replace(/{{fecha}}/g, provision.fecha || '');
+            provisionHtml = provisionHtml.replace(/{{importe}}/g, provision.importe || '0.00');
+            return provisionHtml;
+          }).join('');
+          
+          const newProvisionesSection = provisionesSection.replace(/{{#each provisiones}}[\s\S]*?{{\/each}}/, provisionesHtml);
+          template = template.replace(/{{#if provisiones}}[\s\S]*?{{\/if}}/, newProvisionesSection);
+        }
+      }
     } else {
       template = template.replace(/{{#if provisiones}}[\s\S]*?{{\/if}}/g, '');
     }
@@ -297,7 +329,7 @@ export class PdfGeneratorService {
     try {
       this.logger.log('[PUPPETEER] Iniciando Puppeteer...');
       
-      // Lanzar browser con configuración mejorada
+      // Lanzar browser con configuración mejorada para mejor renderizado
       browser = await puppeteer.launch({
         headless: true,
         args: [
@@ -307,7 +339,11 @@ export class PdfGeneratorService {
           '--disable-accelerated-2d-canvas',
           '--no-first-run',
           '--no-zygote',
-          '--disable-gpu'
+          '--disable-gpu',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor',
+          '--font-render-hinting=none',
+          '--disable-font-subpixel-positioning'
         ]
       });
 
@@ -315,7 +351,14 @@ export class PdfGeneratorService {
       const page = await browser.newPage();
 
       // Configurar viewport más grande para mejor renderizado
-      await page.setViewport({ width: 1920, height: 1080 });
+      await page.setViewport({ 
+        width: 1200, 
+        height: 1600,
+        deviceScaleFactor: 2 // Mejor calidad de renderizado
+      });
+
+      // Configurar user agent para mejor compatibilidad
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
       // Establecer contenido HTML con tiempo de espera adicional
       this.logger.log('[PUPPETEER] Estableciendo contenido HTML...');
@@ -323,8 +366,8 @@ export class PdfGeneratorService {
         waitUntil: ['networkidle0', 'domcontentloaded', 'load'] 
       });
 
-      // Esperar un poco más para asegurar que todo se renderice (compatible con versiones antiguas)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Esperar un poco más para asegurar que todo se renderice
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Verificar que el contenido se cargó correctamente
       const title = await page.title();
@@ -341,6 +384,10 @@ export class PdfGeneratorService {
         totalsTable: !!totalsTable
       });
 
+      // Verificar que hay items en la tabla
+      const itemRows = await page.$$('.items-table tbody tr');
+      this.logger.log(`[PUPPETEER] Filas de items encontradas: ${itemRows.length}`);
+
       // Generar PDF con configuración mejorada
       this.logger.log('[PUPPETEER] Generando PDF...');
       let pdfBuffer = await page.pdf({
@@ -348,13 +395,16 @@ export class PdfGeneratorService {
         printBackground: true,
         preferCSSPageSize: true,
         margin: {
-          top: '10mm',
-          right: '10mm',
-          bottom: '10mm',
-          left: '10mm'
+          top: '15mm',
+          right: '15mm',
+          bottom: '15mm',
+          left: '15mm'
         },
         displayHeaderFooter: false,
-        scale: 1.0
+        scale: 1.0,
+        // Configuraciones adicionales para mejor calidad
+        timeout: 30000,
+        waitForFunction: 'document.readyState === "complete"'
       });
 
       this.logger.log(`[PUPPETEER] PDF generado. Tipo: ${typeof pdfBuffer}, Es Buffer: ${Buffer.isBuffer(pdfBuffer)}, Tamaño: ${pdfBuffer?.length || 'undefined'} bytes`);

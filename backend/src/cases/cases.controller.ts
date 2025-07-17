@@ -106,6 +106,8 @@ export class CasesController {
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
   findAll(@Request() req) {
+    console.log(`🎯 CasesController.findAll - User ID: ${req.user.id}, Role: ${req.user.role}`);
+    console.log(`🎯 Headers:`, req.headers);
     return this.casesService.findAll(req.user.id, req.user.role);
   }
 

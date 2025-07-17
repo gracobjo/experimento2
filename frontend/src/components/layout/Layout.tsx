@@ -1,11 +1,10 @@
-import React from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import ChatbotWidget from '../chat/ChatWidget';
-import Notifications from '../Notifications';
-import { useState, useEffect } from 'react';
 import { useAppConfig } from '../../hooks/useSiteConfig';
-import axios from '../../api/axios';
+import Notifications from '../Notifications';
+import ChatbotWidget from '../chat/ChatbotWidget';
+import api from '../../api/axios';
 
 interface ContactParam {
   id: string;
@@ -153,26 +152,37 @@ const Layout = () => {
     return [];
   };
 
-  const currentMenuItems = configLoading ? getDefaultMenuItems() : menuItems;
+  const currentMenuItems = configLoading ? getDefaultMenuItems() : (menuItems && menuItems.length > 0 ? menuItems : getDefaultMenuItems());
+
+  // Logs de depuración
+  console.log('Layout - User role:', user?.role);
+  console.log('Layout - Config loading:', configLoading);
+  console.log('Layout - Menu items:', menuItems);
+  console.log('Layout - Current menu items:', currentMenuItems);
 
   // Obtener parámetros de contacto y contenido legal
   useEffect(() => {
     const fetchContactParams = async () => {
       try {
         const [contactResponse, legalResponse] = await Promise.all([
-          axios.get('/parametros/contact'),
-          axios.get('/parametros/legal')
+          api.get('/parametros/contact'),
+          api.get('/parametros/legal')
         ]);
         
-        setContactParams(contactResponse.data);
+        // Asegurar que contactParams sea siempre un array
+        const contactData = Array.isArray(contactResponse.data) ? contactResponse.data : [];
+        setContactParams(contactData);
         
         // Buscar el texto de copyright
-        const copyrightParam = legalResponse.data.find((param: ContactParam) => param.clave === 'COPYRIGHT_TEXT');
+        const legalData = Array.isArray(legalResponse.data) ? legalResponse.data : [];
+        const copyrightParam = legalData.find((param: ContactParam) => param.clave === 'COPYRIGHT_TEXT');
         if (copyrightParam) {
           setCopyrightText(copyrightParam.valor);
         }
       } catch (error) {
         console.error('Error fetching contact and legal params:', error);
+        // En caso de error, establecer arrays vacíos
+        setContactParams([]);
       }
     };
 
@@ -183,11 +193,8 @@ const Layout = () => {
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
-        const token = localStorage.getItem('token');
         if (!user) return;
-        const res = await axios.get('/chat/unread-count', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await api.get('/chat/unread-count');
         setUnreadCount(res.data.count || 0);
       } catch {
         setUnreadCount(0);
@@ -198,6 +205,10 @@ const Layout = () => {
 
   // Función para obtener valor de parámetro por clave
   const getParamValue = (clave: string): string => {
+    if (!Array.isArray(contactParams)) {
+      console.warn('contactParams is not an array:', contactParams);
+      return '';
+    }
     const param = contactParams.find(p => p.clave === clave);
     return param ? param.valor : '';
   };

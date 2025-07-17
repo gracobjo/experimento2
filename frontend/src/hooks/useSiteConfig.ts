@@ -105,14 +105,18 @@ export const useMenuConfig = (role: 'ADMIN' | 'ABOGADO' | 'CLIENTE') => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchMenuConfig();
+    if (role) {
+      fetchMenuConfig();
+    }
   }, [role]);
 
   const fetchMenuConfig = async () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Fetching menu config for role:', role);
       const response = await axios.get(`/menu-config/role/${role}`);
+      console.log('Menu config response:', response.data);
       setMenuConfig(response.data);
     } catch (err) {
       console.error('Error fetching menu config:', err);
@@ -124,7 +128,7 @@ export const useMenuConfig = (role: 'ADMIN' | 'ABOGADO' | 'CLIENTE') => {
   };
 
   const getMenuItems = (): MenuItem[] => {
-    if (!menuConfig) return [];
+    if (!menuConfig || !menuConfig.items) return [];
     return menuConfig.items
       .filter(item => item.isVisible)
       .sort((a, b) => a.order - b.order);

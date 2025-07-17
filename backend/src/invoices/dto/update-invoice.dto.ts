@@ -31,17 +31,6 @@ export class UpdateInvoiceItemDto {
 
 export class UpdateInvoiceDto {
   @ApiProperty({
-    description: 'Fecha de la factura',
-    example: '2024-12-25',
-    required: false,
-    type: String,
-    format: 'date',
-  })
-  @IsDateString()
-  @IsOptional()
-  fechaFactura?: string;
-
-  @ApiProperty({
     description: 'ID del receptor',
     example: '123e4567-e89b-12d3-a456-426614174002',
     required: false,
@@ -103,7 +92,7 @@ export class UpdateInvoiceDto {
 
   @ApiProperty({
     description: 'Régimen IVA del emisor',
-    example: '01',
+    example: 'General',
     required: false,
     type: String,
   })
@@ -141,6 +130,17 @@ export class UpdateInvoiceDto {
   @IsDateString()
   @IsOptional()
   fechaOperacion?: string;
+
+  @ApiProperty({
+    description: 'Fecha de la factura',
+    example: '2024-12-25',
+    required: false,
+    type: String,
+    format: 'date',
+  })
+  @IsDateString()
+  @IsOptional()
+  fechaFactura?: string;
 
   @ApiProperty({
     description: 'Estado de la factura',
@@ -193,35 +193,4 @@ export class UpdateInvoiceDto {
   @IsString({ each: true })
   @IsOptional()
   provisionIds?: string[];
-
-  // Campos calculados que pueden ser actualizados
-  @ApiProperty({
-    description: 'Base imponible',
-    example: 100.00,
-    required: false,
-    type: Number,
-  })
-  @IsNumber()
-  @IsOptional()
-  baseImponible?: number;
-
-  @ApiProperty({
-    description: 'Cuota de IVA',
-    example: 21.00,
-    required: false,
-    type: Number,
-  })
-  @IsNumber()
-  @IsOptional()
-  cuotaIVA?: number;
-
-  @ApiProperty({
-    description: 'Importe total de la factura',
-    example: 121.00,
-    required: false,
-    type: Number,
-  })
-  @IsNumber()
-  @IsOptional()
-  importeTotal?: number;
 } 

@@ -75,27 +75,45 @@ export class CasesService {
   }
 
   async findAll(currentUserId: string, userRole: string) {
+    console.log(`🔍 CasesService.findAll - currentUserId: ${currentUserId}, userRole: ${userRole}`);
+    
     let whereClause = {};
 
     // Filtrar por rol del usuario
     if (userRole === 'CLIENTE') {
+      console.log(`👤 Buscando perfil de cliente para userId: ${currentUserId}`);
+      
       // Clientes solo ven sus propios expedientes
       const client = await this.prisma.client.findUnique({
         where: { userId: currentUserId }
       });
 
+      console.log(`📋 Perfil de cliente encontrado:`, client);
+
       if (!client) {
+        console.log(`❌ No se encontró perfil de cliente para userId: ${currentUserId}`);
         throw new NotFoundException('Cliente no encontrado');
       }
 
       whereClause = { clientId: client.id };
+      console.log(`🔍 Filtro aplicado: clientId = ${client.id}`);
+      
+      // Verificar que existen expedientes con ese clientId
+      const expedientesCount = await this.prisma.expediente.count({
+        where: { clientId: client.id }
+      });
+      console.log(`🔍 Total de expedientes con clientId ${client.id}: ${expedientesCount}`);
+      
     } else if (userRole === 'ABOGADO') {
       // Abogados ven expedientes asignados a ellos
       whereClause = { lawyerId: currentUserId };
+      console.log(`🔍 Filtro aplicado: lawyerId = ${currentUserId}`);
     }
     // Los admins ven todos los expedientes (whereClause vacío)
 
-    return this.prisma.expediente.findMany({
+    console.log(`🔍 Where clause final:`, whereClause);
+
+    const expedientes = await this.prisma.expediente.findMany({
       where: whereClause,
       include: {
         client: {
@@ -126,6 +144,13 @@ export class CasesService {
         createdAt: 'desc'
       },
     });
+
+    console.log(`📊 Expedientes encontrados: ${expedientes.length}`);
+    expedientes.forEach(exp => {
+      console.log(`  - ${exp.id}: ${exp.title} (clientId: ${exp.clientId})`);
+    });
+
+    return expedientes;
   }
 
 
