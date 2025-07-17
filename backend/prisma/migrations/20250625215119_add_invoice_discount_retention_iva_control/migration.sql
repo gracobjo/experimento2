@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Invoice" ADD COLUMN     "aplicarIVA" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "descuento" DOUBLE PRECISION,
+ADD COLUMN     "retencion" DOUBLE PRECISION;

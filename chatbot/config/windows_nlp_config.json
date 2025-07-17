@@ -1,0 +1,28 @@
+{
+  "windows_settings": {
+    "use_local_llm": true,
+    "use_semantic_similarity": true,
+    "use_huggingface_fallback": true,
+    "model_path": "./models/llama-2-7b-chat.Q4_0.gguf",
+    "max_tokens": 100,
+    "temperature": 0.7,
+    "similarity_threshold": 0.6
+  },
+  "performance": {
+    "n_threads": 2,
+    "n_gpu_layers": 0,
+    "context_length": 1024,
+    "memory_optimization": true
+  },
+  "fallback_order": [
+    "local_llm",
+    "semantic_similarity",
+    "huggingface",
+    "knowledge_base"
+  ],
+  "windows_compatibility": {
+    "avoid_compilation": true,
+    "use_precompiled_binaries": true,
+    "reduced_memory_usage": true
+  }
+}

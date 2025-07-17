@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factura FAC-C1-001</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #fff;
+        }
+
+        .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 15px;
+            background: white;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #2563eb;
+        }
+
+        .company-info {
+            flex: 1;
+        }
+
+        .company-logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 8px;
+        }
+
+        .company-details {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .invoice-info {
+            text-align: right;
+            flex: 1;
+        }
+
+        .invoice-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 8px;
+        }
+
+        .invoice-number {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .invoice-date {
+            color: #666;
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+
+        .invoice-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-emitida { background: #dcfce7; color: #166534; }
+        .status-pagada { background: #dbeafe; color: #1e40af; }
+        .status-anulada { background: #fee2e2; color: #991b1b; }
+
+        /* QR Code */
+        .qr-section {
+            text-align: center;
+            margin: 10px 0;
+            padding: 8px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+
+        .qr-code {
+            margin: 0 auto;
+            width: 80px;
+            height: 80px;
+            background: #e5e7eb;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .qr-code img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .qr-text {
+            font-size: 8px;
+            color: #666;
+            background: #f3f4f6;
+            padding: 3px;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        /* Parties Section */
+        .parties {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            gap: 20px;
+        }
+        
+        .party {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .party {
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 4px solid #2563eb;
+        }
+
+        .party-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 10px;
+        }
+
+        .party-info {
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+
+        .party-label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        /* Items Table */
+        .items-section {
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 10px;
+            padding-bottom: 3px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .items-table th {
+            background: #2563eb;
+            color: white;
+            padding: 6px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .items-table td {
+            padding: 6px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 12px;
+        }
+
+        .items-table tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        .items-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+
+        /* Discounts */
+        .discounts-section {
+            margin-bottom: 20px;
+        }
+
+        .discount-box {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .discount-label {
+            font-weight: bold;
+            color: #92400e;
+        }
+
+        .discount-amount {
+            font-weight: bold;
+            color: #92400e;
+            font-size: 16px;
+        }
+
+        /* Provisions */
+        .provisions-section {
+            margin-bottom: 20px;
+        }
+
+        .provisions-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .provisions-table th {
+            background: #059669;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .provisions-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .provisions-table tr:nth-child(even) {
+            background: #f0fdf4;
+        }
+
+        /* Totals */
+        .totals-section {
+            margin-bottom: 20px;
+        }
+
+        .totals-table {
+            width: 100%;
+            max-width: 300px;
+            margin-left: auto;
+        }
+
+        .totals-table tr {
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .totals-table td {
+            padding: 6px 0;
+            font-size: 12px;
+        }
+
+        .totals-table .total-row {
+            border-top: 2px solid #2563eb;
+            font-weight: bold;
+            font-size: 16px;
+            color: #2563eb;
+        }
+
+        /* Additional Info */
+        .additional-info {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .additional-info h3 {
+            color: #2563eb;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .info-item {
+            margin-bottom: 6px;
+            font-size: 11px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 2px solid #e5e7eb;
+            text-align: center;
+            color: #666;
+            font-size: 11px;
+        }
+
+        /* Print styles */
+        @media print {
+            body { margin: 0; }
+            .invoice-container { padding: 20px; }
+            .qr-code { background: white !important; }
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .parties { 
+                flex-direction: column; 
+                gap: 10px;
+            }
+            .info-grid { grid-template-columns: 1fr; }
+            .header { flex-direction: column; }
+            .invoice-info { text-align: left; margin-top: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="company-info">
+                <div class="company-logo">🏛️ Despacho Legal</div>
+                <div class="company-details">
+                    <div>Servicios Jurídicos Profesionales</div>
+                    <div>Especialistas en Derecho Civil y Mercantil</div>
+                    <div>Tel: +34 900 123 456 | Email: info@despacholegal.es</div>
+                </div>
+            </div>
+            <div class="invoice-info">
+                <div class="invoice-title">FACTURA</div>
+                <div class="invoice-number">FAC-C1-001</div>
+                <div class="invoice-date">2025-07-14</div>
+                <div class="invoice-status status-emitida">emitida</div>
+            </div>
+        </div>
+
+        <!-- QR Code -->
+        <div class="qr-section">
+            <div class="qr-code">
+                <img src="data:image/png;base64,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" alt="QR Code" width="80" height="80">
+            </div>
+            <div class="qr-text">NIF:lawyer1@example.com|NUM:FAC-C1-001|FEC:2025-07-14|IMP:544.5</div>
+        </div>
+
+        <!-- Parties -->
+        <div class="parties">
+            <div class="party">
+                <div class="party-title">DATOS DEL EMISOR</div>
+                <div class="party-info">
+                    <span class="party-label">Nombre:</span> Lawyer Uno
+                </div>
+                <div class="party-info">
+                    <span class="party-label">Email:</span> lawyer1@example.com
+                </div>
+                <div class="party-info">
+                    <span class="party-label">Régimen IVA:</span> General
+                </div>
+            </div>
+            <div class="party">
+                <div class="party-title">DATOS DEL RECEPTOR</div>
+                <div class="party-info">
+                    <span class="party-label">Nombre:</span> Cliente Uno
+                </div>
+                <div class="party-info">
+                    <span class="party-label">Email:</span> client1@example.com
+                </div>
+                
+                <div class="party-info">
+                    <span class="party-label">Expediente:</span> Expediente A de Cliente Uno
+                </div>
+                
+            </div>
+        </div>
+
+        <!-- Items -->
+        
+        <div class="items-section">
+            <div class="section-title">CONCEPTOS</div>
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Descripción</th>
+                        <th class="text-center">Cantidad</th>
+                        <th class="text-right">Precio Unitario</th>
+                        <th class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+        <tr>
+          <td>Consulta y asesoría legal</td>
+          <td class="text-center">1</td>
+          <td class="text-right">350.00 €</td>
+          <td class="text-right">350.00 €</td>
+        </tr>
+      
+        <tr>
+          <td>Documentación y trámites</td>
+          <td class="text-center">1</td>
+          <td class="text-right">150.00 €</td>
+          <td class="text-right">150.00 €</td>
+        </tr>
+      
+                </tbody>
+            </table>
+        </div>
+        
+
+        <!-- Discounts -->
+        
+        <div class="discounts-section">
+            <div class="section-title">DESCUENTOS</div>
+            <div class="discount-box">
+                <span class="discount-label">Descuento (10%)</span>
+                <span class="discount-amount">-50.00 €</span>
+            </div>
+        </div>
+        
+
+        <!-- Provisions -->
+        
+
+        <!-- Totals -->
+        <div class="totals-section">
+            <div class="section-title">TOTALES</div>
+            <table class="totals-table">
+                <tr>
+                    <td>Base Imponible:</td>
+                    <td class="text-right">450.00 €</td>
+                </tr>
+                <tr>
+                    <td>IVA (21%):</td>
+                    <td class="text-right">94.50 €</td>
+                </tr>
+                <tr class="total-row">
+                    <td>TOTAL:</td>
+                    <td class="text-right">544.50 €</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Additional Info -->
+        <div class="additional-info">
+            <h3>INFORMACIÓN ADICIONAL</h3>
+            <div class="info-grid">
+                <div>
+                    <div class="info-item">
+                        <span class="info-label">Método de pago:</span> Transferencia
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Clave de operación:</span> 01
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Fecha de operación:</span> 2025-07-14
+                    </div>
+                </div>
+                <div>
+                    <div class="info-item">
+                        <span class="info-label">Fecha de creación:</span> 2025-07-14
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Esta factura cumple con la normativa española de facturación electrónica</p>
+            <p>Factura generada automáticamente por el sistema de gestión legal</p>
+        </div>
+    </div>
+</body>
+</html> 
