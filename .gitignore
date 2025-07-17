@@ -1,0 +1,33 @@
+# Archivos grandes de modelos
+chatbot/models/*.gguf
+chatbot/models/*.bin
+chatbot/models/*.safetensors
+
+# Archivos de Fuentes (librerías externas)
+Fuentes/
+
+# Archivos temporales
+*.tmp
+*.temp
+*.log
+*.lock
+
+# Dependencias
+node_modules/
+__pycache__/
+*.pyc
+
+# Archivos de configuración local
+.env
+.env.local
+.env.production
+
+# Archivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db 
