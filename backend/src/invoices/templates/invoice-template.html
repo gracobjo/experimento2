@@ -2,446 +2,293 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=800, initial-scale=1.0">
     <title>Factura {{numeroFactura}}</title>
     <style>
-        * {
+        @import url('https://fonts.googleapis.com/css?family=Open+Sans:400,700&display=swap');
+        body {
+            font-family: Calibri, 'Open Sans', Arial, sans-serif;
+            color: #222;
+            background: #fff;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: #fff;
-        }
-
         .invoice-container {
-            max-width: 800px;
+            width: 210mm;
+            min-height: 297mm;
             margin: 0 auto;
-            padding: 15px;
-            background: white;
+            padding: 24px 32px 0 32px;
+            background: #fff;
+            position: relative;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
         }
-
-        /* Header */
+        /* Encabezado */
         .header {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 15px;
-            padding-bottom: 12px;
-            border-bottom: 3px solid #2563eb;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 12px;
         }
-
-        .company-info {
-            flex: 1;
-        }
-
-        .company-logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2563eb;
-            margin-bottom: 8px;
-        }
-
-        .company-details {
-            color: #666;
-            font-size: 12px;
-        }
-
-        .invoice-info {
-            text-align: right;
-            flex: 1;
-        }
-
-        .invoice-title {
-            font-size: 28px;
-            font-weight: bold;
-            color: #2563eb;
-            margin-bottom: 8px;
-        }
-
-        .invoice-number {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 4px;
-        }
-
-        .invoice-date {
-            color: #666;
-            margin-bottom: 4px;
-            font-size: 12px;
-        }
-
-        .invoice-status {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .status-emitida { background: #dcfce7; color: #166534; }
-        .status-pagada { background: #dbeafe; color: #1e40af; }
-        .status-anulada { background: #fee2e2; color: #991b1b; }
-
-        /* QR Code */
-        .qr-section {
-            text-align: center;
-            margin: 10px 0;
-            padding: 8px;
-            background: #f8fafc;
-            border-radius: 8px;
-        }
-
-        .qr-code {
-            margin: 0 auto;
-            width: 80px;
-            height: 80px;
-            background: #e5e7eb;
-            text-align: center;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            display: block;
-        }
-
-        .qr-code img {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 0 auto;
-        }
-
-        .qr-text {
-            font-size: 8px;
-            color: #666;
-            background: #f3f4f6;
-            padding: 3px;
-            border-radius: 4px;
-            font-family: monospace;
-            word-break: break-all;
-        }
-
-        /* Parties Section */
-        .parties {
+        .header-row {
+            width: 100%;
             display: flex;
+            align-items: flex-start;
             justify-content: space-between;
-            margin-bottom: 15px;
-            gap: 20px;
         }
-        
-        .party {
+        .logo {
+            width: 48px;
+            height: 48px;
+            margin-right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        .logo span {
+            font-size: 40px;
+        }
+        .title {
             flex: 1;
-            min-width: 0;
-        }
-
-        .party {
-            padding: 12px;
-            background: #f8fafc;
-            border-radius: 8px;
-            border-left: 4px solid #2563eb;
-        }
-
-        .party-title {
-            font-size: 14px;
+            text-align: center;
+            font-size: 2.1rem;
             font-weight: bold;
-            color: #2563eb;
+            color: #003366;
+            letter-spacing: 1px;
+        }
+        .lema {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-top: 2px;
             margin-bottom: 10px;
         }
-
-        .party-info {
-            margin-bottom: 6px;
-            font-size: 12px;
+        /* Bloques de datos */
+        .data-blocks {
+            display: flex;
+            justify-content: space-between;
+            gap: 32px;
+            margin-bottom: 10px;
         }
-
+        .party-block {
+            flex: 1;
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-size: 1rem;
+            min-width: 0;
+        }
+        .party-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #003366;
+            margin-bottom: 8px;
+        }
+        .party-info {
+            margin-bottom: 4px;
+            font-size: 0.98rem;
+        }
         .party-label {
             font-weight: bold;
             color: #555;
         }
-
-        /* Items Table */
-        .items-section {
-            margin-bottom: 15px;
-        }
-
-        .section-title {
-            font-size: 16px;
-            font-weight: bold;
-            color: #2563eb;
+        /* Datos de factura */
+        .factura-datos {
+            text-align: center;
             margin-bottom: 10px;
-            padding-bottom: 3px;
-            border-bottom: 2px solid #e5e7eb;
+            font-size: 1.1rem;
         }
-
+        .factura-datos .factura-num {
+            font-weight: bold;
+            color: #003366;
+            margin: 0 8px;
+        }
+        .factura-datos .factura-status {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: #dcfce7;
+            color: #166534;
+            margin-left: 8px;
+        }
+        /* Tabla de conceptos */
+        .items-section {
+            margin-bottom: 10px;
+        }
         .items-table {
             width: 100%;
             border-collapse: collapse;
             background: white;
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            margin-bottom: 15px;
-            page-break-inside: avoid;
+            font-size: 0.98rem;
+            margin-bottom: 0;
         }
-
         .items-table th {
-            background: #2563eb;
+            background: #003366;
             color: white;
-            padding: 8px 6px;
+            padding: 7px 5px;
             text-align: left;
             font-weight: 600;
-            font-size: 12px;
+            font-size: 1rem;
             border: none;
         }
-
         .items-table td {
-            padding: 8px 6px;
+            padding: 7px 5px;
             border-bottom: 1px solid #e5e7eb;
-            font-size: 12px;
+            font-size: 0.98rem;
             vertical-align: top;
         }
-
         .items-table tr:last-child td {
             border-bottom: none;
         }
-
         .items-table tr:nth-child(even) {
             background-color: #f8fafc;
         }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .text-right {
-            text-align: right;
-        }
-
-        /* Totals Table */
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        /* Totales y descuentos */
         .totals-section {
-            margin-bottom: 15px;
-        }
-
-        .totals-table {
             width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .totals-table {
+            min-width: 260px;
             border-collapse: collapse;
             background: white;
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            page-break-inside: avoid;
+            font-size: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
-
         .totals-table td {
-            padding: 8px 12px;
+            padding: 7px 12px;
             border-bottom: 1px solid #e5e7eb;
-            font-size: 12px;
         }
-
         .totals-table tr:last-child td {
             border-bottom: none;
         }
-
         .total-row {
-            background: #2563eb;
+            background: #003366;
             color: white;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 1.1rem;
         }
-
-        .total-row td {
-            border-bottom: none;
-        }
-
-        /* Discounts */
-        .discounts-section {
-            margin-bottom: 15px;
-        }
-
-        .discount-box {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 12px;
+        .discount-row {
             background: #fef3c7;
-            border: 1px solid #f59e0b;
-            border-radius: 6px;
-            font-size: 12px;
-        }
-
-        .discount-label {
-            font-weight: bold;
             color: #92400e;
-        }
-
-        .discount-amount {
             font-weight: bold;
-            color: #dc2626;
         }
-
-        /* Provisions */
-        .provisions-section {
-            margin-bottom: 15px;
-        }
-
-        .provisions-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
+        /* QR en esquina inferior derecha */
+        .qr-absolute {
+            position: absolute;
+            right: 32px;
+            bottom: 60px;
+            width: 95px;
+            height: 95px;
+            background: #fff;
             border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            page-break-inside: avoid;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            z-index: 10;
         }
-
-        .provisions-table th {
-            background: #059669;
-            color: white;
-            padding: 8px 6px;
-            text-align: left;
-            font-weight: 600;
-            font-size: 12px;
-            border: none;
+        .qr-absolute img {
+            width: 90px;
+            height: 90px;
+            display: block;
+            margin: 0 auto;
         }
-
-        .provisions-table td {
-            padding: 8px 6px;
-            border-bottom: 1px solid #e5e7eb;
-            font-size: 12px;
-        }
-
-        .provisions-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .provisions-table tr:nth-child(even) {
-            background-color: #f0fdf4;
-        }
-
-        /* Additional Info */
-        .additional-info {
-            background: #f8fafc;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-
-        .additional-info h3 {
-            color: #2563eb;
-            margin-bottom: 10px;
-            font-size: 14px;
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .info-item {
-            margin-bottom: 6px;
-            font-size: 11px;
-        }
-
-        .info-label {
-            font-weight: bold;
-            color: #555;
-        }
-
-        /* Footer */
-        .footer {
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 2px solid #e5e7eb;
-            text-align: center;
+        .qr-legend {
+            font-size: 8px;
             color: #666;
-            font-size: 11px;
+            background: #f3f4f6;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            margin-top: 2px;
+            text-align: center;
+            width: 100%;
         }
-
-        /* Print styles */
-        @media print {
-            body { margin: 0; }
-            .invoice-container { padding: 20px; }
-            .qr-code { background: white !important; }
+        /* Pie de página y espacio firma */
+        .footer {
+            width: 100%;
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            padding: 0 32px 18px 32px;
+            box-sizing: border-box;
+            text-align: left;
+            color: #666;
+            font-size: 0.95rem;
         }
-
+        .firma-block {
+            margin-top: 12px;
+            height: 3cm;
+            border: 1px dashed #bbb;
+            border-radius: 8px;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #bbb;
+            font-size: 1rem;
+        }
         /* Responsive */
-        @media (max-width: 600px) {
-            .parties { 
-                flex-direction: column; 
-                gap: 10px;
-            }
-            .info-grid { grid-template-columns: 1fr; }
-            .header { flex-direction: column; }
-            .invoice-info { text-align: left; margin-top: 20px; }
+        @media (max-width: 900px) {
+            .invoice-container { padding: 8px; }
+            .qr-absolute { right: 8px; }
+            .footer { padding: 0 8px 12px 8px; }
         }
     </style>
 </head>
 <body>
     <div class="invoice-container">
-        <!-- Header -->
+        <!-- Encabezado -->
         <div class="header">
-            <div class="company-info">
-                <div class="company-logo">🏛️ Despacho Legal</div>
-                <div class="company-details">
-                    <div>Servicios Jurídicos Profesionales</div>
-                    <div>Especialistas en Derecho Civil y Mercantil</div>
-                    <div>Tel: +34 900 123 456 | Email: info@despacholegal.es</div>
-                </div>
+            <div class="header-row">
+                <div class="logo"><span>🏛️</span></div>
+                <div class="title">Despacho Legal</div>
+                <div style="width:48px;"></div>
             </div>
-            <div class="invoice-info">
-                <div class="invoice-title">FACTURA</div>
-                <div class="invoice-number">{{numeroFactura}}</div>
-                <div class="invoice-date">{{fechaFactura}}</div>
-                <div class="invoice-status status-{{estado}}">{{estado}}</div>
-            </div>
+            <div class="lema">Servicios Jurídicos Profesionales<br>Especialistas en Derecho Civil y Mercantil</div>
         </div>
-
-        <!-- QR Code -->
-        <div class="qr-section">
-            <div class="qr-code">
-                <img src="{{qrImage}}" alt="QR Code" width="80" height="80">
+        <!-- Bloques de datos -->
+        <div class="data-blocks">
+            <div class="party-block">
+                <div class="party-title">EMISOR</div>
+                <div class="party-info"><span class="party-label">Nombre:</span> {{emisor.nombre}}</div>
+                <div class="party-info"><span class="party-label">Email:</span> {{emisor.email}}</div>
+                <div class="party-info"><span class="party-label">Régimen IVA:</span> {{regimenIvaEmisor}}</div>
             </div>
-            <div class="qr-text">{{qrData}}</div>
-        </div>
-
-        <!-- Parties -->
-        <div class="parties">
-            <div class="party">
-                <div class="party-title">DATOS DEL EMISOR</div>
-                <div class="party-info">
-                    <span class="party-label">Nombre:</span> {{emisor.nombre}}
-                </div>
-                <div class="party-info">
-                    <span class="party-label">Email:</span> {{emisor.email}}
-                </div>
-                <div class="party-info">
-                    <span class="party-label">Régimen IVA:</span> {{regimenIvaEmisor}}
-                </div>
-            </div>
-            <div class="party">
-                <div class="party-title">DATOS DEL RECEPTOR</div>
-                <div class="party-info">
-                    <span class="party-label">Nombre:</span> {{receptor.nombre}}
-                </div>
-                <div class="party-info">
-                    <span class="party-label">Email:</span> {{receptor.email}}
-                </div>
+            <div class="party-block">
+                <div class="party-title">RECEPTOR</div>
+                <div class="party-info"><span class="party-label">Nombre:</span> {{receptor.nombre}}</div>
+                <div class="party-info"><span class="party-label">Email:</span> {{receptor.email}}</div>
                 {{#if expediente}}
-                <div class="party-info">
-                    <span class="party-label">Expediente:</span> {{expediente.titulo}}
-                </div>
+                <div class="party-info"><span class="party-label">Expediente:</span> {{expediente.titulo}}</div>
                 {{/if}}
             </div>
         </div>
-
-        <!-- Items -->
+        <!-- Datos de factura -->
+        <div class="factura-datos">
+            <span class="factura-num">FACTURA {{numeroFactura}}</span>
+            <span>{{fechaFactura}}</span>
+            <span class="factura-status">{{estado}}</span>
+        </div>
+        <!-- Conceptos -->
         {{#if items}}
         <div class="items-section">
-            <div class="section-title">CONCEPTOS</div>
             <table class="items-table">
                 <thead>
                     <tr>
@@ -464,94 +311,39 @@
             </table>
         </div>
         {{/if}}
-
-        <!-- Discounts -->
-        {{#if descuento}}
-        <div class="discounts-section">
-            <div class="section-title">DESCUENTOS</div>
-            <div class="discount-box">
-                <span class="discount-label">Descuento ({{descuento}}%)</span>
-                <span class="discount-amount">-{{descuentoCalculado}} €</span>
-            </div>
-        </div>
-        {{/if}}
-
-        <!-- Provisions -->
-        {{#if provisiones}}
-        <div class="provisions-section">
-            <div class="section-title">PROVISIONES DE FONDOS ASOCIADAS</div>
-            <table class="provisions-table">
-                <thead>
-                    <tr>
-                        <th>Descripción</th>
-                        <th class="text-center">Fecha</th>
-                        <th class="text-right">Importe</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{#each provisiones}}
-                    <tr>
-                        <td>{{descripcion}}</td>
-                        <td class="text-center">{{fecha}}</td>
-                        <td class="text-right">{{importe}} €</td>
-                    </tr>
-                    {{/each}}
-                </tbody>
-            </table>
-        </div>
-        {{/if}}
-
-        <!-- Totals -->
+        <!-- Totales y descuentos -->
         <div class="totals-section">
-            <div class="section-title">TOTALES</div>
             <table class="totals-table">
+                {{#if descuento}}
+                <tr class="discount-row">
+                    <td>Descuento ({{descuento}}%)</td>
+                    <td class="text-right">-{{descuentoCalculado}} €</td>
+                </tr>
+                {{/if}}
                 <tr>
-                    <td>Base Imponible:</td>
+                    <td>Base Imponible</td>
                     <td class="text-right">{{baseImponible}} €</td>
                 </tr>
                 <tr>
-                    <td>IVA ({{tipoIVA}}%):</td>
+                    <td>IVA ({{tipoIVA}}%)</td>
                     <td class="text-right">{{cuotaIVA}} €</td>
                 </tr>
                 <tr class="total-row">
-                    <td>TOTAL:</td>
+                    <td>TOTAL</td>
                     <td class="text-right">{{importeTotal}} €</td>
                 </tr>
             </table>
         </div>
-
-        <!-- Additional Info -->
-        <div class="additional-info">
-            <h3>INFORMACIÓN ADICIONAL</h3>
-            <div class="info-grid">
-                <div>
-                    <div class="info-item">
-                        <span class="info-label">Método de pago:</span> {{metodoPago}}
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Clave de operación:</span> {{claveOperacion}}
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Fecha de operación:</span> {{fechaOperacion}}
-                    </div>
-                </div>
-                <div>
-                    <div class="info-item">
-                        <span class="info-label">Fecha de creación:</span> {{fechaCreacion}}
-                    </div>
-                    {{#if motivoAnulacion}}
-                    <div class="info-item">
-                        <span class="info-label">Motivo de anulación:</span> {{motivoAnulacion}}
-                    </div>
-                    {{/if}}
-                </div>
-            </div>
+        <!-- QR en esquina inferior derecha -->
+        <div class="qr-absolute">
+            <img src="{{qrImage}}" alt="QR Code" />
+            <div class="qr-legend">{{qrData}}</div>
         </div>
-
-        <!-- Footer -->
+        <!-- Pie de página y espacio para firma/certificado -->
         <div class="footer">
-            <p>Esta factura cumple con la normativa española de facturación electrónica</p>
-            <p>Factura generada automáticamente por el sistema de gestión legal</p>
+            <div>Firmado electrónicamente conforme a la ley vigente. Código de verificación incluido.</div>
+            <div style="font-size:0.93rem; color:#003366; margin-top:2px;">Verifica la autenticidad en: <span style="text-decoration:underline;">{{verificacionUrl}}</span></div>
+            <div class="firma-block">Espacio reservado para certificado/firma (3cm)</div>
         </div>
     </div>
 </body>

@@ -88,6 +88,14 @@ Permitir la configuración dinámica de menús y configuraciones del sitio sin n
 - **Mantenimiento**: Cambios sin reiniciar el sistema
 - **Escalabilidad**: Fácil agregar nuevas configuraciones
 
+### **4. 🧾 Facturación Electrónica Profesional y QR**
+
+- Generación de facturas en formato profesional, idéntico en previsualización y PDF descargado.
+- Inclusión de QR con datos fiscales y URL de verificación configurable.
+- Formato numérico español en todos los importes (miles con punto, decimales con coma).
+- Descarga e impresión profesional solo desde el PDF.
+- Gestión de la URL de verificación desde parámetros (`VERIFICACION_URL_BASE`).
+
 ## 📊 Métricas de Implementación
 
 ### **Código Implementado**

@@ -156,19 +156,19 @@ const AuditDashboard = () => {
       {summary && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-700">Total Acciones</h3>
+                            <h2 className="text-lg font-semibold text-gray-700">Total Acciones</h2>
             <p className="text-3xl font-bold text-blue-600">{summary.totalActions}</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-700">Facturas Creadas</h3>
+                            <h2 className="text-lg font-semibold text-gray-700">Facturas Creadas</h2>
             <p className="text-3xl font-bold text-green-600">{summary.actionsByType.CREATE || 0}</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-700">Facturas Firmadas</h3>
+                            <h2 className="text-lg font-semibold text-gray-700">Facturas Firmadas</h2>
             <p className="text-3xl font-bold text-purple-600">{summary.actionsByType.SIGN || 0}</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-700">Usuarios Activos</h3>
+                            <h2 className="text-lg font-semibold text-gray-700">Usuarios Activos</h2>
             <p className="text-3xl font-bold text-orange-600">{Object.keys(summary.actionsByUser).length}</p>
           </div>
         </div>

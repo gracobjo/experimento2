@@ -11,7 +11,33 @@ import { Role } from '@prisma/client';
 export class ParametrosController {
   constructor(private readonly parametrosService: ParametrosService) {}
 
-  // Endpoints públicos para el frontend
+  // Endpoints públicos para el frontend - DEBEN IR PRIMERO
+  @Get('services')
+  @ApiOperation({ 
+    summary: 'Obtener servicios parametrizables',
+    description: 'Devuelve la lista de servicios configurados para mostrar en el frontend'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Lista de servicios',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+          icon: { type: 'string' },
+          orden: { type: 'number' }
+        }
+      }
+    }
+  })
+  getServices() {
+    return this.parametrosService.findServices();
+  }
+
   @Get('contact')
   @ApiOperation({ 
     summary: 'Obtener parámetros de contacto',
@@ -343,5 +369,77 @@ export class ParametrosController {
   @ApiResponse({ status: 403, description: 'Acceso prohibido' })
   initializeDefaultParams() {
     return this.parametrosService.initializeDefaultParams();
+  }
+
+
+
+  @Post('services')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ 
+    summary: 'Agregar nuevo servicio',
+    description: 'Agrega un nuevo servicio parametrizable'
+  })
+  @ApiBody({ 
+    schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Título del servicio' },
+        description: { type: 'string', description: 'Descripción del servicio' },
+        icon: { type: 'string', description: 'Icono del servicio' },
+        orden: { type: 'number', description: 'Orden de visualización' }
+      },
+      required: ['title', 'description', 'icon']
+    }
+  })
+  @ApiResponse({ status: 201, description: 'Servicio agregado exitosamente' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Acceso prohibido' })
+  addService(@Body() serviceData: { title: string; description: string; icon: string; orden?: number }) {
+    return this.parametrosService.addService(serviceData);
+  }
+
+  @Put('services/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ 
+    summary: 'Actualizar servicio',
+    description: 'Actualiza un servicio existente'
+  })
+  @ApiParam({ name: 'id', description: 'ID del servicio', type: 'string' })
+  @ApiBody({ 
+    schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Título del servicio' },
+        description: { type: 'string', description: 'Descripción del servicio' },
+        icon: { type: 'string', description: 'Icono del servicio' },
+        orden: { type: 'number', description: 'Orden de visualización' }
+      }
+    }
+  })
+  @ApiResponse({ status: 200, description: 'Servicio actualizado exitosamente' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Acceso prohibido' })
+  updateService(@Param('id') id: string, @Body() serviceData: { title: string; description: string; icon: string; orden?: number }) {
+    return this.parametrosService.updateService(id, serviceData);
+  }
+
+  @Delete('services/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ 
+    summary: 'Eliminar servicio',
+    description: 'Elimina un servicio existente'
+  })
+  @ApiParam({ name: 'id', description: 'ID del servicio', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Servicio eliminado exitosamente' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Acceso prohibido' })
+  deleteService(@Param('id') id: string) {
+    return this.parametrosService.deleteService(id);
   }
 } 

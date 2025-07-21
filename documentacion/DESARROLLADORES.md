@@ -36,23 +36,62 @@
 
 ---
 
-## Modelo de Datos (ERD)
+## Modelo de Datos (ERD y Prisma)
 
-```mermaid
-erDiagram
-  User ||--o{ Case : has
-  User ||--o{ Document : uploads
-  User ||--o{ Invoice : issues
-  User ||--o{ Appointment : books
-  User ||--o{ Task : assigned
-  Case ||--o{ Document : contains
-  Case ||--o{ Invoice : related
-  Case ||--o{ Task : related
-  Invoice ||--o{ InvoiceItem : includes
-  User ||--o{ TeleassistanceSession : participates
-  TeleassistanceSession ||--o{ TeleassistanceMessage : has
-  User ||--o{ Contact : sends
+```prisma
+model Invoice {
+  id                String        @id @default(uuid())
+  numeroFactura     String        @unique
+  fechaFactura      DateTime
+  tipoFactura       String        // F=Completa, R=Rectificativa
+  emisorId          String        // User (abogado/despacho)
+  receptorId        String        // User (cliente)
+  expedienteId      String?       // Relación opcional con Expediente
+  importeTotal      Float
+  baseImponible     Float
+  cuotaIVA          Float
+  tipoIVA           Float
+  descuento         Float?        // Porcentaje de descuento
+  retencion         Float?        // Porcentaje de retención
+  aplicarIVA        Boolean       @default(true)
+  regimenIvaEmisor  String
+  claveOperacion    String
+  metodoPago        String
+  fechaOperacion    DateTime
+  xml               String?
+  xmlFirmado        String?
+  estado            String
+  motivoAnulacion   String?
+  selloTiempo       DateTime?
+  externalId        String?
+  sistemaEnvio      String?
+  fechaEnvio        DateTime?
+  paymentDate       DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  emisor            User          @relation("EmisorFacturas", fields: [emisorId], references: [id])
+  receptor          User          @relation("ReceptorFacturas", fields: [receptorId], references: [id])
+  expediente        Expediente?   @relation(fields: [expedienteId], references: [id])
+  items             InvoiceItem[]
+  provisionFondos   ProvisionFondos[]
+  auditHistory      InvoiceAuditHistory[]
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  description String
+  quantity    Int
+  unitPrice   Float
+  total       Float
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+}
 ```
+
+- Cada factura puede tener múltiples items y provisiones asociadas.
+- El parámetro `VERIFICACION_URL_BASE` permite configurar la URL base para la verificación de facturas (usada en QR y pie de página).
+- El backend genera el HTML y PDF de la factura con formato profesional, usando formato numérico español (`toLocaleString('es-ES')`).
+- El endpoint `/invoices/:id/html-preview` permite obtener la previsualización HTML idéntica al PDF.
 
 ---
 

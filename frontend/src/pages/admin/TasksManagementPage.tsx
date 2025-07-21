@@ -209,6 +209,7 @@ const TasksManagementPage = () => {
 
         {/* Filtros */}
         <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Filtros de Búsqueda</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -273,6 +274,9 @@ const TasksManagementPage = () => {
 
         {/* Lista de tareas */}
         <div className="bg-white shadow rounded-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900">Lista de Tareas</h2>
+          </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">

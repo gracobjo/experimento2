@@ -208,9 +208,9 @@ const ClientDocumentsPage = () => {
                   </span>
                 </div>
                 
-                <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate">
-                  {doc.originalName}
-                </h3>
+                                                      <h2 className="text-lg font-semibold text-gray-900 mb-2 truncate">
+                    {doc.originalName}
+                  </h2>
                 
                 {doc.description && (
                   <p className="text-gray-600 text-sm mb-4 line-clamp-2">

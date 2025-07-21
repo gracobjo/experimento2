@@ -86,7 +86,9 @@ const AdminDashboard = () => {
 
         {/* Estadísticas principales */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Estadísticas Principales</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -151,11 +153,14 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
+          </>
         )}
 
         {/* Estadísticas detalladas */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Estadísticas Detalladas</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900">Usuarios por Rol</h3>
@@ -222,12 +227,13 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
+          </>
         )}
 
         {/* Navegación rápida */}
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Acciones Rápidas</h3>
+            <h2 className="text-2xl font-bold text-gray-900">Navegación Rápida</h2>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

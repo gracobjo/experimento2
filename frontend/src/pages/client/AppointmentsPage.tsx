@@ -167,7 +167,7 @@ const AppointmentsPage = () => {
     <div key={appointment.id} className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">{appointment.lawyer.name}</h3>
+                                  <h2 className="text-lg font-semibold text-gray-900">{appointment.lawyer.name}</h2>
           <p className="text-sm text-gray-600">{appointment.lawyer.email}</p>
         </div>
         <div className="flex items-center space-x-2">

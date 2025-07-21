@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  
   const [stats, setStats] = useState({
     totalCases: 0,
     activeCases: 0,
@@ -13,10 +14,259 @@ const Dashboard = () => {
     recentDocuments: 0,
     totalUsers: 0
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  
+  // Refs para controlar estado entre renders
+  const lastUserIdRef = useRef<string | null>(null);
+  const isInitializedRef = useRef(false);
+  const isProcessingRef = useRef(false);
+  const executionCountRef = useRef(0);
 
+  // Función para cargar datos del dashboard
+  const loadDashboardData = async () => {
+    if (!user) return;
+
+    executionCountRef.current += 1;
+    console.log(`Dashboard loadDashboardData: user (execution #${executionCountRef.current})`, user);
+
+    const currentUserId = user.id;
+    console.log(`Dashboard loadDashboardData: Current user ID: ${currentUserId}, Last user ID: ${lastUserIdRef.current}, Initialized: ${isInitializedRef.current}`);
+
+    if (lastUserIdRef.current === currentUserId && isInitializedRef.current) {
+      console.log('Dashboard loadDashboardData: Already initialized for this user, skipping');
+      return;
+    }
+
+    if (isProcessingRef.current) {
+      console.log('Dashboard loadDashboardData: Already processing, skipping duplicate execution');
+      return;
+    }
+
+    isProcessingRef.current = true;
+    lastUserIdRef.current = currentUserId;
+    console.log('Dashboard loadDashboardData: Starting data fetch for user:', currentUserId);
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const requests = [
+        api.get('/cases/stats'),
+        api.get('/appointments'),
+        api.get('/documents/stats')
+      ];
+
+      if (user.role === 'ADMIN') {
+        requests.push(api.get('/users'));
+      }
+
+      requests.push(api.get('/cases/recent'));
+
+      if (user.role === 'ABOGADO') {
+        requests.push(api.get('/cases/recent-activities'));
+      }
+
+      const results = await Promise.allSettled(requests);
+
+      results.forEach((res, idx) => {
+        if (res.status === 'fulfilled') {
+          console.log(`Dashboard stats result[${idx}]`, (res as PromiseFulfilledResult<any>).value.data);
+        } else {
+          console.error(`Dashboard stats error[${idx}]`, (res as PromiseRejectedResult).reason);
+        }
+      });
+
+      // Casos
+      const casesStats = results[0].status === 'fulfilled' ? (results[0] as PromiseFulfilledResult<any>).value.data : {};
+      // Citas
+      const appointments = results[1].status === 'fulfilled' ? (results[1] as PromiseFulfilledResult<any>).value.data : [];
+      // Documentos
+      const documentsStats = results[2].status === 'fulfilled' ? (results[2] as PromiseFulfilledResult<any>).value.data : {};
+      // Usuarios (solo para admin)
+      const users = user.role === 'ADMIN' && results[3] && results[3].status === 'fulfilled' ? (results[3] as PromiseFulfilledResult<any>).value.data : [];
+      // Actividad reciente
+      const recentCases = results[user.role === 'ADMIN' ? 4 : 3] && results[user.role === 'ADMIN' ? 4 : 3].status === 'fulfilled' ? (results[user.role === 'ADMIN' ? 4 : 3] as PromiseFulfilledResult<any>).value.data : [];
+      // Actividad reciente completa para abogados
+      const recentActivities = user.role === 'ABOGADO' && results[4] && results[4].status === 'fulfilled' ? (results[4] as PromiseFulfilledResult<any>).value.data : null;
+      
+      // Calcular valores según el rol
+      let totalCases = 0, activeCases = 0, pendingAppointments = 0, recentDocuments = 0, totalUsers = 0;
+      if (user.role === 'ADMIN' || user.role === 'ABOGADO' || user.role === 'CLIENTE') {
+        totalCases = casesStats.total || 0;
+        activeCases = (casesStats.abiertos || 0) + (casesStats.enProceso || 0);
+      }
+      
+      // Citas: próximas (futuras)
+      if (Array.isArray(appointments)) {
+        const now = new Date();
+        if (user.role === 'ADMIN') {
+          pendingAppointments = appointments.filter((a: any) => new Date(a.date) > now).length;
+        } else if (user.role === 'ABOGADO' || user.role === 'CLIENTE') {
+          // Citas de hoy
+          pendingAppointments = appointments.filter((a: any) => {
+            const d = new Date(a.date);
+            return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+          }).length;
+        }
+      }
+      
+      // Documentos
+      if (documentsStats && typeof documentsStats.total === 'number') {
+        recentDocuments = documentsStats.total;
+      }
+      
+      // Usuarios (solo para admin)
+      if (user.role === 'ADMIN' && Array.isArray(users)) {
+        totalUsers = users.length;
+      }
+      
+      setStats({
+        totalCases,
+        activeCases,
+        pendingAppointments,
+        recentDocuments,
+        totalUsers
+      });
+
+      // Generar actividad reciente basada en datos reales
+      const activity: Array<{
+        action: string; 
+        time: string; 
+        type: string;
+        id?: string;
+        link?: string;
+        entityType?: string;
+      }> = [];
+      
+      // Para abogados, usar la actividad reciente completa
+      if (user.role === 'ABOGADO' && recentActivities) {
+        if (recentActivities.cases && recentActivities.cases.length > 0) {
+          recentActivities.cases.forEach((caseItem: any) => {
+            activity.push({
+              action: `Expediente: ${caseItem.title}`,
+              time: caseItem.createdAt,
+              type: 'case',
+              id: caseItem.id,
+              link: `/lawyer/cases/${caseItem.id}`,
+              entityType: 'Expediente'
+            });
+          });
+        }
+
+        // Agregar tareas recientes
+        if (recentActivities.tasks && recentActivities.tasks.length > 0) {
+          recentActivities.tasks.forEach((task: any) => {
+            const clientName = task.client?.user?.name || 'Cliente';
+            const expedienteTitle = task.expediente?.title ? ` - ${task.expediente.title}` : '';
+            activity.push({
+              action: `Tarea: ${task.title} (${clientName}${expedienteTitle})`,
+              time: new Date(task.createdAt).toLocaleDateString(),
+              type: 'task',
+              id: task.id,
+              link: `/lawyer/tasks/${task.id}`,
+              entityType: 'Tarea'
+            });
+          });
+        }
+
+        // Agregar citas recientes
+        if (recentActivities.appointments && recentActivities.appointments.length > 0) {
+          recentActivities.appointments.forEach((appointment: any) => {
+            const clientName = appointment.client?.user?.name || 'Cliente';
+            activity.push({
+              action: `Cita: ${appointment.title} (${clientName})`,
+              time: new Date(appointment.date).toLocaleDateString(),
+              type: 'appointment',
+              id: appointment.id,
+              link: `/lawyer/appointments/${appointment.id}`,
+              entityType: 'Cita'
+            });
+          });
+        }
+
+        // Agregar provisiones recientes
+        if (recentActivities.provisions && recentActivities.provisions.length > 0) {
+          recentActivities.provisions.forEach((provision: any) => {
+            const clientName = provision.client?.user?.name || 'Cliente';
+            activity.push({
+              action: `Provisión: ${provision.concept} (${clientName})`,
+              time: new Date(provision.createdAt).toLocaleDateString(),
+              type: 'provision',
+              id: provision.id,
+              link: `/lawyer/provisiones/${provision.id}`,
+              entityType: 'Provisión'
+            });
+          });
+        }
+      } else if (user.role === 'CLIENTE') {
+        // Actividad reciente mejorada para clientes
+        if (Array.isArray(recentCases)) {
+          recentCases.forEach((caseItem: any) => {
+            activity.push({
+              action: `Expediente: ${caseItem.title}`,
+              time: caseItem.createdAt,
+              type: 'case',
+              id: caseItem.id,
+              link: `/client/cases/${caseItem.id}`,
+              entityType: 'Expediente'
+            });
+          });
+        }
+
+        if (Array.isArray(appointments)) {
+          appointments.slice(0, 3).forEach((appointment: any) => {
+            activity.push({
+              action: `Cita: ${appointment.title}`,
+              time: new Date(appointment.date).toLocaleDateString(),
+              type: 'appointment',
+              id: appointment.id,
+              link: `/client/appointments/${appointment.id}`,
+              entityType: 'Cita'
+            });
+          });
+        }
+      } else {
+        // Actividad reciente para admin
+        if (Array.isArray(recentCases)) {
+          recentCases.forEach((caseItem: any) => {
+            activity.push({
+              action: `Expediente: ${caseItem.title}`,
+              time: caseItem.createdAt,
+              type: 'case',
+              id: caseItem.id,
+              link: `/admin/cases/${caseItem.id}`,
+              entityType: 'Expediente'
+            });
+          });
+        }
+
+        // Agregar usuarios (solo para admin)
+        if (user.role === 'ADMIN' && totalUsers > 0) {
+          activity.push({
+            action: `${totalUsers} usuarios registrados`,
+            time: 'Total',
+            type: 'user',
+            link: '/admin/users',
+            entityType: 'user'
+          });
+        }
+      }
+
+      setRecentActivity(activity.slice(0, 4)); // Máximo 4 actividades
+      isInitializedRef.current = true;
+      console.log('Dashboard loadDashboardData: Data fetch completed successfully for user:', currentUserId);
+    } catch (err: any) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Error al cargar las estadísticas del dashboard');
+    } finally {
+      isProcessingRef.current = false;
+      setLoading(false);
+    }
+  };
+
+  // useEffect para redirección
   useEffect(() => {
     if (user) {
       // Redirigir según el rol si está en /dashboard
@@ -28,6 +278,18 @@ const Dashboard = () => {
       }
     }
   }, [user, navigate]);
+
+  // useEffect para cargar datos cuando cambia el usuario
+  useEffect(() => {
+    if (user) {
+      loadDashboardData();
+    } else {
+      // Reset cuando no hay usuario
+      lastUserIdRef.current = null;
+      isInitializedRef.current = false;
+      isProcessingRef.current = false;
+    }
+  }, [user?.id]);
 
   // Función para calcular el porcentaje de cambio
   const calculateChangePercentage = (current: number, previous: number = 0): { value: string; positive: boolean; neutral: boolean } => {
@@ -82,280 +344,6 @@ const Dashboard = () => {
     };
   };
 
-  useEffect(() => {
-    console.log('Dashboard useEffect: user', user);
-    if (!user) return;
-    const fetchStats = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const token = localStorage.getItem('token');
-        const requests = [
-          api.get('/cases/stats'),
-          api.get('/appointments'),
-          api.get('/documents/stats')
-        ];
-        if (user?.role === 'ADMIN') {
-          requests.push(api.get('/users'));
-        }
-        requests.push(api.get('/cases/recent'));
-        if (user?.role === 'ABOGADO') {
-          requests.push(api.get('/cases/recent-activities'));
-        }
-        const results = await Promise.allSettled(requests);
-        results.forEach((res, idx) => {
-          if (res.status === 'fulfilled' && 'value' in res) {
-            console.log(`Dashboard stats result[${idx}]`, res.value.data);
-          } else if (res.status === 'rejected' && 'reason' in res) {
-            console.error(`Dashboard stats error[${idx}]`, res.reason);
-          }
-        });
-        // Casos
-        const casesStats = results[0].status === 'fulfilled' ? results[0].value.data : {};
-        // Citas
-        const appointments = results[1].status === 'fulfilled' ? results[1].value.data : [];
-        // Documentos
-        const documentsStats = results[2].status === 'fulfilled' ? results[2].value.data : {};
-        // Usuarios (solo para admin)
-        const users = user?.role === 'ADMIN' && results[3] && results[3].status === 'fulfilled' ? results[3].value.data : [];
-        // Actividad reciente
-        const recentCases = results[user?.role === 'ADMIN' ? 4 : 3] && results[user?.role === 'ADMIN' ? 4 : 3].status === 'fulfilled' ? results[user?.role === 'ADMIN' ? 4 : 3].value.data : [];
-        // Actividad reciente completa para abogados
-        const recentActivities = user?.role === 'ABOGADO' && results[4] && results[4].status === 'fulfilled' ? results[4].value.data : null;
-        // Calcular valores según el rol
-        let totalCases = 0, activeCases = 0, pendingAppointments = 0, recentDocuments = 0, totalUsers = 0;
-        if (user?.role === 'ADMIN' || user?.role === 'ABOGADO' || user?.role === 'CLIENTE') {
-          totalCases = casesStats.total || 0;
-          activeCases = (casesStats.abiertos || 0) + (casesStats.enProceso || 0);
-        }
-        // Citas: próximas (futuras)
-        if (Array.isArray(appointments)) {
-          const now = new Date();
-          if (user?.role === 'ADMIN') {
-            pendingAppointments = appointments.filter((a: any) => new Date(a.date) > now).length;
-          } else if (user?.role === 'ABOGADO' || user?.role === 'CLIENTE') {
-            // Citas de hoy
-            pendingAppointments = appointments.filter((a: any) => {
-              const d = new Date(a.date);
-              return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-            }).length;
-          }
-        }
-        // Documentos
-        if (documentsStats && typeof documentsStats.total === 'number') {
-          recentDocuments = documentsStats.total;
-        }
-        // Usuarios (solo para admin)
-        if (user?.role === 'ADMIN' && Array.isArray(users)) {
-          totalUsers = users.length;
-        }
-        setStats({
-          totalCases,
-          activeCases,
-          pendingAppointments,
-          recentDocuments,
-          totalUsers
-        });
-        // Generar actividad reciente basada en datos reales
-        const activity: Array<{
-          action: string; 
-          time: string; 
-          type: string;
-          id?: string;
-          link?: string;
-          entityType?: string;
-        }> = [];
-        // Para abogados, usar la actividad reciente completa
-        if (user?.role === 'ABOGADO' && recentActivities) {
-          if (recentActivities.cases && recentActivities.cases.length > 0) {
-            recentActivities.cases.forEach((caseItem: any) => {
-              activity.push({
-                action: `Expediente: ${caseItem.title}`,
-                time: caseItem.createdAt,
-                type: 'case',
-                id: caseItem.id,
-                link: `/lawyer/cases/${caseItem.id}`,
-                entityType: 'Expediente'
-              });
-            });
-          }
-
-          // Agregar tareas recientes
-          if (recentActivities.tasks && recentActivities.tasks.length > 0) {
-            recentActivities.tasks.forEach((task: any) => {
-              const clientName = task.client?.user?.name || 'Cliente';
-              const expedienteTitle = task.expediente?.title ? ` - ${task.expediente.title}` : '';
-              activity.push({
-                action: `Tarea: ${task.title} (${clientName}${expedienteTitle})`,
-                time: new Date(task.createdAt).toLocaleDateString(),
-                type: 'task',
-                id: task.id,
-                link: `/lawyer/tasks`,
-                entityType: 'task'
-              });
-            });
-          }
-
-          // Agregar citas recientes
-          if (recentActivities.appointments && recentActivities.appointments.length > 0) {
-            recentActivities.appointments.forEach((appointment: any) => {
-              const clientName = appointment.client?.user?.name || 'Cliente';
-              activity.push({
-                action: `Cita con ${clientName} - ${new Date(appointment.date).toLocaleDateString()}`,
-                time: new Date(appointment.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                type: 'appointment',
-                id: appointment.id,
-                link: `/lawyer/appointments`,
-                entityType: 'appointment'
-              });
-            });
-          }
-
-          // Agregar provisiones de fondos recientes
-          if (recentActivities.provisions && recentActivities.provisions.length > 0) {
-            recentActivities.provisions.forEach((provision: any) => {
-              const clientName = provision.client?.user?.name || 'Cliente';
-              const expedienteTitle = provision.expediente?.title ? ` - ${provision.expediente.title}` : '';
-              activity.push({
-                action: `Provisión de fondos: ${provision.amount}€ (${clientName}${expedienteTitle})`,
-                time: new Date(provision.createdAt).toLocaleDateString(),
-                type: 'provision',
-                id: provision.id,
-                link: `/lawyer/provisiones`,
-                entityType: 'provision'
-              });
-            });
-          }
-        } else if (user?.role === 'CLIENTE') {
-          // Actividad reciente mejorada para clientes
-          // Agregar expedientes recientes
-          if (Array.isArray(recentCases) && recentCases.length > 0) {
-            recentCases.slice(0, 2).forEach((caseItem: any) => {
-              activity.push({
-                action: `Expediente: ${caseItem.title}`,
-                time: new Date(caseItem.createdAt).toLocaleDateString(),
-                type: 'case',
-                id: caseItem.id,
-                link: `/client/cases/${caseItem.id}`,
-                entityType: 'case'
-              });
-            });
-          }
-          
-          // Agregar citas próximas
-          if (Array.isArray(appointments) && appointments.length > 0) {
-            const upcomingAppointments = appointments
-              .filter((a: any) => new Date(a.date) > new Date())
-              .slice(0, 2);
-            
-            upcomingAppointments.forEach((appointment: any) => {
-              const lawyerName = appointment.lawyer?.name || 'Abogado';
-              activity.push({
-                action: `Cita con ${lawyerName} - ${new Date(appointment.date).toLocaleDateString()}`,
-                time: new Date(appointment.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                type: 'appointment',
-                id: appointment.id,
-                link: `/client/appointments`,
-                entityType: 'appointment'
-              });
-            });
-          }
-          
-          // Agregar documentos recientes (si hay datos)
-          if (documentsStats && documentsStats.total > 0) {
-            activity.push({
-              action: `${documentsStats.total} documentos disponibles`,
-              time: 'Total',
-              type: 'document',
-              link: `/client/documents`,
-              entityType: 'document'
-            });
-          }
-          
-          // Agregar información de provisiones de fondos
-          if (stats.totalCases > 0) {
-            activity.push({
-              action: `Ver mis provisiones de fondos`,
-              time: 'Acceso directo',
-              type: 'provision',
-              link: `/client/provisiones`,
-              entityType: 'provision'
-            });
-          }
-        } else {
-          // Agregar expedientes recientes
-          if (Array.isArray(recentCases) && recentCases.length > 0) {
-            recentCases.slice(0, 3).forEach((caseItem: any) => {
-              activity.push({
-                action: `Expediente: ${caseItem.title}`,
-                time: new Date(caseItem.createdAt).toLocaleDateString(),
-                type: 'case',
-                id: caseItem.id,
-                link: user?.role === 'ADMIN' ? `/admin/cases/${caseItem.id}` : 
-                      user?.role === 'ABOGADO' ? `/lawyer/cases/${caseItem.id}` : 
-                      `/client/cases/${caseItem.id}`,
-                entityType: 'case'
-              });
-            });
-          }
-          
-          // Agregar citas próximas
-          if (Array.isArray(appointments) && appointments.length > 0) {
-            const upcomingAppointments = appointments
-              .filter((a: any) => new Date(a.date) > new Date())
-              .slice(0, 2);
-            
-            upcomingAppointments.forEach((appointment: any) => {
-              activity.push({
-                action: `Cita con ${appointment.client?.user?.name || 'Cliente'} - ${new Date(appointment.date).toLocaleDateString()}`,
-                time: new Date(appointment.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                type: 'appointment',
-                id: appointment.id,
-                link: user?.role === 'ADMIN' ? `/admin/appointments/${appointment.id}` : 
-                      user?.role === 'ABOGADO' ? `/lawyer/appointments` : 
-                      `/client/appointments`,
-                entityType: 'appointment'
-              });
-            });
-          }
-          
-          // Agregar documentos recientes (si hay datos)
-          if (documentsStats && documentsStats.total > 0) {
-            activity.push({
-              action: `${documentsStats.total} documentos en el sistema`,
-              time: 'Total',
-              type: 'document',
-              link: user?.role === 'ADMIN' ? `/admin/documents` : 
-                    user?.role === 'ABOGADO' ? `/lawyer/documents` : 
-                    `/client/documents`,
-              entityType: 'document'
-            });
-          }
-          
-          // Agregar usuarios (solo para admin)
-          if (user?.role === 'ADMIN' && totalUsers > 0) {
-            activity.push({
-              action: `${totalUsers} usuarios registrados`,
-              time: 'Total',
-              type: 'user',
-              link: '/admin/users',
-              entityType: 'user'
-            });
-          }
-        }
-
-        setRecentActivity(activity.slice(0, 4)); // Máximo 4 actividades
-
-      } catch (err: any) {
-        setError('Error al cargar las estadísticas del dashboard');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
-    // eslint-disable-next-line
-  }, [user]);
-
   const renderAdminDashboard = () => {
     const statsStatus = getStatsStatus();
     
@@ -393,56 +381,56 @@ const Dashboard = () => {
           />
         </div>
 
-      {/* Tarjetas de acción */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <DashboardCard
-          title="Gestión de Usuarios"
-          description="Administrar usuarios, roles y permisos"
-          icon="👥"
-          link="/admin/users"
-          color="blue"
-        />
-        <DashboardCard
-          title="Todos los Expedientes"
-          description="Ver y gestionar todos los casos"
-          icon="📋"
-          link="/admin/cases"
-          color="green"
-        />
-        <DashboardCard
-          title="Reportes y Estadísticas"
-          description="Análisis y reportes del sistema"
-          icon="📊"
-          link="/admin/reports"
-          color="purple"
-        />
-        <DashboardCard
-          title="Configuración del Sistema"
-          description="Configurar parámetros generales"
-          icon="⚙️"
-          link="/admin/settings"
-          color="gray"
-        />
-        <DashboardCard
-          title="Auditoría"
-          description="Registros de actividad del sistema"
-          icon="🔍"
-          link="/admin/audit"
-          color="yellow"
-        />
-        <DashboardCard
-          title="Backup y Restauración"
-          description="Gestionar copias de seguridad"
-          icon="💾"
-          link="/admin/backup"
-          color="red"
-        />
-      </div>
+        {/* Tarjetas de acción */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <DashboardCard
+            title="Gestión de Usuarios"
+            description="Administrar usuarios, roles y permisos"
+            icon="👥"
+            link="/admin/users"
+            color="blue"
+          />
+          <DashboardCard
+            title="Todos los Expedientes"
+            description="Ver y gestionar todos los casos"
+            icon="📋"
+            link="/admin/cases"
+            color="green"
+          />
+          <DashboardCard
+            title="Reportes y Estadísticas"
+            description="Análisis y reportes del sistema"
+            icon="📊"
+            link="/admin/reports"
+            color="purple"
+          />
+          <DashboardCard
+            title="Configuración del Sistema"
+            description="Configurar parámetros generales"
+            icon="⚙️"
+            link="/admin/settings"
+            color="gray"
+          />
+          <DashboardCard
+            title="Auditoría"
+            description="Registros de actividad del sistema"
+            icon="🔍"
+            link="/admin/audit"
+            color="yellow"
+          />
+          <DashboardCard
+            title="Backup y Restauración"
+            description="Gestionar copias de seguridad"
+            icon="💾"
+            link="/admin/backup"
+            color="red"
+          />
+        </div>
 
-      {/* Actividad reciente */}
-      <RecentActivity role="ADMIN" activities={recentActivity} />
-    </div>
-  );
+        {/* Actividad reciente */}
+        <RecentActivity role="ADMIN" activities={recentActivity} />
+      </div>
+    );
   };
 
   const renderAbogadoDashboard = () => {
@@ -450,6 +438,7 @@ const Dashboard = () => {
     
     return (
       <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Estadísticas Principales</h2>
         {/* Estadísticas principales */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard 
@@ -482,70 +471,64 @@ const Dashboard = () => {
           />
         </div>
 
-      {/* Tarjetas de acción */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <DashboardCard
-          title="Mis Casos"
-          description="Gestionar casos asignados"
-          icon="📁"
-          link="/lawyer/cases"
-          color="blue"
-        />
-        <DashboardCard
-          title="Mis Clientes"
-          description="Ver información de clientes"
-          icon="👤"
-          link="/lawyer/clients"
-          color="green"
-        />
-        <DashboardCard
-          title="Provisión de Fondos"
-          description="Gestiona provisiones de fondos"
-          icon="💰"
-          link="/lawyer/provisiones"
-          color="blue"
-        />
-        <DashboardCard
-          title="Facturación Electrónica"
-          description="Gestiona y firma tus facturas"
-          icon="🧾"
-          link="/lawyer/facturacion"
-          color="green"
-        />
-        <DashboardCard
-          title="Calendario de Citas"
-          description="Programar y gestionar citas"
-          icon="📅"
-          link="/lawyer/appointments"
-          color="purple"
-        />
-        <DashboardCard
-          title="Documentos"
-          description="Gestionar documentos legales"
-          icon="📄"
-          link="/lawyer/documents"
-          color="yellow"
-        />
-        <DashboardCard
-          title="Tareas Pendientes"
-          description="Ver tareas y recordatorios"
-          icon="✅"
-          link="/lawyer/tasks"
-          color="red"
-        />
-        <DashboardCard
-          title="Reportes Personales"
-          description="Mis estadísticas y reportes"
-          icon="📊"
-          link="/lawyer/reports"
-          color="gray"
-        />
-      </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Acciones Rápidas</h2>
+        {/* Tarjetas de acción */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <DashboardCard
+            title="Mis Casos"
+            description="Gestionar casos asignados"
+            icon="📁"
+            link="/lawyer/cases"
+            color="blue"
+          />
+          <DashboardCard
+            title="Mis Clientes"
+            description="Ver información de clientes"
+            icon="👤"
+            link="/lawyer/clients"
+            color="green"
+          />
+          <DashboardCard
+            title="Provisión de Fondos"
+            description="Gestiona provisiones de fondos"
+            icon="💰"
+            link="/lawyer/provisiones"
+            color="blue"
+          />
+          <DashboardCard
+            title="Facturación Electrónica"
+            description="Gestiona y firma tus facturas"
+            icon="🧾"
+            link="/lawyer/facturacion"
+            color="green"
+          />
+          <DashboardCard
+            title="Calendario de Citas"
+            description="Programar y gestionar citas"
+            icon="📅"
+            link="/lawyer/appointments"
+            color="purple"
+          />
+          <DashboardCard
+            title="Documentos"
+            description="Gestionar documentos legales"
+            icon="📄"
+            link="/lawyer/documents"
+            color="yellow"
+          />
+          <DashboardCard
+            title="Tareas Pendientes"
+            description="Ver tareas y recordatorios"
+            icon="✅"
+            link="/lawyer/tasks"
+            color="red"
+          />
+        </div>
 
-      {/* Actividad reciente */}
-      <RecentActivity role="ABOGADO" activities={recentActivity} />
-    </div>
-  );
+        {/* Actividad reciente */}
+        <RecentActivity role="ABOGADO" activities={recentActivity} />
+      </div>
+    );
   };
 
   const renderClienteDashboard = () => {
@@ -553,10 +536,11 @@ const Dashboard = () => {
     
     return (
       <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Mis Expedientes</h2>
         {/* Estadísticas principales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <StatCard 
-            title="Mis Expedientes" 
+            title="Mis Casos" 
             value={stats.totalCases} 
             change={statsStatus.cases.value} 
             positive={statsStatus.cases.positive}
@@ -570,82 +554,80 @@ const Dashboard = () => {
             neutral={statsStatus.activeCases.neutral}
           />
           <StatCard 
-            title="Próxima Cita" 
+            title="Citas Hoy" 
             value={stats.pendingAppointments} 
             change={statsStatus.appointments.value} 
             positive={statsStatus.appointments.positive}
             neutral={statsStatus.appointments.neutral}
           />
-          <StatCard 
-            title="Documentos" 
-            value={stats.recentDocuments} 
-            change={statsStatus.documents.value} 
-            positive={statsStatus.documents.positive}
-            neutral={statsStatus.documents.neutral}
+        </div>
+
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Acciones Rápidas</h2>
+        {/* Tarjetas de acción */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <DashboardCard
+            title="Mis Expedientes"
+            description="Ver el estado de mis casos"
+            icon="📁"
+            link="/client/cases"
+            color="blue"
+          />
+          <DashboardCard
+            title="Mis Citas"
+            description="Ver y programar citas"
+            icon="📅"
+            link="/client/appointments"
+            color="green"
+          />
+          <DashboardCard
+            title="Documentos"
+            description="Acceder a mis documentos"
+            icon="📄"
+            link="/client/documents"
+            color="purple"
+          />
+          <DashboardCard
+            title="Contactar Abogado"
+            description="Enviar mensaje a mi abogado"
+            icon="💬"
+            link="/client/chat"
+            color="yellow"
+          />
+          <DashboardCard
+            title="Facturas"
+            description="Ver mis facturas"
+            icon="🧾"
+            link="/client/invoices"
+            color="red"
+          />
+          <DashboardCard
+            title="Perfil"
+            description="Actualizar mi información"
+            icon="👤"
+            link="/client/profile"
+            color="gray"
           />
         </div>
 
-      {/* Tarjetas de acción */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <DashboardCard
-          title="Mis Expedientes"
-          description="Ver el estado de mis casos"
-          icon="📋"
-          link="/client/cases"
-          color="blue"
-        />
-        <DashboardCard
-          title="Mis Documentos"
-          description="Acceder a documentos legales"
-          icon="📄"
-          link="/client/documents"
-          color="green"
-        />
-        <DashboardCard
-          title="Provisiones de Fondos"
-          description="Consulta tus provisiones de fondos"
-          icon="💰"
-          link="/client/provisiones"
-          color="blue"
-        />
-        <DashboardCard
-          title="Pagos y Facturas"
-          description="Gestiona tus pagos y facturas"
-          icon="🧾"
-          link="/client/payments"
-          color="green"
-        />
-        <DashboardCard
-          title="Programar Cita"
-          description="Agendar consulta con abogado"
-          icon="📅"
-          link="/client/appointments"
-          color="purple"
-        />
-        <DashboardCard
-          title="Chat con Abogado"
-          description="Comunicación directa"
-          icon="💬"
-          link="/client/chat"
-          color="yellow"
-        />
-        <DashboardCard
-          title="Perfil"
-          description="Actualizar información personal"
-          icon="👤"
-          link="/client/profile"
-          color="gray"
-        />
+        {/* Actividad reciente */}
+        <RecentActivity role="CLIENTE" activities={recentActivity} />
       </div>
-
-      {/* Actividad reciente */}
-      <RecentActivity role="CLIENTE" activities={recentActivity} />
-    </div>
-  );
+    );
   };
 
   const getDashboardContent = () => {
-    switch (user?.role) {
+    if (!user) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Cargando dashboard...</p>
+          </div>
+        </div>
+      );
+    }
+
+    switch (user.role) {
       case 'ADMIN':
         return renderAdminDashboard();
       case 'ABOGADO':
@@ -653,58 +635,59 @@ const Dashboard = () => {
       case 'CLIENTE':
         return renderClienteDashboard();
       default:
-        return <div>Acceso no autorizado</div>;
+        return (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Rol no reconocido</h2>
+            <p className="text-gray-600">Contacta al administrador del sistema.</p>
+          </div>
+        );
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando estadísticas...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="text-red-600 text-xl mb-4">Error</div>
-          <div className="text-gray-600">{error}</div>
-          <button 
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Reintentar
-          </button>
-        </div>
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+        <p className="text-gray-600 mb-4">{error}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          Reintentar
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="py-6">
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
-            Bienvenido, {user?.name}{user?.email && ` (${user.email})`}
+            Dashboard
           </h1>
           <p className="mt-2 text-gray-600">
-            {user?.role === 'ADMIN' && 'Panel de administración del sistema'}
-            {user?.role === 'ABOGADO' && 'Gestiona tus casos y clientes'}
-            {user?.role === 'CLIENTE' && 'Sigue el progreso de tus casos legales'}
+            Bienvenido, {user?.name || 'Usuario'}
           </p>
         </div>
-
-        {/* Contenido del dashboard */}
+        
         {getDashboardContent()}
       </div>
     </div>
   );
 };
 
-// Componente de tarjeta de estadísticas
 interface StatCardProps {
   title: string;
   value: number | string;
@@ -719,16 +702,17 @@ const StatCard = ({ title, value, change, positive, negative, neutral }: StatCar
     <div className="p-5">
       <div className="flex items-center">
         <div className="flex-shrink-0">
-          <div className="text-2xl font-bold text-gray-900">{value}</div>
+          <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+            <span className="text-white text-sm font-medium">📊</span>
+          </div>
         </div>
         <div className="ml-5 w-0 flex-1">
           <dl>
             <dt className="text-sm font-medium text-gray-500 truncate">{title}</dt>
             <dd className="flex items-baseline">
-              <div className={`text-sm font-semibold ${
-                positive ? 'text-green-600' : 
-                negative ? 'text-red-600' : 
-                'text-gray-500'
+              <div className="text-2xl font-semibold text-gray-900">{value}</div>
+              <div className={`ml-2 flex items-baseline text-sm font-semibold ${
+                positive ? 'text-green-600' : negative ? 'text-red-600' : 'text-gray-500'
               }`}>
                 {change}
               </div>
@@ -740,7 +724,6 @@ const StatCard = ({ title, value, change, positive, negative, neutral }: StatCar
   </div>
 );
 
-// Componente de tarjeta del dashboard
 interface DashboardCardProps {
   title: string;
   description: string;
@@ -750,35 +733,38 @@ interface DashboardCardProps {
 }
 
 const DashboardCard = ({ title, description, icon, link, color }: DashboardCardProps) => {
-  const colorClasses = {
-    blue: 'bg-blue-50 border-blue-200 hover:bg-blue-100',
-    green: 'bg-green-50 border-green-200 hover:bg-green-100',
-    purple: 'bg-purple-50 border-purple-200 hover:bg-purple-100',
-    yellow: 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100',
-    red: 'bg-red-50 border-red-200 hover:bg-red-100',
-    gray: 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+  const navigate = useNavigate();
+  
+  const getColorClasses = (color: string) => {
+    switch (color) {
+      case 'blue': return 'bg-blue-50 border-blue-200 hover:bg-blue-100';
+      case 'green': return 'bg-green-50 border-green-200 hover:bg-green-100';
+      case 'purple': return 'bg-purple-50 border-purple-200 hover:bg-purple-100';
+      case 'yellow': return 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100';
+      case 'red': return 'bg-red-50 border-red-200 hover:bg-red-100';
+      case 'gray': return 'bg-gray-50 border-gray-200 hover:bg-gray-100';
+      default: return 'bg-blue-50 border-blue-200 hover:bg-blue-100';
+    }
   };
 
   return (
-    <Link to={link} className="block">
-      <div className={`bg-white overflow-hidden shadow rounded-lg border-2 transition-colors duration-200 ${colorClasses[color as keyof typeof colorClasses]}`}>
-        <div className="p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="text-3xl">{icon}</div>
-            </div>
-            <div className="ml-4">
-              <h3 className="text-lg font-medium text-gray-900">{title}</h3>
-              <p className="text-sm text-gray-600">{description}</p>
-            </div>
-          </div>
+    <div 
+      className={`p-6 border rounded-lg cursor-pointer transition-colors duration-200 ${getColorClasses(color)}`}
+      onClick={() => navigate(link)}
+    >
+      <div className="flex items-center">
+        <div className="flex-shrink-0">
+          <span className="text-2xl">{icon}</span>
+        </div>
+        <div className="ml-4">
+          <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+          <p className="text-sm text-gray-600">{description}</p>
         </div>
       </div>
-    </Link>
+    </div>
   );
 };
 
-// Componente de actividad reciente
 interface RecentActivityProps {
   role: string;
   activities?: any[];
@@ -788,113 +774,37 @@ const RecentActivity = ({ role, activities = [] }: RecentActivityProps) => {
   const navigate = useNavigate();
 
   const getActivityData = () => {
-    // Si hay actividades reales, usarlas
     if (activities && activities.length > 0) {
       return activities;
     }
-    
-    // Fallback a datos simulados si no hay datos reales
-    switch (role) {
-      case 'ADMIN':
-        return [
-          { 
-            action: 'Nuevo usuario registrado', 
-            time: 'Hace 5 minutos', 
-            type: 'user',
-            link: '/admin/users',
-            entityType: 'user'
-          },
-          { 
-            action: 'Expediente creado #1234', 
-            time: 'Hace 15 minutos', 
-            type: 'case',
-            link: '/admin/cases',
-            entityType: 'case'
-          },
-          { 
-            action: 'Cita programada', 
-            time: 'Hace 1 hora', 
-            type: 'appointment',
-            link: '/admin/appointments',
-            entityType: 'appointment'
-          },
-          { 
-            action: 'Documento subido', 
-            time: 'Hace 2 horas', 
-            type: 'document',
-            link: '/admin/documents',
-            entityType: 'document'
-          }
-        ];
-      case 'ABOGADO':
-        return [
-          { 
-            action: 'Nuevo caso asignado', 
-            time: 'Hace 10 minutos', 
-            type: 'case',
-            link: '/lawyer/cases',
-            entityType: 'case'
-          },
-          { 
-            action: 'Cita con cliente', 
-            time: 'Hace 30 minutos', 
-            type: 'appointment',
-            link: '/lawyer/appointments',
-            entityType: 'appointment'
-          },
-          { 
-            action: 'Documento revisado', 
-            time: 'Hace 1 hora', 
-            type: 'document',
-            link: '/lawyer/documents',
-            entityType: 'document'
-          },
-          { 
-            action: 'Tarea completada', 
-            time: 'Hace 2 horas', 
-            type: 'task',
-            link: '/lawyer/tasks',
-            entityType: 'task'
-          }
-        ];
-      case 'CLIENTE':
-        return [
-          { 
-            action: 'Documento recibido', 
-            time: 'Hace 5 minutos', 
-            type: 'document',
-            link: '/client/documents',
-            entityType: 'document'
-          },
-          { 
-            action: 'Cita confirmada', 
-            time: 'Hace 1 hora', 
-            type: 'appointment',
-            link: '/client/appointments',
-            entityType: 'appointment'
-          },
-          { 
-            action: 'Actualización de caso', 
-            time: 'Hace 3 horas', 
-            type: 'case',
-            link: '/client/cases',
-            entityType: 'case'
-          },
-          { 
-            action: 'Pago procesado', 
-            time: 'Hace 1 día', 
-            type: 'payment',
-            link: '/client/payments',
-            entityType: 'payment'
-          }
-        ];
-      default:
-        return [];
-    }
+
+    // Datos de ejemplo si no hay actividades reales
+    const mockActivities = [
+      {
+        action: 'Expediente creado',
+        time: 'Hace 2 horas',
+        type: 'case',
+        link: '#'
+      },
+      {
+        action: 'Cita programada',
+        time: 'Hace 1 día',
+        type: 'appointment',
+        link: '#'
+      },
+      {
+        action: 'Documento subido',
+        time: 'Hace 2 días',
+        type: 'document',
+        link: '#'
+      }
+    ];
+
+    return mockActivities;
   };
 
   const handleActivityClick = (activity: any) => {
-    if (activity.link) {
+    if (activity.link && activity.link !== '#') {
       navigate(activity.link);
     }
   };
@@ -902,21 +812,19 @@ const RecentActivity = ({ role, activities = [] }: RecentActivityProps) => {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'case':
-        return '📋';
+        return '📁';
       case 'appointment':
         return '📅';
       case 'document':
         return '📄';
       case 'task':
         return '✅';
+      case 'provision':
+        return '💰';
       case 'user':
         return '👤';
-      case 'payment':
-        return '💰';
-      case 'provision':
-        return '💳';
       default:
-        return '📌';
+        return '📋';
     }
   };
 
@@ -928,34 +836,29 @@ const RecentActivity = ({ role, activities = [] }: RecentActivityProps) => {
         <h3 className="text-lg font-medium text-gray-900">Actividad Reciente</h3>
       </div>
       <div className="divide-y divide-gray-200">
-        {activityData.map((activity, index) => (
-          <div 
-            key={index} 
-            className={`px-6 py-4 ${activity.link ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''}`}
-            onClick={() => activity.link && handleActivityClick(activity)}
-          >
-            <div className="flex items-center justify-between">
+        {activityData.length > 0 ? (
+          activityData.map((activity, index) => (
+            <div 
+              key={index}
+              className="px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+              onClick={() => handleActivityClick(activity)}
+            >
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="text-lg mr-3">{getActivityIcon(activity.type)}</div>
+                  <span className="text-lg">{getActivityIcon(activity.type)}</span>
                 </div>
-                <div className="ml-3 flex-1">
-                  <p className={`text-sm font-medium ${activity.link ? 'text-blue-600 hover:text-blue-800' : 'text-gray-900'}`}>
-                    {activity.action}
-                  </p>
+                <div className="ml-4 flex-1">
+                  <p className="text-sm font-medium text-gray-900">{activity.action}</p>
                   <p className="text-sm text-gray-500">{activity.time}</p>
                 </div>
               </div>
-              {activity.link && (
-                <div className="flex-shrink-0">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              )}
             </div>
+          ))
+        ) : (
+          <div className="px-6 py-8 text-center">
+            <p className="text-gray-500">No hay actividad reciente</p>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

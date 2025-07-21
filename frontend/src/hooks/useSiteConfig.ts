@@ -40,10 +40,13 @@ export const useSiteConfig = () => {
   const [configs, setConfigs] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
-    fetchPublicConfigs();
-  }, []);
+    if (!hasLoaded) {
+      fetchPublicConfigs();
+    }
+  }, [hasLoaded]);
 
   const fetchPublicConfigs = async () => {
     try {
@@ -55,6 +58,7 @@ export const useSiteConfig = () => {
         configsMap[config.key] = config.value;
       });
       setConfigs(configsMap);
+      setHasLoaded(true);
     } catch (err) {
       console.error('Error fetching site configs:', err);
       setError('Error al cargar las configuraciones del sitio');
@@ -99,24 +103,34 @@ export const useSiteConfig = () => {
   };
 };
 
-export const useMenuConfig = (role: 'ADMIN' | 'ABOGADO' | 'CLIENTE') => {
+export const useMenuConfig = (role?: 'ADMIN' | 'ABOGADO' | 'CLIENTE') => {
   const [menuConfig, setMenuConfig] = useState<MenuConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastRole, setLastRole] = useState<string | null>(null);
 
   useEffect(() => {
-    if (role) {
+    if (role && role !== lastRole) {
+      setLastRole(role);
       fetchMenuConfig();
+    } else if (!role && lastRole) {
+      // Si no hay role, resetear el estado
+      setLastRole(null);
+      setMenuConfig(null);
+      setLoading(false);
+    } else if (!role && !lastRole && loading) {
+      // Si no hay role y no ha habido uno antes, no cargar
+      setLoading(false);
     }
-  }, [role]);
+  }, [role, lastRole, loading]);
 
   const fetchMenuConfig = async () => {
+    if (!role) return;
+    
     try {
       setLoading(true);
       setError(null);
-      console.log('Fetching menu config for role:', role);
       const response = await axios.get(`/menu-config/role/${role}`);
-      console.log('Menu config response:', response.data);
       setMenuConfig(response.data);
     } catch (err) {
       console.error('Error fetching menu config:', err);
@@ -149,7 +163,7 @@ export const useMenuConfig = (role: 'ADMIN' | 'ABOGADO' | 'CLIENTE') => {
 };
 
 // Hook combinado para obtener tanto configuraciones como menús
-export const useAppConfig = (role: 'ADMIN' | 'ABOGADO' | 'CLIENTE') => {
+export const useAppConfig = (role?: 'ADMIN' | 'ABOGADO' | 'CLIENTE') => {
   const siteConfig = useSiteConfig();
   const menuConfig = useMenuConfig(role);
 
@@ -186,13 +200,13 @@ export const useAppConfig = (role: 'ADMIN' | 'ABOGADO' | 'CLIENTE') => {
     timezone: siteConfig.getConfig('timezone', 'Europe/Madrid'),
     dateFormat: siteConfig.getConfig('date_format', 'DD/MM/YYYY'),
     
-    // Menu config
-    menuItems: menuConfig.menuItems,
-    menuOrientation: menuConfig.orientation,
+    // Menu config - solo cargar si hay role
+    menuItems: role ? menuConfig.menuItems : [],
+    menuOrientation: role ? menuConfig.orientation : 'horizontal',
     
     // Loading states
-    loading: siteConfig.loading || menuConfig.loading,
-    error: siteConfig.error || menuConfig.error,
+    loading: siteConfig.loading || (role ? menuConfig.loading : false),
+    error: siteConfig.error || (role ? menuConfig.error : null),
     
     // Methods
     updateSiteConfig: siteConfig.updateConfig,

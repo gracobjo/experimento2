@@ -41,18 +41,131 @@ export class ParametrosService {
   }
 
   async findLegalContent() {
-    return this.prisma.parametro.findMany({
+    const legalParams = await this.prisma.parametro.findMany({
       where: {
         clave: {
-          in: [
-            'PRIVACY_POLICY',
-            'TERMS_OF_SERVICE',
-            'COOKIE_POLICY',
-            'COPYRIGHT_TEXT'
-          ]
+          startsWith: 'LEGAL_'
+        }
+      },
+      orderBy: {
+        clave: 'asc'
+      }
+    });
+
+    return legalParams;
+  }
+
+  async findServices() {
+    const services = await this.prisma.parametro.findMany({
+      where: {
+        clave: {
+          startsWith: 'SERVICE_'
+        }
+      },
+      orderBy: {
+        clave: 'asc'
+      }
+    });
+
+    // Transformar los servicios a un formato más útil
+    const servicesMap = new Map();
+    services.forEach(service => {
+      const parts = service.clave.split('_');
+      if (parts.length >= 3) {
+        const serviceId = parts[1];
+        const field = parts[2];
+        
+        if (!servicesMap.has(serviceId)) {
+          servicesMap.set(serviceId, {
+            id: serviceId,
+            orden: parseInt(parts[1]) || 0
+          });
+        }
+        
+        servicesMap.get(serviceId)[field] = service.valor;
+      }
+    });
+
+    return Array.from(servicesMap.values()).sort((a, b) => a.orden - b.orden);
+  }
+
+  async updateService(serviceId: string, serviceData: {
+    title: string;
+    description: string;
+    icon: string;
+    orden?: number;
+  }) {
+    const updates = [
+      this.updateByClave(`SERVICE_${serviceId}_TITLE`, serviceData.title),
+      this.updateByClave(`SERVICE_${serviceId}_DESCRIPTION`, serviceData.description),
+      this.updateByClave(`SERVICE_${serviceId}_ICON`, serviceData.icon)
+    ];
+
+    if (serviceData.orden !== undefined) {
+      updates.push(this.updateByClave(`SERVICE_${serviceId}_ORDER`, serviceData.orden.toString()));
+    }
+
+    await Promise.all(updates);
+    return this.findServices();
+  }
+
+  async deleteService(serviceId: string) {
+    const servicesToDelete = await this.prisma.parametro.findMany({
+      where: {
+        clave: {
+          startsWith: `SERVICE_${serviceId}_`
         }
       }
     });
+
+    for (const service of servicesToDelete) {
+      await this.prisma.parametro.delete({
+        where: { id: service.id }
+      });
+    }
+
+    return this.findServices();
+  }
+
+  async addService(serviceData: {
+    title: string;
+    description: string;
+    icon: string;
+    orden?: number;
+  }) {
+    const serviceId = `SERVICE_${Date.now()}`;
+    const orden = serviceData.orden || 0;
+
+    const newService = await this.prisma.parametro.createMany({
+      data: [
+        {
+          clave: `${serviceId}_TITLE`,
+          valor: serviceData.title,
+          etiqueta: `Título del servicio ${serviceId}`,
+          tipo: 'string'
+        },
+        {
+          clave: `${serviceId}_DESCRIPTION`,
+          valor: serviceData.description,
+          etiqueta: `Descripción del servicio ${serviceId}`,
+          tipo: 'text'
+        },
+        {
+          clave: `${serviceId}_ICON`,
+          valor: serviceData.icon,
+          etiqueta: `Icono del servicio ${serviceId}`,
+          tipo: 'string'
+        },
+        {
+          clave: `${serviceId}_ORDER`,
+          valor: orden.toString(),
+          etiqueta: `Orden del servicio ${serviceId}`,
+          tipo: 'number'
+        }
+      ]
+    });
+
+    return this.findServices();
   }
 
   async create(data: { clave: string; valor: string; etiqueta: string; tipo: string }) {
@@ -93,7 +206,9 @@ export class ParametrosService {
       { clave: 'PRIVACY_POLICY', valor: 'Política de Privacidad del Despacho Legal...', etiqueta: 'Política de Privacidad', tipo: 'html' },
       { clave: 'TERMS_OF_SERVICE', valor: 'Términos de Servicio del Despacho Legal...', etiqueta: 'Términos de Servicio', tipo: 'html' },
       { clave: 'COOKIE_POLICY', valor: 'Política de Cookies del Despacho Legal...', etiqueta: 'Política de Cookies', tipo: 'html' },
-      { clave: 'COPYRIGHT_TEXT', valor: '© 2024 Despacho Legal. Todos los derechos reservados.', etiqueta: 'Texto de Copyright', tipo: 'string' }
+      { clave: 'COPYRIGHT_TEXT', valor: '© 2024 Despacho Legal. Todos los derechos reservados.', etiqueta: 'Texto de Copyright', tipo: 'string' },
+      // URL de verificación de facturas
+      { clave: 'VERIFICACION_URL_BASE', valor: 'https://tudominio.com/verificar/', etiqueta: 'URL base de verificación de facturas', tipo: 'url' }
     ];
 
     for (const param of defaultParams) {

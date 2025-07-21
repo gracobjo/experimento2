@@ -119,34 +119,75 @@ const ChatbotWidget = () => {
   };
 
   const handleDateSelect = async (date: string, time: string) => {
+    console.log('handleDateSelect called with:', { date, time });
+    
+    // Validar que los parámetros no sean undefined o vacíos
+    if (!date || !time || date.trim() === '' || time.trim() === '') {
+      console.error('Invalid date or time:', { date, time });
+      const errorMessage: ChatMessage = {
+        text: "Error: Fecha o hora no válida. Por favor, selecciona de nuevo.",
+        isUser: false,
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
+    
     setShowCalendar(false);
     
-    // Formatear la fecha y hora para el chatbot
-    const selectedDateTime = `${date}T${time}:00`;
-    const formattedDate = new Date(selectedDateTime);
-    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    
-    const formattedDateStr = `${days[formattedDate.getDay()]} ${formattedDate.getDate()} de ${months[formattedDate.getMonth()]} a las ${time}`;
-    
-    // Enviar la fecha seleccionada al chatbot
-    const dateMessage = formattedDateStr;
-    setInputMessage(dateMessage);
-    
-    // Simular envío del mensaje
-    const userChatMessage: ChatMessage = {
-      text: dateMessage,
-      isUser: true,
-      timestamp: new Date().toISOString()
-    };
-    setMessages(prev => [...prev, userChatMessage]);
-    
-    // Enviar al chatbot
     try {
+      // Validar formato de fecha (YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(date)) {
+        throw new Error(`Invalid date format: ${date}. Expected YYYY-MM-DD`);
+      }
+      
+      // Validar formato de hora (HH:MM)
+      const timeRegex = /^\d{1,2}:\d{2}$/;
+      if (!timeRegex.test(time)) {
+        throw new Error(`Invalid time format: ${time}. Expected HH:MM`);
+      }
+      
+      // Formatear la fecha y hora para el chatbot
+      const selectedDateTime = `${date}T${time}:00`;
+      console.log('selectedDateTime:', selectedDateTime);
+      
+      const formattedDate = new Date(selectedDateTime);
+      console.log('formattedDate:', formattedDate);
+      
+      // Validar que la fecha sea válida
+      if (isNaN(formattedDate.getTime())) {
+        throw new Error(`Invalid date: ${selectedDateTime}`);
+      }
+      
+      const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      
+      const dayName = days[formattedDate.getDay()];
+      const dayNumber = formattedDate.getDate();
+      const monthName = months[formattedDate.getMonth()];
+      
+      // Validar que todos los valores sean válidos
+      if (!dayName || !monthName || isNaN(dayNumber)) {
+        throw new Error(`Invalid date components: day=${dayName}, month=${monthName}, date=${dayNumber}`);
+      }
+      
+      const formattedDateStr = `${dayName} ${dayNumber} de ${monthName} a las ${time}`;
+      console.log('formattedDateStr:', formattedDateStr);
+      
+      // Agregar mensaje del usuario mostrando la selección
+      const userChatMessage: ChatMessage = {
+        text: `He seleccionado: ${formattedDateStr}`,
+        isUser: true,
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, userChatMessage]);
+      
+      // Enviar al chatbot
       setIsLoading(true);
       const response = await chatbotApi.post('/chat', {
-        text: dateMessage,
+        text: formattedDateStr,
         language: 'es',
         user_id: userIdRef.current
       });
@@ -158,9 +199,10 @@ const ChatbotWidget = () => {
       };
       setMessages(prev => [...prev, botMessage]);
     } catch (err: any) {
-      console.error('Error sending date selection:', err);
+      console.error('Error in handleDateSelect:', err);
+      const errorMessage = err.message || 'Error desconocido';
       const fallbackMessage: ChatMessage = {
-        text: "Lo siento, hubo un problema al procesar tu selección. Por favor, intenta de nuevo.",
+        text: `Lo siento, hubo un problema al procesar tu selección: ${errorMessage}. Por favor, intenta de nuevo.`,
         isUser: false,
         timestamp: new Date().toISOString()
       };
@@ -197,19 +239,32 @@ const ChatbotWidget = () => {
 
       const botResponse = response.data.response;
 
-      // Agregar respuesta del chatbot
+      // Detectar si es una respuesta a entrada imprecisa (menú después de entrada corta)
+      const impreciseInputs = ['si', 'sí', 'vale', 'ok', 'claro', 'jj', 'a', 'x', '123', 'abc', 'xyz'];
+      const isImpreciseResponse = botResponse.includes('Para ayudarte mejor') && 
+                                 botResponse.includes('¿En qué puedo ayudarte?') &&
+                                 (userMessage.length < 10 || 
+                                  impreciseInputs.includes(userMessage.toLowerCase()));
+
+      // Agregar respuesta del chatbot con formato mejorado si es imprecisa
+      let formattedResponse = botResponse;
+      if (isImpreciseResponse) {
+        formattedResponse = `**Has indicado:** "${userMessage}"\n\n${botResponse}`;
+      }
+
       const botMessage: ChatMessage = {
-        text: botResponse,
+        text: formattedResponse,
         isUser: false,
         timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, botMessage]);
 
-      // Detectar si el chatbot está pidiendo seleccionar fecha
-      if (botResponse.includes('¿Qué fecha prefieres') || 
-          botResponse.includes('Opciones disponibles') ||
-          botResponse.includes('Responde con el número')) {
-        // Mostrar calendario visual
+      // Detectar si el chatbot está pidiendo seleccionar fecha específicamente
+      // Solo mostrar calendario si es una solicitud específica de fecha, no el menú principal
+      if (botResponse.includes('¿Qué fecha prefieres para tu consulta?') && 
+          botResponse.includes('Opciones disponibles:') &&
+          botResponse.includes('Responde con el número de la opción que prefieras')) {
+        // Mostrar calendario visual solo para selección de fecha específica
         setShowCalendar(true);
       }
 

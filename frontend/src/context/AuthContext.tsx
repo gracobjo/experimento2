@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import api from '../api/axios';
 import { useNavigate } from 'react-router-dom'; // Añade este import
 
@@ -65,31 +65,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const checkAuth = async () => {
     try {
       const token = localStorage.getItem('token');
-      console.log('checkAuth - Token exists:', !!token);
-      console.log('checkAuth - Token value:', token ? token.substring(0, 50) + '...' : 'No token');
       
       if (token) {
-        console.log('checkAuth - Making request to /auth/me');
         const response = await api.get('/auth/me', {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        console.log('checkAuth - Response data:', response.data);
-        
         // Verifica la estructura del usuario
         if (response.data && response.data.role) {
           setUser(response.data);
-          console.log('checkAuth - User set:', response.data);
         } else {
-          console.error('checkAuth - Invalid user data structure:', response.data);
           throw new Error('Datos de usuario incompletos');
         }
-      } else {
-        console.log('checkAuth - No token found, user remains null');
       }
     } catch (error) {
-      console.error("Error en checkAuth:", error);
-      console.error("Error details:", error.response?.data || error.message);
       localStorage.removeItem('token');
     } finally {
       setLoading(false);
@@ -117,7 +106,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         window.location.href = '/dashboard';
       }
     } catch (error: unknown) {
-      console.error("Error completo en login:", (error as any)?.response?.data || (error as Error)?.message);
       throw new Error((error as any)?.response?.data?.message || 'Error en el inicio de sesión');
     }
   };
@@ -139,13 +127,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const value = {
-    user,
+  // Memoizar el objeto user para evitar recreaciones innecesarias
+  const memoizedUser = useMemo(() => user, [user?.id, user?.email, user?.name, user?.role]);
+
+  // Memoizar las funciones para evitar recreaciones
+  const memoizedLogin = useCallback(login, []);
+  const memoizedLogout = useCallback(logout, []);
+  const memoizedRegister = useCallback(register, []);
+
+  const value = useMemo(() => ({
+    user: memoizedUser,
     loading,
-    login,
-    logout,
-    register
-  };
+    login: memoizedLogin,
+    logout: memoizedLogout,
+    register: memoizedRegister
+  }), [memoizedUser, loading, memoizedLogin, memoizedLogout, memoizedRegister]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }; 

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards, UsePipes, ValidationPipe, Request, HttpException, HttpStatus, Patch, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards, UsePipes, ValidationPipe, Request, HttpException, HttpStatus, Patch, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody, ApiParam } from '@nestjs/swagger';
 import { InvoicesService } from './invoices.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
@@ -9,6 +9,11 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { Response } from 'express';
 import { InvoiceAuditService } from './invoice-audit.service';
+import { DigitalSignatureService, SignatureRequest } from './digital-signature.service';
+import * as fs from 'fs';
+import * as path from 'path';
+import { FileInterceptor } from '@nestjs/platform-express';
+import * as multer from 'multer';
 
 @ApiTags('invoices')
 @Controller('invoices')
@@ -16,7 +21,8 @@ import { InvoiceAuditService } from './invoice-audit.service';
 export class InvoicesController {
   constructor(
     private readonly invoicesService: InvoicesService,
-    private readonly invoiceAuditService: InvoiceAuditService
+    private readonly invoiceAuditService: InvoiceAuditService,
+    private readonly digitalSignatureService: DigitalSignatureService
   ) {}
 
   @Post()
@@ -612,5 +618,305 @@ export class InvoicesController {
       auditHistory,
       summary
     };
+  }
+
+  // ===== ENDPOINTS DE FIRMA DIGITAL =====
+
+  @Post(':id/sign-pdf')
+  @Roles(Role.ABOGADO)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ 
+    summary: 'Firmar PDF de factura digitalmente',
+    description: 'Firma digitalmente el PDF de una factura usando AutoFirma'
+  })
+  @ApiParam({ name: 'id', description: 'ID de la factura', type: 'string' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        certificateType: { 
+          type: 'string', 
+          enum: ['FNMT', 'DNIe', 'Other'],
+          description: 'Tipo de certificado a usar'
+        }
+      },
+      required: ['certificateType']
+    }
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'PDF firmado exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        signedPdf: { type: 'string', description: 'PDF firmado en base64' },
+        signatureInfo: {
+          type: 'object',
+          properties: {
+            signer: { type: 'string' },
+            timestamp: { type: 'string' },
+            certificate: { type: 'string' },
+            signatureAlgorithm: { type: 'string' }
+          }
+        },
+        downloadUrl: { type: 'string' }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente' })
+  @ApiResponse({ status: 404, description: 'Factura no encontrada' })
+  @ApiResponse({ status: 500, description: 'Error en firma digital' })
+  async signPdf(@Param('id') id: string, @Body() body: { certificateType: 'FNMT' | 'DNIe' | 'Other' }, @Request() req) {
+    try {
+      // 1. Verificar que la factura existe y pertenece al usuario
+      const invoice = await this.invoicesService.findOne(id);
+      if (!invoice) {
+        throw new HttpException('Factura no encontrada', HttpStatus.NOT_FOUND);
+      }
+
+      if (invoice.emisorId !== req.user.id && req.user.role !== 'ADMIN') {
+        throw new HttpException('No autorizado para firmar esta factura', HttpStatus.FORBIDDEN);
+      }
+
+      // 2. Generar el PDF original
+      const pdfBuffer = await this.invoicesService.generateInvoicePdfWithQR(invoice);
+      const pdfBase64 = pdfBuffer.toString('base64');
+
+      // 3. Preparar solicitud de firma
+      const signatureRequest: SignatureRequest = {
+        fileName: `factura_${invoice.numeroFactura || id}.pdf`,
+        fileContent: pdfBase64,
+        fileSize: pdfBuffer.length,
+        certificateType: body.certificateType,
+        userId: req.user.id,
+        invoiceId: id
+      };
+
+      // 4. Firmar el PDF
+      const signatureResponse = await this.digitalSignatureService.signPdfWithAutoFirma(signatureRequest);
+
+      if (!signatureResponse.success) {
+        throw new HttpException(signatureResponse.error || 'Error en firma digital', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      // 5. Guardar el PDF firmado
+      const fileName = await this.digitalSignatureService.saveSignedPdf(id, signatureResponse.signedPdf!);
+      const downloadUrl = this.digitalSignatureService.getSignedPdfDownloadUrl(fileName);
+
+      // 6. Registrar en auditoría
+      await this.invoiceAuditService.logStatusChange(id, req.user.id, 'emitida', 'firmada', req.ip, req.headers['user-agent']);
+
+      return {
+        success: true,
+        signedPdf: signatureResponse.signedPdf,
+        signatureInfo: signatureResponse.signatureInfo,
+        downloadUrl
+      };
+
+    } catch (error) {
+      console.error('Error en firma digital de PDF:', error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException('Error en firma digital', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Get(':id/signed-pdf')
+  @Roles(Role.ABOGADO, Role.ADMIN, Role.CLIENTE)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ 
+    summary: 'Descargar PDF firmado',
+    description: 'Descarga el PDF de la factura firmado digitalmente'
+  })
+  @ApiParam({ name: 'id', description: 'ID de la factura', type: 'string' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'PDF firmado',
+    schema: {
+      type: 'string',
+      format: 'binary'
+    }
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente' })
+  @ApiResponse({ status: 404, description: 'PDF firmado no encontrado' })
+  async downloadSignedPdf(@Param('id') id: string, @Res() res: Response, @Request() req) {
+    try {
+      // Verificar que la factura existe
+      const invoice = await this.invoicesService.findOne(id);
+      if (!invoice) {
+        throw new HttpException('Factura no encontrada', HttpStatus.NOT_FOUND);
+      }
+
+      // Verificar permisos
+      if (req.user.role === 'CLIENTE' && invoice.receptorId !== req.user.id) {
+        throw new HttpException('No autorizado', HttpStatus.FORBIDDEN);
+      }
+
+      if (req.user.role === 'ABOGADO' && invoice.emisorId !== req.user.id && req.user.role !== 'ADMIN') {
+        throw new HttpException('No autorizado', HttpStatus.FORBIDDEN);
+      }
+
+      // Buscar el PDF firmado
+      const uploadsDir = path.join(process.cwd(), 'uploads', 'signed-invoices');
+      const files = fs.readdirSync(uploadsDir).filter(file => file.includes(`factura_firmada_${id}_`));
+      
+      if (files.length === 0) {
+        throw new HttpException('PDF firmado no encontrado', HttpStatus.NOT_FOUND);
+      }
+
+      // Tomar el más reciente
+      const latestFile = files.sort().reverse()[0];
+      const filePath = path.join(uploadsDir, latestFile);
+      
+      // Enviar el archivo
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="factura_firmada_${invoice.numeroFactura || id}.pdf"`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      });
+      
+      res.sendFile(filePath);
+
+    } catch (error) {
+      console.error('Error descargando PDF firmado:', error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException('Error descargando PDF firmado', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Post(':id/upload-signed-pdf')
+  @Roles(Role.ABOGADO)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseInterceptors(FileInterceptor('signedPdf', {
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, path.join(process.cwd(), 'uploads', 'signed-invoices'));
+      },
+      filename: (req, file, cb) => {
+        const invoiceId = req.params.id;
+        const timestamp = Date.now();
+        cb(null, `factura_firmada_${invoiceId}_${timestamp}.pdf`);
+      }
+    }),
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype !== 'application/pdf') {
+        return cb(new Error('Solo se permiten archivos PDF firmados'), false);
+      }
+      cb(null, true);
+    },
+    limits: { fileSize: 20 * 1024 * 1024 } // 20 MB
+  }))
+  @ApiOperation({ summary: 'Subir PDF firmado', description: 'Sube un PDF firmado digitalmente para una factura' })
+  @ApiParam({ name: 'id', description: 'ID de la factura', type: 'string' })
+  @ApiResponse({ status: 200, description: 'PDF firmado guardado exitosamente', schema: { type: 'object', properties: { success: { type: 'boolean' }, fileName: { type: 'string' }, downloadUrl: { type: 'string' } } } })
+  @ApiResponse({ status: 400, description: 'Archivo inválido' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente' })
+  @ApiResponse({ status: 404, description: 'Factura no encontrada' })
+  async uploadSignedPdf(@Param('id') id: string, @UploadedFile() file: any, @Request() req) {
+    if (!file) {
+      throw new HttpException('No se recibió archivo PDF firmado', HttpStatus.BAD_REQUEST);
+    }
+    // Verificar que la factura existe y pertenece al usuario
+    const invoice = await this.invoicesService.findOne(id);
+    if (!invoice) {
+      throw new HttpException('Factura no encontrada', HttpStatus.NOT_FOUND);
+    }
+    if (invoice.emisorId !== req.user.id && req.user.role !== 'ADMIN') {
+      throw new HttpException('No autorizado para subir PDF firmado de esta factura', HttpStatus.FORBIDDEN);
+    }
+    // Opcional: marcar la factura como firmada en la base de datos
+    await this.invoicesService.markAsSigned(id);
+    // Devolver la URL de descarga
+    const fileName = file.filename;
+    const downloadUrl = `/uploads/signed-invoices/${fileName}`;
+    return { success: true, fileName, downloadUrl };
+  }
+
+  @Get('autofirma/status')
+  @Roles(Role.ABOGADO, Role.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ 
+    summary: 'Verificar estado de AutoFirma',
+    description: 'Verifica si AutoFirma está disponible y funcionando'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Estado de AutoFirma',
+    schema: {
+      type: 'object',
+      properties: {
+        available: { type: 'boolean' },
+        status: { type: 'string' },
+        message: { type: 'string' },
+        autofirma: {
+          type: 'object',
+          properties: {
+            installed: { type: 'boolean' },
+            running: { type: 'boolean' },
+            available: { type: 'boolean' },
+            installation: { type: 'object' },
+            runningInfo: { type: 'object' }
+          }
+        }
+      }
+    }
+  })
+  async checkAutoFirmaStatus() {
+    try {
+      const detailedStatus = await this.digitalSignatureService.getAutoFirmaDetailedStatus();
+      
+      return {
+        available: detailedStatus.autofirma?.available || false,
+        status: detailedStatus.status || 'error',
+        message: detailedStatus.message || 'Error verificando AutoFirma',
+        autofirma: detailedStatus.autofirma || {
+          installed: false,
+          running: false,
+          available: false
+        }
+      };
+    } catch (error) {
+      return {
+        available: false,
+        status: 'error',
+        message: 'Error verificando estado de AutoFirma',
+        autofirma: {
+          installed: false,
+          running: false,
+          available: false,
+          error: error instanceof Error ? error.message : 'Error desconocido'
+        }
+      };
+    }
+  }
+
+  @Get(':id/html-preview')
+  @Roles(Role.ABOGADO, Role.ADMIN, Role.CLIENTE)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ summary: 'Vista previa HTML de la factura', description: 'Devuelve el HTML renderizado de la factura para previsualización' })
+  @ApiParam({ name: 'id', description: 'ID de la factura', type: 'string' })
+  @ApiResponse({ status: 200, description: 'HTML de la factura', schema: { type: 'string' } })
+  @ApiResponse({ status: 404, description: 'Factura no encontrada' })
+  async getInvoiceHtmlPreview(@Param('id') id: string, @Res() res: Response, @Request() req) {
+    const invoice = await this.invoicesService.findOne(id);
+    if (!invoice) {
+      return res.status(404).send('Factura no encontrada');
+    }
+    // Verifica permisos
+    if (invoice.emisorId !== req.user.id && invoice.receptorId !== req.user.id && req.user.role !== 'ADMIN') {
+      return res.status(403).send('No autorizado para ver esta factura');
+    }
+    // Genera el HTML usando el mismo template que el PDF
+    const html = await this.invoicesService.generateInvoiceHtml(invoice);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.send(html);
   }
 } 

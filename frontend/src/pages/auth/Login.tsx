@@ -15,8 +15,8 @@ const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [formData, setFormData] = useState({
-    email: 'admin@despacho.com', // Valor por defecto para pruebas
-    password: 'password123' // Valor por defecto para pruebas
+    email: '',
+    password: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -69,9 +69,9 @@ const Login = () => {
     <div className="min-h-[calc(100vh-64px)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h1 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             Iniciar Sesión
-          </h2>
+          </h1>
           <p className="mt-2 text-center text-sm text-gray-600">
             ¿No tiene una cuenta?{' '}
             <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">

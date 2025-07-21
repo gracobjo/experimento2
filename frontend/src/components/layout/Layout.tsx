@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useAppConfig } from '../../hooks/useSiteConfig';
 import Notifications from '../Notifications';
 import ChatbotWidget from '../chat/ChatbotWidget';
+import AccessibilityTester from '../AccessibilityTester';
+import ContactModal from '../ContactModal';
 import api from '../../api/axios';
 
 interface ContactParam {
@@ -19,17 +21,19 @@ interface UnreadCount {
 }
 
 const Layout = () => {
-  const { user, logout } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const [openBilling, setOpenBilling] = useState(false);
   const [contactParams, setContactParams] = useState<ContactParam[]>([]);
   const [copyrightText, setCopyrightText] = useState('© 2024 Despacho Legal. Todos los derechos reservados.');
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [showAccessibilityTester, setShowAccessibilityTester] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
 
   const isAdmin = user?.role === 'ADMIN';
   const isLawyer = user?.role === 'ABOGADO';
   const isClient = user?.role === 'CLIENTE';
 
-  // Usar configuraciones dinámicas
+  // Usar configuraciones dinámicas solo cuando la autenticación no está cargando
   const {
     siteName,
     logoUrl,
@@ -45,7 +49,7 @@ const Layout = () => {
     socialLinkedin,
     socialInstagram,
     loading: configLoading
-  } = useAppConfig(user?.role || 'CLIENTE');
+  } = useAppConfig(authLoading ? undefined : user?.role);
 
   // Estilos dinámicos basados en configuraciones
   const navStyle = {
@@ -62,7 +66,7 @@ const Layout = () => {
           <button
             className="hover:text-blue-200 px-2 py-1 rounded focus:outline-none flex items-center"
             onClick={() => setOpenBilling((v) => !v)}
-            onBlur={() => setTimeout(() => setOpenBilling(false), 150)}
+            onBlur={() => setTimeout(() => setOpenBilling(false), 200)}
           >
             {item.icon && <span className="mr-1">{item.icon}</span>}
             {item.label}
@@ -71,13 +75,20 @@ const Layout = () => {
             </svg>
           </button>
           {openBilling && (
-            <div className="absolute right-0 mt-2 w-56 bg-white text-gray-900 rounded shadow-lg z-50">
+            <div 
+              className="absolute right-0 mt-2 w-56 bg-white text-gray-900 rounded shadow-lg z-50"
+              onMouseEnter={() => setOpenBilling(true)}
+              onMouseLeave={() => setTimeout(() => setOpenBilling(false), 100)}
+            >
               {item.children.map((child: any, childIndex: number) => (
                 <Link
                   key={child.id || child.label || `child-${childIndex}`}
                   to={child.url}
-                  className="block px-4 py-2 hover:bg-blue-100"
-                  onClick={() => setOpenBilling(false)}
+                  className="block px-4 py-2 hover:bg-blue-100 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenBilling(false);
+                  }}
                 >
                   {child.icon && <span className="mr-2">{child.icon}</span>}
                   {child.label}
@@ -120,6 +131,7 @@ const Layout = () => {
         { label: 'Tareas', url: '/admin/tasks', icon: '✅' },
         { label: 'Documentos', url: '/admin/documents', icon: '📄' },
         { label: 'Reportes', url: '/admin/reports', icon: '📊' },
+        { label: 'Servicios', url: '/admin/services', icon: '⚖️' },
         { label: 'Home Builder', url: '/admin/home-builder', icon: '🎨' }
       ];
     } else if (isLawyer) {
@@ -154,11 +166,7 @@ const Layout = () => {
 
   const currentMenuItems = configLoading ? getDefaultMenuItems() : (menuItems && menuItems.length > 0 ? menuItems : getDefaultMenuItems());
 
-  // Logs de depuración
-  console.log('Layout - User role:', user?.role);
-  console.log('Layout - Config loading:', configLoading);
-  console.log('Layout - Menu items:', menuItems);
-  console.log('Layout - Current menu items:', currentMenuItems);
+
 
   // Obtener parámetros de contacto y contenido legal
   useEffect(() => {
@@ -180,7 +188,6 @@ const Layout = () => {
           setCopyrightText(copyrightParam.valor);
         }
       } catch (error) {
-        console.error('Error fetching contact and legal params:', error);
         // En caso de error, establecer arrays vacíos
         setContactParams([]);
       }
@@ -206,7 +213,6 @@ const Layout = () => {
   // Función para obtener valor de parámetro por clave
   const getParamValue = (clave: string): string => {
     if (!Array.isArray(contactParams)) {
-      console.warn('contactParams is not an array:', contactParams);
       return '';
     }
     const param = contactParams.find(p => p.clave === clave);
@@ -251,6 +257,16 @@ const Layout = () => {
                     {user.name} {user.email && <span className="text-gray-300">({user.email})</span>}
                   </span>
                   
+                  {/* Botón de prueba de accesibilidad */}
+                  <button
+                    onClick={() => setShowAccessibilityTester(true)}
+                    className="hover:text-blue-200 px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    aria-label="Abrir tester de accesibilidad"
+                    title="Probar accesibilidad"
+                  >
+                    ♿
+                  </button>
+                  
                   {/* Botón de logout */}
                   <button
                     onClick={logout}
@@ -291,6 +307,7 @@ const Layout = () => {
       {footerVisible && (
         <footer className="bg-gray-800 text-white">
           <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <h2 className="text-xl font-bold text-white mb-6">Información de Contacto</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {/* Información de contacto */}
               <div>
@@ -300,7 +317,13 @@ const Layout = () => {
                     <p className="text-gray-300 mb-2">{getParamValue('CONTACT_INFO')}</p>
                   )}
                   {getParamValue('CONTACT_EMAIL') && (
-                    <p>📧 {getParamValue('CONTACT_EMAIL')}</p>
+                    <button
+                      onClick={() => setShowContactModal(true)}
+                      className="text-left hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1 py-1 transition-colors"
+                      aria-label={`Abrir formulario de contacto. Email: ${getParamValue('CONTACT_EMAIL')}`}
+                    >
+                      📧 {getParamValue('CONTACT_EMAIL')}
+                    </button>
                   )}
                   {getParamValue('CONTACT_PHONE_PREFIX') && getParamValue('CONTACT_PHONE') && (
                     <p>📞 {getParamValue('CONTACT_PHONE_PREFIX')} {getParamValue('CONTACT_PHONE')}</p>
@@ -381,6 +404,18 @@ const Layout = () => {
 
       {/* Chat Widget - Solo disponible para usuarios NO autenticados */}
       {!user && <ChatbotWidget />}
+
+      {/* Accessibility Tester */}
+      <AccessibilityTester 
+        isVisible={showAccessibilityTester}
+        onClose={() => setShowAccessibilityTester(false)}
+      />
+
+      {/* Contact Modal */}
+      <ContactModal
+        isOpen={showContactModal}
+        onClose={() => setShowContactModal(false)}
+      />
     </div>
   );
 };

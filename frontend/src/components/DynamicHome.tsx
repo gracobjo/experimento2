@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LayoutConfig } from './HomeBuilder/types';
 import ComponentRenderer from './HomeBuilder/ComponentRenderer';
-import WelcomeChatbot from './chat/WelcomeChatbot';
-import ChatbotBanner from './chat/ChatbotBanner';
 import { useAuth } from '../context/AuthContext';
 
 const DynamicHome: React.FC = () => {
@@ -28,7 +26,6 @@ const DynamicHome: React.FC = () => {
         }
       } catch (err) {
         console.error('Error fetching layout:', err);
-        setError('Error al cargar la página');
         // Usar layout por defecto en caso de error
         setLayout(getDefaultLayout());
       } finally {
@@ -74,6 +71,9 @@ const DynamicHome: React.FC = () => {
 
   return (
     <div className="min-h-screen">
+      {/* Título principal oculto para lectores de pantalla */}
+      <h1 className="sr-only">Página Principal - Despacho Legal</h1>
+      
       {layout.components.map((component) => (
         <div key={component.id}>
           <ComponentRenderer
@@ -81,14 +81,6 @@ const DynamicHome: React.FC = () => {
           />
         </div>
       ))}
-      
-      {/* Chatbot Widget - Solo disponible para usuarios NO autenticados en la página de bienvenida */}
-      {!user && (
-        <>
-          <WelcomeChatbot />
-          <ChatbotBanner />
-        </>
-      )}
     </div>
   );
 };
@@ -105,8 +97,9 @@ const getDefaultLayout = (): LayoutConfig => ({
         title: 'Bienvenido a Nuestro Despacho Legal',
         subtitle: 'Servicios legales profesionales y confiables para proteger sus derechos',
         backgroundImage: '/images/hero-bg.jpg',
-        ctaText: 'Consultar Ahora',
-        ctaLink: '/contact'
+        ctaText: 'Solicitar Consulta Gratuita',
+        secondaryText: 'Conocer Servicios',
+        secondaryLink: '/contact'
       },
       order: 0
     },
@@ -152,9 +145,9 @@ const getDefaultLayout = (): LayoutConfig => ({
       id: 'default-contact',
       type: 'contact-form',
       props: {
-        title: 'Contáctanos',
-        subtitle: 'Estamos aquí para ayudarte con tu caso legal',
-        fields: ['nombre', 'email', 'telefono', 'mensaje'],
+        title: '¿Necesitas Asesoría Legal?',
+        subtitle: 'Nuestros abogados especialistas están listos para ayudarte',
+        buttonText: 'Solicitar Consulta Gratuita',
         submitText: 'Enviar Consulta'
       },
       order: 3

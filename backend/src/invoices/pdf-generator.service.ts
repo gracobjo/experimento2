@@ -3,13 +3,14 @@ import * as puppeteer from 'puppeteer';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as QRCode from 'qrcode';
+import { ParametrosService } from '../parametros/parametros.service'; // Added import for ParametrosService
 
 @Injectable()
 export class PdfGeneratorService {
   private readonly logger = new Logger(PdfGeneratorService.name);
   private templatePath: string;
 
-  constructor() {
+  constructor(private readonly parametrosService: ParametrosService) { // inyectar el servicio de parámetros
     // Buscar el template en múltiples ubicaciones posibles
     const possiblePaths = [
       // Template original con formato profesional
@@ -28,7 +29,7 @@ export class PdfGeneratorService {
     for (const templatePath of possiblePaths) {
       if (fs.existsSync(templatePath)) {
         this.templatePath = templatePath;
-        this.logger.log(`Template encontrado en: ${this.templatePath}`);
+        this.logger.log(`Template HTML usado para PDF: ${this.templatePath}`);
         break;
       }
     }
@@ -47,21 +48,19 @@ export class PdfGeneratorService {
       this.logger.log('Iniciando generación de PDF profesional');
 
       // 1. Generar QR
-      const qrData = [
-        `NIF:${invoice.emisor?.email || ''}`,
-        `NUM:${invoice.numeroFactura || ''}`,
-        `FEC:${invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : ''}`,
-        `IMP:${invoice.importeTotal || ''}`
-      ].join('|');
-
-      const qrImageDataUrl = await QRCode.toDataURL(qrData, { 
-        errorCorrectionLevel: 'M', 
-        width: 200,
-        margin: 2
+      // QR: ahora como JSON con datos fiscales y URL de verificación
+      const verificacionUrl = `https://tudominio.com/verificar/${invoice.numeroFactura}`;
+      const qrJson = JSON.stringify({
+        NIF: invoice.emisor?.email || '',
+        NUM: invoice.numeroFactura || '',
+        FEC: invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : '',
+        IMP: invoice.importeTotal || '',
+        verificacion: verificacionUrl
       });
+      const qrImageDataUrl = await QRCode.toDataURL(qrJson, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
 
       // 2. Preparar datos para el template
-      const templateData = this.prepareTemplateData(invoice, qrData, qrImageDataUrl);
+      const templateData = await this.prepareTemplateData(invoice, qrJson, qrImageDataUrl);
 
       // 3. Generar HTML con los datos
       const htmlContent = await this.generateHtml(templateData);
@@ -79,10 +78,8 @@ export class PdfGeneratorService {
     }
   }
 
-  /**
-   * Prepara los datos para el template
-   */
-  private prepareTemplateData(invoice: any, qrData: string, qrImageDataUrl: string): any {
+  // Cambiar a public para permitir uso desde InvoicesService
+  public async prepareTemplateData(invoice: any, qrData: string, qrImageDataUrl: string): Promise<any> {
     this.logger.log('Preparando datos para template. Items recibidos:', invoice.items?.length || 0);
     this.logger.log('Items detallados:', JSON.stringify(invoice.items, null, 2));
     
@@ -92,6 +89,19 @@ export class PdfGeneratorService {
       descuentoCalculado = (invoice.items?.reduce((sum: number, item: any) => 
         sum + (item.quantity * item.unitPrice), 0) || 0) * (invoice.descuento / 100);
     }
+
+    // Obtener la base de la URL de verificación desde parámetros
+    let verificacionUrlBase = 'https://tudominio.com/verificar/';
+    try {
+      const param = await this.parametrosService.findByClave?.('VERIFICACION_URL_BASE');
+      if (param && param.valor) {
+        verificacionUrlBase = param.valor;
+      }
+    } catch {}
+    const verificacionUrl = `${verificacionUrlBase}${invoice.numeroFactura}`;
+
+    // Utilidad para formato español
+    const formatNumberES = (num: number) => Number(num).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     return {
       // Datos básicos
@@ -107,11 +117,11 @@ export class PdfGeneratorService {
       fechaCreacion: new Date(invoice.createdAt).toISOString().slice(0, 10),
 
       // Totales
-      baseImponible: (invoice.baseImponible || 0).toFixed(2),
-      cuotaIVA: (invoice.cuotaIVA || 0).toFixed(2),
-      importeTotal: (invoice.importeTotal || 0).toFixed(2),
+      baseImponible: formatNumberES(invoice.baseImponible || 0),
+      cuotaIVA: formatNumberES(invoice.cuotaIVA || 0),
+      importeTotal: formatNumberES(invoice.importeTotal || 0),
       descuento: invoice.descuento || 0,
-      descuentoCalculado: descuentoCalculado.toFixed(2),
+      descuentoCalculado: formatNumberES(descuentoCalculado),
 
       // Emisor
       emisor: {
@@ -133,28 +143,27 @@ export class PdfGeneratorService {
       // Items
       items: (invoice.items || []).map((item: any) => ({
         descripcion: item.description || '',
-        cantidad: item.quantity || 0,
-        precioUnitario: (item.unitPrice || 0).toFixed(2),
-        total: (item.total || 0).toFixed(2)
+        cantidad: Number(item.quantity || 0),
+        precioUnitario: formatNumberES(Number(item.unitPrice || 0)),
+        total: formatNumberES(Number(item.total || 0))
       })),
 
       // Provisiones
       provisiones: (invoice.provisionFondos || []).map((provision: any) => ({
         descripcion: provision.description || 'Sin descripción',
         fecha: provision.date ? new Date(provision.date).toISOString().slice(0, 10) : 'N/A',
-        importe: (provision.amount || 0).toFixed(2)
+        importe: formatNumberES(provision.amount || 0)
       })),
 
       // QR
       qrData: qrData,
-      qrImage: qrImageDataUrl
+      qrImage: qrImageDataUrl,
+      verificacionUrl: verificacionUrl
     };
   }
 
-  /**
-   * Genera el HTML con los datos del template
-   */
-  private async generateHtml(data: any): Promise<string> {
+  // Cambiar a public para permitir uso desde InvoicesService
+  public async generateHtml(data: any): Promise<string> {
     try {
       this.logger.log(`[PDF-TEMPLATE] Buscando template en: ${this.templatePath}`);
       this.logger.log(`[PDF-TEMPLATE] __dirname: ${__dirname}`);
@@ -328,8 +337,6 @@ export class PdfGeneratorService {
     let browser;
     try {
       this.logger.log('[PUPPETEER] Iniciando Puppeteer...');
-      
-      // Lanzar browser con configuración mejorada para mejor renderizado
       browser = await puppeteer.launch({
         headless: true,
         args: [
@@ -350,106 +357,65 @@ export class PdfGeneratorService {
       this.logger.log('[PUPPETEER] Browser iniciado correctamente');
       const page = await browser.newPage();
 
-      // Configurar viewport más grande para mejor renderizado
+      // Configurar viewport más pequeño para forzar compactación
       await page.setViewport({ 
-        width: 1200, 
-        height: 1600,
-        deviceScaleFactor: 2 // Mejor calidad de renderizado
+        width: 900, 
+        height: 1200,
+        deviceScaleFactor: 2
       });
 
-      // Configurar user agent para mejor compatibilidad
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+      // Inyectar CSS para compactar el diseño y reducir márgenes y fuentes
+      const compactCss = `
+        <style>
+          body { font-size: 10px !important; }
+          .invoice-container { padding: 8px !important; }
+          .header, .parties, .items-section, .totals-section, .footer, .additional-info { margin-bottom: 8px !important; }
+          .qr-code, .qr-code img { width: 60px !important; height: 60px !important; }
+          .items-table th, .items-table td, .totals-table td, .provisions-table th, .provisions-table td { padding: 4px 3px !important; font-size: 10px !important; }
+          .section-title, .invoice-title { font-size: 18px !important; }
+          .company-logo { font-size: 16px !important; }
+          .discount-box, .party, .additional-info { padding: 6px !important; }
+          /* Permite ajustar el tamaño aquí si necesitas más compactación */
+        </style>
+      `;
+      const htmlWithCompactCss = htmlContent.replace('</head>', `${compactCss}</head>`);
 
-      // Establecer contenido HTML con tiempo de espera adicional
+      // Establecer contenido HTML
       this.logger.log('[PUPPETEER] Estableciendo contenido HTML...');
-      await page.setContent(htmlContent, { 
+      await page.setContent(htmlWithCompactCss, { 
         waitUntil: ['networkidle0', 'domcontentloaded', 'load'] 
       });
 
       // Esperar un poco más para asegurar que todo se renderice
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Verificar que el contenido se cargó correctamente
-      const title = await page.title();
-      this.logger.log(`[PUPPETEER] Título de la página: ${title}`);
-
-      // Verificar que los elementos principales están presentes
-      const invoiceNumber = await page.$('.invoice-number');
-      const itemsTable = await page.$('.items-table');
-      const totalsTable = await page.$('.totals-table');
-      
-      this.logger.log(`[PUPPETEER] Elementos encontrados:`, {
-        invoiceNumber: !!invoiceNumber,
-        itemsTable: !!itemsTable,
-        totalsTable: !!totalsTable
-      });
-
-      // Verificar que hay items en la tabla
-      const itemRows = await page.$$('.items-table tbody tr');
-      this.logger.log(`[PUPPETEER] Filas de items encontradas: ${itemRows.length}`);
-
-      // Generar PDF con configuración mejorada
+      // Generar PDF con márgenes reducidos
       this.logger.log('[PUPPETEER] Generando PDF...');
       let pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
         preferCSSPageSize: true,
         margin: {
-          top: '15mm',
-          right: '15mm',
-          bottom: '15mm',
-          left: '15mm'
+          top: '8mm',
+          right: '8mm',
+          bottom: '8mm',
+          left: '8mm'
         },
         displayHeaderFooter: false,
         scale: 1.0,
-        // Configuraciones adicionales para mejor calidad
         timeout: 30000,
         waitForFunction: 'document.readyState === "complete"'
       });
 
+      // Asegura que pdfBuffer es un Buffer
+      if (!Buffer.isBuffer(pdfBuffer)) {
+        pdfBuffer = Buffer.from(pdfBuffer);
+      }
+
       this.logger.log(`[PUPPETEER] PDF generado. Tipo: ${typeof pdfBuffer}, Es Buffer: ${Buffer.isBuffer(pdfBuffer)}, Tamaño: ${pdfBuffer?.length || 'undefined'} bytes`);
-      
-      // Si no es un Buffer, intentar convertirlo
-      if (!Buffer.isBuffer(pdfBuffer)) {
-        this.logger.warn(`[PUPPETEER] pdfBuffer no es un Buffer. Intentando convertir...`);
-        
-        // Si es un objeto con propiedades numéricas, convertirlo a Buffer
-        if (typeof pdfBuffer === 'object' && pdfBuffer !== null) {
-          try {
-            const keys = Object.keys(pdfBuffer).filter(k => !isNaN(Number(k)));
-            if (keys.length > 0) {
-              this.logger.log(`[PUPPETEER] Convirtiendo objeto con ${keys.length} bytes a Buffer...`);
-              const byteArray = new Uint8Array(keys.length);
-              keys.forEach(key => {
-                const index = parseInt(key);
-                byteArray[index] = pdfBuffer[key];
-              });
-              pdfBuffer = Buffer.from(byteArray);
-              this.logger.log(`[PUPPETEER] Conversión exitosa. Nuevo tipo: ${typeof pdfBuffer}, Es Buffer: ${Buffer.isBuffer(pdfBuffer)}`);
-            }
-          } catch (error) {
-            this.logger.error(`[PUPPETEER] Error en conversión: ${error instanceof Error ? error.message : String(error)}`);
-          }
-        }
-      }
-      
-      if (!Buffer.isBuffer(pdfBuffer)) {
-        this.logger.error(`[PUPPETEER] Error: pdfBuffer no es un Buffer después de conversión. Tipo: ${typeof pdfBuffer}`);
-        this.logger.error(`[PUPPETEER] Contenido: ${JSON.stringify(pdfBuffer).substring(0, 200)}...`);
-        throw new Error('Puppeteer no devolvió un Buffer válido');
-      }
-
-      this.logger.log(`[PUPPETEER] Buffer válido generado. Primeros bytes: ${Array.from(pdfBuffer.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
       return pdfBuffer;
-
-    } catch (error) {
-      this.logger.error('Error en Puppeteer:', error);
-      throw new Error('Error generando PDF con Puppeteer');
     } finally {
-      if (browser) {
-        await browser.close();
-        this.logger.log('[PUPPETEER] Browser cerrado');
-      }
+      if (browser) await browser.close();
     }
   }
 } 

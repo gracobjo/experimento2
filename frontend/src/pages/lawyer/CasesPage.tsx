@@ -216,6 +216,7 @@ const CasesPage = () => {
         {/* Estadísticas */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 col-span-full">Estadísticas de Expedientes</h2>
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -281,6 +282,7 @@ const CasesPage = () => {
 
         {/* Filtros */}
         <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Filtros de Búsqueda</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -326,6 +328,7 @@ const CasesPage = () => {
 
         {/* Tabla de expedientes */}
         <div className="bg-white shadow rounded-lg overflow-hidden">
+          <h2 className="text-xl font-semibold text-gray-900 p-6 border-b border-gray-200">Lista de Expedientes</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -393,7 +396,7 @@ const CasesPage = () => {
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No se encontraron expedientes</h3>
+            <h4 className="mt-2 text-sm font-medium text-gray-900">No se encontraron expedientes</h4>
             <p className="mt-1 text-sm text-gray-500">
               Intenta ajustar los filtros o crear un nuevo expediente.
             </p>

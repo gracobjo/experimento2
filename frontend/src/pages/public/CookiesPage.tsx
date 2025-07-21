@@ -35,6 +35,7 @@ const CookiesPage: React.FC = () => {
           
           <h2>Tipos de cookies que utilizamos</h2>
           
+          <h2>Cookies por Categoría</h2>
           <h3>Cookies técnicas (necesarias)</h3>
           <p>Estas cookies son esenciales para el funcionamiento del sitio web y no se pueden desactivar. Incluyen:</p>
           <ul>

@@ -980,19 +980,18 @@ export class InvoicesService {
   }
 
   /**
-   * Genera un PDF profesional de la factura usando el template HTML
+   * Genera un PDF profesional de la factura usando el template HTML profesional (Puppeteer)
    * @param invoice Datos de la factura
    * @returns Buffer del PDF generado
    */
   async generateInvoicePdfWithQR(invoice: any): Promise<Buffer> {
     try {
-      this.logger.log('Generando PDF profesional con template HTML');
+      this.logger.log('Generando PDF profesional con template HTML y Puppeteer');
+      // Usar siempre el servicio PdfGeneratorService (Puppeteer + HTML)
       return await this.pdfGeneratorService.generateInvoicePdf(invoice);
     } catch (error) {
       this.logger.error('Error generando PDF profesional:', error);
-      // Fallback al método anterior si hay error
-      this.logger.log('Usando método de fallback para PDF');
-      return await this.generateInvoicePdfFallback(invoice);
+      throw new Error('Error generando PDF profesional');
     }
   }
 
@@ -1040,5 +1039,35 @@ export class InvoicesService {
     // 6. Finalizar PDF
     const pdfBytes = await pdfDoc.save();
     return Buffer.from(pdfBytes);
+  }
+
+  async markAsSigned(id: string) {
+    await this.prisma.invoice.update({
+      where: { id },
+      data: {
+        estado: 'firmada',
+        updatedAt: new Date(),
+      },
+    });
+    this.logger.log(`Factura ${id} marcada como firmada.`);
+  }
+
+  async generateInvoiceHtml(invoice: any): Promise<string> {
+    // Generar qrData igual que en el PDF
+    const qrData = [
+      `NIF:${invoice.emisor?.email || ''}`,
+      `NUM:${invoice.numeroFactura || ''}`,
+      `FEC:${invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : ''}`,
+      `IMP:${invoice.importeTotal || ''}`
+    ].join('|');
+    const qrImageDataUrl = await (await import('qrcode')).toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
+    const templateData = await this.pdfGeneratorService.prepareTemplateData(invoice, qrData, qrImageDataUrl);
+    const fullHtml = await this.pdfGeneratorService.generateHtml(templateData);
+    // Extraer solo <style> y <body> para la previsualización
+    const styleMatch = fullHtml.match(/<style[\s\S]*?<\/style>/i);
+    const bodyMatch = fullHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    const style = styleMatch ? styleMatch[0] : '';
+    const body = bodyMatch ? bodyMatch[1] : fullHtml;
+    return `${style}\n${body}`;
   }
 } 

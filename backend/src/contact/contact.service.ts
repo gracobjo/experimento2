@@ -25,20 +25,30 @@ export class ContactService {
         }
       });
 
-      // Enviar email de notificación al administrador
-      await this.emailService.sendContactNotification({
-        nombre: createContactDto.nombre,
-        email: createContactDto.email,
-        telefono: createContactDto.telefono,
-        asunto: createContactDto.asunto,
-        mensaje: createContactDto.mensaje
-      });
+      // Enviar email de notificación al administrador (no bloquear si falla)
+      try {
+        await this.emailService.sendContactNotification({
+          nombre: createContactDto.nombre,
+          email: createContactDto.email,
+          telefono: createContactDto.telefono,
+          asunto: createContactDto.asunto,
+          mensaje: createContactDto.mensaje
+        });
+      } catch (emailError) {
+        console.error('Error sending contact notification email:', emailError);
+        // No lanzar error si falla el email
+      }
 
-      // Enviar email de confirmación al usuario
-      await this.emailService.sendContactConfirmation({
-        nombre: createContactDto.nombre,
-        email: createContactDto.email
-      });
+      // Enviar email de confirmación al usuario (no bloquear si falla)
+      try {
+        await this.emailService.sendContactConfirmation({
+          nombre: createContactDto.nombre,
+          email: createContactDto.email
+        });
+      } catch (emailError) {
+        console.error('Error sending contact confirmation email:', emailError);
+        // No lanzar error si falla el email
+      }
 
       return contact;
     } catch (error) {

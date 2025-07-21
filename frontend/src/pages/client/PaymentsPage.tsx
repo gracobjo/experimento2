@@ -65,6 +65,7 @@ const PaymentsPage = () => {
           <h1 className="text-2xl font-semibold mb-2">Gestionar pagos y facturas</h1>
           <p className="text-gray-600 mb-6">Aquí puedes consultar tus facturas, descargar el PDF y acceder al QR para pago o verificación.</p>
 
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Filtros de Búsqueda</h2>
           {/* Filtros */}
           <div className="flex flex-wrap gap-4 mb-6">
             <div>
@@ -92,6 +93,7 @@ const PaymentsPage = () => {
             <div className="text-gray-500">No tienes facturas registradas.</div>
           ) : (
             <div className="overflow-x-auto">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Lista de Facturas</h2>
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr>

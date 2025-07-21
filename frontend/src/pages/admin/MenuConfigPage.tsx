@@ -180,7 +180,7 @@ const MenuConfigPage: React.FC = () => {
         {/* Create Menu Form */}
         {showCreateForm && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h3 className="text-lg font-semibold mb-4">Crear Nuevo Menú</h3>
+            <h2 className="text-lg font-semibold mb-4">Crear Nuevo Menú</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -258,7 +258,7 @@ const MenuConfigPage: React.FC = () => {
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="text-lg font-semibold">{menu.name}</h3>
+                    <h2 className="text-lg font-semibold">{menu.name}</h2>
                     <p className="text-blue-100 text-sm">
                       {getRoleLabel(menu.role)} • {menu.orientation === 'horizontal' ? 'Horizontal' : 'Vertical'}
                     </p>

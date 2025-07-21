@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Calendario</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">Test del Calendario de Citas</h1>
+        
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-lg font-semibold mb-4">Simulación del Calendario</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Lado izquierdo - Fechas -->
+                <div class="border rounded-lg p-4">
+                    <h3 class="font-semibold mb-3">📆 Fechas disponibles</h3>
+                    
+                    <div class="space-y-2">
+                        <div class="border rounded-lg p-2 cursor-pointer hover:bg-blue-50">
+                            <div class="flex items-center space-x-2">
+                                <div class="text-center min-w-[50px] text-blue-600">
+                                    <div class="text-xs font-medium">Lun</div>
+                                    <div class="text-md font-bold">21</div>
+                                    <div class="text-xs">Jul</div>
+                                </div>
+                                <div className="flex-1">
+                                    <div class="font-medium text-sm text-blue-800">
+                                        Lunes 21 de Julio
+                                    </div>
+                                    <div class="text-xs text-gray-500">
+                                        6 horarios disponibles
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="border rounded-lg p-2 cursor-pointer hover:bg-blue-50">
+                            <div class="flex items-center space-x-2">
+                                <div class="text-center min-w-[50px] text-gray-600">
+                                    <div class="text-xs font-medium">Mar</div>
+                                    <div class="text-md font-bold">22</div>
+                                    <div class="text-xs">Jul</div>
+                                </div>
+                                <div className="flex-1">
+                                    <div class="font-medium text-sm text-gray-800">
+                                        Martes 22 de Julio
+                                    </div>
+                                    <div class="text-xs text-gray-500">
+                                        6 horarios disponibles
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Lado derecho - Horarios -->
+                <div class="border rounded-lg p-4">
+                    <h3 class="font-semibold mb-3">🕐 Horarios disponibles</h3>
+                    
+                    <div class="mb-3 p-2 bg-blue-50 rounded-lg">
+                        <p class="text-blue-800 font-medium text-sm">
+                            Fecha seleccionada: Lunes 21 de Julio
+                        </p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <button class="p-3 border rounded-lg text-center hover:bg-blue-50 border-gray-200">
+                            <div class="text-md font-semibold">9:00</div>
+                            <div class="text-xs opacity-75">Disponible</div>
+                        </button>
+                        
+                        <button class="p-3 border rounded-lg text-center hover:bg-blue-50 border-gray-200">
+                            <div class="text-md font-semibold">10:00</div>
+                            <div class="text-xs opacity-75">Disponible</div>
+                        </button>
+                        
+                        <button class="p-3 border rounded-lg text-center hover:bg-blue-50 border-gray-200">
+                            <div class="text-md font-semibold">11:00</div>
+                            <div class="text-xs opacity-75">Disponible</div>
+                        </button>
+                        
+                        <button class="p-3 border rounded-lg text-center hover:bg-blue-50 border-gray-200">
+                            <div class="text-md font-semibold">12:00</div>
+                            <div class="text-xs opacity-75">Disponible</div>
+                        </button>
+                        
+                        <button class="p-3 border rounded-lg text-center hover:bg-blue-50 border-gray-200">
+                            <div class="text-md font-semibold">16:00</div>
+                            <div class="text-xs opacity-75">Disponible</div>
+                        </button>
+                        
+                        <button class="p-3 border rounded-lg text-center hover:bg-blue-50 border-gray-200">
+                            <div class="text-md font-semibold">17:00</div>
+                            <div class="text-xs opacity-75">Disponible</div>
+                        </button>
+                    </div>
+                    
+                    <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <h4 class="font-semibold text-green-800 mb-1 text-sm">
+                            ✅ Cita seleccionada
+                        </h4>
+                        <p class="text-green-700 text-sm">
+                            Lunes 21 de Julio a las 9:00
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-6 bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-lg font-semibold mb-4">Estado de la Corrección</h2>
+            <div class="space-y-2">
+                <div class="flex items-center space-x-2">
+                    <span class="text-green-500">✅</span>
+                    <span>Fechas sin hora incorrecta (ya no muestra "a las 2:00")</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-green-500">✅</span>
+                    <span>Horarios correctos (9:00, 10:00, 11:00, 12:00, 16:00, 17:00)</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-green-500">✅</span>
+                    <span>Confirmación correcta de fecha y hora</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

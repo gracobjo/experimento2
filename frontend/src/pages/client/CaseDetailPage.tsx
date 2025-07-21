@@ -73,6 +73,34 @@ const ClientCaseDetailPage = () => {
     }
   };
 
+  const handleContactLawyer = () => {
+    if (caseData?.lawyer?.email) {
+      const subject = encodeURIComponent(`Consulta sobre expediente: ${caseData.title}`);
+      const body = encodeURIComponent(`Estimado/a ${caseData.lawyer.name},\n\nMe gustaría consultar sobre mi expediente "${caseData.title}" (ID: ${caseData.id}).\n\nSaludos cordiales.`);
+      window.open(`mailto:${caseData.lawyer.email}?subject=${subject}&body=${body}`);
+    } else {
+      alert('No hay información de contacto del abogado disponible.');
+    }
+  };
+
+  const handleScheduleAppointment = () => {
+    navigate('/client/appointments');
+  };
+
+  const handleSendMessage = () => {
+    navigate('/client/chat');
+  };
+
+  const handleRequestInfo = () => {
+    if (caseData?.lawyer?.email) {
+      const subject = encodeURIComponent(`Solicitud de información: ${caseData.title}`);
+      const body = encodeURIComponent(`Estimado/a ${caseData.lawyer.name},\n\nMe gustaría solicitar información adicional sobre mi expediente "${caseData.title}" (ID: ${caseData.id}).\n\nPor favor, indíqueme qué documentación adicional necesito proporcionar o qué información específica requiere.\n\nSaludos cordiales.`);
+      window.open(`mailto:${caseData.lawyer.email}?subject=${subject}&body=${body}`);
+    } else {
+      alert('No hay información de contacto del abogado disponible.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -273,7 +301,10 @@ const ClientCaseDetailPage = () => {
                     <p className="text-sm text-gray-500">{caseData.lawyer?.email || 'Email no disponible'}</p>
                   </div>
                 </div>
-                <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">
+                <button 
+                  onClick={handleContactLawyer}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                >
                   Contactar Abogado
                 </button>
               </div>
@@ -283,13 +314,22 @@ const ClientCaseDetailPage = () => {
             <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
               <div className="space-y-3">
-                <button className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm">
+                <button 
+                  onClick={handleScheduleAppointment}
+                  className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+                >
                   Programar Cita
                 </button>
-                <button className="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm">
+                <button 
+                  onClick={handleSendMessage}
+                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm"
+                >
                   Enviar Mensaje
                 </button>
-                <button className="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm">
+                <button 
+                  onClick={handleRequestInfo}
+                  className="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm"
+                >
                   Solicitar Información
                 </button>
               </div>

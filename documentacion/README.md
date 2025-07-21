@@ -269,3 +269,16 @@ Para información sobre despliegue en producción, consultar:
 - [Guía de Despliegue](./despliegue-produccion.md)
 - [Configuración de Servidor](./configuracion-servidor.md)
 - [Optimización de Rendimiento](./optimizacion.md) 
+
+## 🧾 Facturación Electrónica Profesional
+
+- Las facturas generadas y descargadas tienen un formato profesional, idéntico a la previsualización.
+- El PDF incluye un **código QR** con los datos fiscales y una URL de verificación.
+- **Importes**: Todos los importes se muestran con formato español (miles con punto, decimales con coma), por ejemplo: `1.496,07 €`.
+- **Descarga e impresión**: Para imprimir una factura, primero descárgala como PDF y luego imprímela desde tu visor de PDF. No uses la impresión directa del navegador para evitar problemas de formato.
+- **Verificación**: El QR y el pie de página de la factura incluyen una URL de verificación configurable por el administrador.
+
+## ⚙️ Gestión de Parámetros de Verificación
+
+- El administrador puede configurar la URL base de verificación de facturas desde el panel de parámetros (`/admin/parametros`).
+- El parámetro se llama `VERIFICACION_URL_BASE` y afecta tanto al QR como al pie de página de la factura. 

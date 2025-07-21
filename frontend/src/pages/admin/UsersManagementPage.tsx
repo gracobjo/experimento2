@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
-import DebugAuth from '../../components/DebugAuth';
 
 interface User {
   id: string;
@@ -42,24 +41,7 @@ const UsersManagementPage = () => {
 
   const { user: currentUser } = useAuth();
 
-  // Función para login automático de pruebas
-  const handleAutoLogin = async () => {
-    try {
-      const response = await api.post('/auth/login', {
-        email: 'admin@despacho.com',
-        password: 'password123'
-      });
-      
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      console.log('Auto login successful:', user);
-      
-      // Recargar la página para que el contexto se actualice
-      window.location.reload();
-    } catch (error) {
-      console.error('Auto login failed:', error);
-    }
-  };
+
 
   useEffect(() => {
     fetchUsers();
@@ -252,30 +234,20 @@ const UsersManagementPage = () => {
 
   return (
     <div className="py-6">
-      <DebugAuth />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Gestión de Usuarios</h1>
-              <p className="mt-2 text-gray-600">
-                Administra todos los usuarios del sistema
-              </p>
-            </div>
-            <div>
-              <button
-                onClick={handleAutoLogin}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-              >
-                Login Admin (Pruebas)
-              </button>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Gestión de Usuarios</h1>
+            <p className="mt-2 text-gray-600">
+              Administra todos los usuarios del sistema
+            </p>
           </div>
         </div>
 
         {/* Filtros */}
         <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Filtros de Búsqueda</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -321,6 +293,9 @@ const UsersManagementPage = () => {
 
         {/* Lista de usuarios */}
         <div className="bg-white shadow rounded-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900">Lista de Usuarios</h2>
+          </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">

@@ -72,19 +72,45 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   }, [isVisible]);
 
   const handleDateSelect = (date: string) => {
+    console.log('handleDateSelect called with:', date);
     setSelectedDate(date);
     setSelectedTime('');
   };
 
   const handleTimeSelect = (time: string) => {
+    console.log('handleTimeSelect called with:', time);
     setSelectedTime(time);
   };
 
   const handleConfirm = () => {
-    if (selectedDate && selectedTime) {
-      onDateSelect(selectedDate, selectedTime);
-      onClose();
+    console.log('handleConfirm called with:', { selectedDate, selectedTime });
+    
+    // Validaciones adicionales
+    if (!selectedDate || !selectedTime) {
+      console.error('Missing date or time:', { selectedDate, selectedTime });
+      alert('Por favor, selecciona una fecha y hora antes de confirmar.');
+      return;
     }
+    
+    // Validar formato de fecha
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(selectedDate)) {
+      console.error('Invalid date format:', selectedDate);
+      alert('Formato de fecha inválido. Por favor, selecciona de nuevo.');
+      return;
+    }
+    
+    // Validar formato de hora
+    const timeRegex = /^\d{1,2}:\d{2}$/;
+    if (!timeRegex.test(selectedTime)) {
+      console.error('Invalid time format:', selectedTime);
+      alert('Formato de hora inválido. Por favor, selecciona de nuevo.');
+      return;
+    }
+    
+    console.log('Calling onDateSelect with:', selectedDate, selectedTime);
+    onDateSelect(selectedDate, selectedTime);
+    onClose();
   };
 
   const getAvailableTimesForDate = (date: string) => {
@@ -105,7 +131,7 @@ const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
       day: days[date.getDay()],
       date: date.getDate(),
       month: months[date.getMonth()],
-      full: formatDate(date)
+      full: `${days[date.getDay()]} ${date.getDate()} de ${months[date.getMonth()]}`
     };
   };
 

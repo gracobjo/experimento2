@@ -132,11 +132,25 @@ const ReportsPage = () => {
           </div>
         </div>
 
+        {/* Tabla de contenidos */}
+        <nav className="mb-8 bg-gray-50 p-4 rounded-lg shadow flex flex-wrap gap-3 items-center">
+          <span className="font-semibold text-gray-700 mr-2">Ir a sección:</span>
+          <a href="#expedientes" className="px-3 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors">Expedientes</a>
+          <a href="#tareas" className="px-3 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors">Tareas</a>
+          <a href="#usuarios" className="px-3 py-1 bg-purple-100 text-purple-800 rounded hover:bg-purple-200 transition-colors">Actividad de Usuarios</a>
+          <a href="#documentos" className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 transition-colors">Documentos</a>
+          <a href="#citas" className="px-3 py-1 bg-pink-100 text-pink-800 rounded hover:bg-pink-200 transition-colors">Citas por Mes</a>
+        </nav>
+
         {reports && (
           <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Estadísticas Generales</h2>
             {/* Estadísticas de Expedientes */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Estadísticas de Expedientes</h3>
+            <div id="expedientes" className="bg-white p-6 rounded-lg shadow scroll-mt-24">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Estadísticas de Expedientes</h3>
+                <a href="/admin/cases" className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm transition-colors" target="_blank" rel="noopener noreferrer">Ver todos</a>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {reports.casesByStatus.map((item) => (
                   <div key={item.status} className="bg-gray-50 p-4 rounded-lg">
@@ -152,8 +166,11 @@ const ReportsPage = () => {
             </div>
 
             {/* Estadísticas de Tareas */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Estadísticas de Tareas</h3>
+            <div id="tareas" className="bg-white p-6 rounded-lg shadow scroll-mt-24">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Estadísticas de Tareas</h3>
+                <a href="/admin/tasks" className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm transition-colors" target="_blank" rel="noopener noreferrer">Ver todos</a>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {reports.tasksByStatus.map((item) => (
                   <div key={item.status} className="bg-gray-50 p-4 rounded-lg">
@@ -169,8 +186,11 @@ const ReportsPage = () => {
             </div>
 
             {/* Actividad de Usuarios */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Actividad de Usuarios</h3>
+            <div id="usuarios" className="bg-white p-6 rounded-lg shadow scroll-mt-24">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Actividad de Usuarios</h3>
+                <a href="/admin/users" className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm transition-colors" target="_blank" rel="noopener noreferrer">Ver todos</a>
+              </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -228,8 +248,11 @@ const ReportsPage = () => {
             </div>
 
             {/* Estadísticas de Documentos */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Estadísticas de Documentos</h3>
+            <div id="documentos" className="bg-white p-6 rounded-lg shadow scroll-mt-24">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Estadísticas de Documentos</h3>
+                <a href="/admin/documents" className="px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm transition-colors" target="_blank" rel="noopener noreferrer">Ver todos</a>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {reports.documentStats.map((item) => (
                   <div key={item.mimeType} className="bg-gray-50 p-4 rounded-lg">
@@ -248,8 +271,11 @@ const ReportsPage = () => {
             </div>
 
             {/* Citas por Mes */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Citas por Mes</h3>
+            <div id="citas" className="bg-white p-6 rounded-lg shadow scroll-mt-24">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Citas por Mes</h3>
+                <a href="/admin/appointments" className="px-3 py-1 bg-pink-600 text-white rounded hover:bg-pink-700 text-sm transition-colors" target="_blank" rel="noopener noreferrer">Ver todos</a>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {reports.appointmentsByMonth.map((item) => (
                   <div key={item.date} className="bg-gray-50 p-4 rounded-lg">

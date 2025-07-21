@@ -884,17 +884,31 @@ const InvoicesManagementPage = () => {
 
       {/* Edit Modal - Real implementation */}
       {showEditModal && editingInvoice && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-invoice-title"
+          aria-describedby="edit-invoice-description"
+          onClick={(e) => e.target === e.currentTarget && setShowEditModal(false)}
+        >
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Editar Factura {editingInvoice.numeroFactura}</h2>
+              <h2 id="edit-invoice-title" className="text-xl font-bold">Editar Factura {editingInvoice.numeroFactura}</h2>
               <button 
                 onClick={() => setShowEditModal(false)}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
+                className="text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
+                aria-label="Cerrar modal de edición"
+                type="button"
               >
-                ×
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
+            <p id="edit-invoice-description" className="sr-only">
+              Formulario para editar los detalles de la factura {editingInvoice.numeroFactura || ''}
+            </p>
             
             <form onSubmit={handleUpdateInvoice} className="space-y-6">
               {/* Información básica */}
@@ -1292,7 +1306,7 @@ const InvoicesManagementPage = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {Object.entries(auditHistory.summary.changesByField).map(([field, count]) => (
                           <div key={field} className="bg-gray-50 p-3 rounded">
-                            <span className="font-medium">{field}:</span> {count} cambio{count !== 1 ? 's' : ''}
+                            <span className="font-medium">{field}:</span> {String(count)} cambio{count !== 1 ? 's' : ''}
                           </div>
                         ))}
                       </div>
@@ -1306,7 +1320,7 @@ const InvoicesManagementPage = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {Object.entries(auditHistory.summary.changesByUser).map(([user, count]) => (
                           <div key={user} className="bg-gray-50 p-3 rounded">
-                            <span className="font-medium">{user}:</span> {count} cambio{count !== 1 ? 's' : ''}
+                            <span className="font-medium">{user}:</span> {String(count)} cambio{count !== 1 ? 's' : ''}
                           </div>
                         ))}
                       </div>

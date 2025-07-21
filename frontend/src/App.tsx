@@ -6,6 +6,7 @@ import Contact from './pages/public/Contact';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import NotFoundPage from './pages/NotFoundPage';
 import PrivateRoute, { RoleRoute } from './components/layout/PrivateRoute';
 import PlaceholderPage from './components/PlaceholderPage';
 import { AuthProvider } from './context/AuthContext';
@@ -41,6 +42,7 @@ import DocumentsManagementPage from './pages/admin/DocumentsManagementPage';
 import InvoicesManagementPage from './pages/admin/InvoicesManagementPage';
 import AdminReportsPage from './pages/admin/ReportsPage';
 import ParametrosConfigPage from './pages/admin/ParametrosConfigPage';
+import ServicesManagementPage from './pages/admin/ServicesManagementPage';
 import HomeBuilderPage from './pages/admin/HomeBuilderPage';
 import MenuConfigPage from './pages/admin/MenuConfigPage';
 import SiteConfigPage from './pages/admin/SiteConfigPage';
@@ -102,6 +104,7 @@ function App() {
                   <Route path="site-config" element={<SiteConfigPage />} />
                   <Route path="guided-config" element={<GuidedConfigPage />} />
                   <Route path="teleassistance" element={<TeleassistancePage />} />
+                  <Route path="services" element={<ServicesManagementPage />} />
                   <Route path="settings" element={<PlaceholderPage title="Configuración del Sistema" description="Configurar parámetros generales" icon="⚙️" />} />
                   <Route path="audit" element={<PlaceholderPage title="Auditoría" description="Registros de actividad del sistema" icon="🔍" />} />
                   <Route path="backup" element={<PlaceholderPage title="Backup y Restauración" description="Gestionar copias de seguridad" icon="💾" />} />
@@ -148,6 +151,8 @@ function App() {
                 </Route>
               </Route>
             </Route>
+            {/* Catch-all route for not found pages */}
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
       </Router>

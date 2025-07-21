@@ -232,7 +232,7 @@ const SiteConfigPage: React.FC = () => {
         {/* Create Config Form */}
         {showCreateForm && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h3 className="text-lg font-semibold mb-4">Crear Nueva Configuración</h3>
+            <h2 className="text-lg font-semibold mb-4">Crear Nueva Configuración</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -336,7 +336,7 @@ const SiteConfigPage: React.FC = () => {
           {configs.map((category) => (
             <div key={category.category} className="bg-white rounded-lg shadow-md overflow-hidden">
               <div className="bg-gradient-to-r from-gray-600 to-gray-700 text-white p-4">
-                <h3 className="text-lg font-semibold">{getCategoryLabel(category.category)}</h3>
+                <h2 className="text-lg font-semibold">{getCategoryLabel(category.category)}</h2>
                 <p className="text-gray-200 text-sm">
                   {category.configs.length} configuración{category.configs.length !== 1 ? 'es' : ''}
                 </p>

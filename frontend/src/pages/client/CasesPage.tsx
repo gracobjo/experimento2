@@ -96,9 +96,9 @@ const ClientCasesPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {casesArray.map((caseItem) => (
             <div key={caseItem.id} className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                {caseItem.title}
-              </h3>
+                                                          <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                  {caseItem.title}
+                </h2>
               <p className="text-gray-600 text-sm mb-4">
                 {caseItem.description || 'Sin descripción disponible'}
               </p>

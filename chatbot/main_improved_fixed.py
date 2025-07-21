@@ -276,7 +276,7 @@ def detect_intent(text: str, conversation_history: list = []) -> Dict[str, float
     
     # Patrones más específicos para cada intención
     patterns = {
-        "appointment": ["agendar cita", "programar cita", "cita con abogado", "consultar abogado", "quiero una cita", "necesito cita", "hacer cita", "quiero agendar", "necesito agendar", "quiero programar", "necesito programar"],
+        "appointment": ["agendar cita", "programar cita", "cita con abogado", "consultar abogado", "quiero una cita", "necesito cita", "hacer cita", "quiero agendar", "necesito agendar", "quiero programar", "necesito programar", "cita", "quiero cita", "necesito una cita"],
         "greeting": ["hola", "buenos días", "buenas tardes", "buenas noches", "saludos", "hey", "buen día"],
         "farewell": ["adiós", "hasta luego", "nos vemos", "chao", "bye", "hasta la vista", "que tengas buen día"],
         "information_request": ["información", "dime", "cuéntame", "qué", "cómo", "dónde", "cuándo", "por qué", "explica"],
@@ -305,7 +305,7 @@ def detect_intent(text: str, conversation_history: list = []) -> Dict[str, float
             if msg.get("isUser"):
                 msg_text = msg.get("text", "").lower()
                 # Si el usuario mencionó citas antes, aumentar probabilidad
-                if any(word in msg_text for word in ["agendar cita", "programar cita", "cita con abogado", "quiero agendar", "necesito agendar"]):
+                if any(word in msg_text for word in ["agendar cita", "programar cita", "cita con abogado", "quiero agendar", "necesito agendar", "cita", "quiero cita", "necesito una cita"]):
                     intents["appointment"] += 0.3
                 # Si mencionó precios, aumentar probabilidad
                 if any(word in msg_text for word in ["costo", "precio", "honorarios"]):
@@ -988,11 +988,54 @@ def process_message(text: str, language: str = "es", conversation_history: list 
         conversation_contexts.pop(user_id, None)
         return "🔄 Conversación reiniciada. ¿En qué puedo ayudarte?"
     
-    # Verificar si hay una conversación activa de cita
+    # Verificar si hay una conversación activa de cita (PRIORIDAD ALTA)
     if user_id in active_conversations:
         appointment_response = handle_appointment_conversation(user_id, text)
         if appointment_response:
             return appointment_response
+    
+    # Manejar opciones numéricas del menú (solo si NO hay conversación activa)
+    if text.strip() in ["1", "1️⃣", "uno", "primero"]:
+        active_conversations[user_id] = AppointmentConversation()
+        return "¡Perfecto! Te ayudo a agendar tu cita. Para comenzar, necesito algunos datos:\n\n¿Cuál es tu nombre completo?"
+    
+    if text.strip() in ["2", "2️⃣", "dos", "segundo"]:
+        return """📋 **Información General del Despacho:**
+
+⚖️ **Servicios disponibles:**
+• Derecho Civil y Mercantil
+• Derecho Laboral
+• Derecho Familiar
+• Derecho Penal
+• Derecho Administrativo
+
+💰 **Honorarios:**
+• Consulta inicial: Gratuita
+• Rango promedio: €50 - €300
+• Depende de la complejidad del caso
+
+🕐 **Horarios de atención:**
+• Lunes a Viernes: 9:00 AM - 6:00 PM
+• Sábados: 9:00 AM - 1:00 PM
+
+¿Te gustaría agendar una cita para discutir tu caso específico?"""
+    
+    if text.strip() in ["3", "3️⃣", "tres", "tercero"]:
+        contact_info = get_backend_info()
+        return f"""📞 **Información de Contacto:**
+
+📱 **Teléfono:** {contact_info.get('CONTACT_PHONE', '(555) 123-4567')}
+📧 **Email:** {contact_info.get('CONTACT_EMAIL', 'info@despacholegal.com')}
+📍 **Dirección:** {contact_info.get('CONTACT_ADDRESS', 'Av. Principal 123, Madrid')}
+
+🕐 **Horarios de atención:**
+• Lunes a Viernes: 9:00 AM - 6:00 PM
+• Sábados: 9:00 AM - 1:00 PM
+
+¿Te gustaría agendar una cita o tienes alguna otra consulta?"""
+    
+    if text.strip() in ["4", "4️⃣", "cuatro", "cuarto"]:
+        return "Por favor, cuéntame más sobre tu consulta específica. ¿En qué puedo ayudarte?"
     
     # Manejar despedidas
     if intents.get("farewell", 0) > 0.5:
@@ -1028,7 +1071,8 @@ def process_message(text: str, language: str = "es", conversation_history: list 
             # Verificar que el último mensaje del asistente sea específicamente sobre agendar citas
             if last_assistant_message and any(phrase in last_assistant_message for phrase in [
                 "agendar tu cita", "programar tu cita", "ayudarte a agendar", "empezar a agendar",
-                "¿te gustaría que te ayude a programar una cita?", "¿te gustaría agendar una cita?"
+                "¿te gustaría que te ayude a programar una cita?", "¿te gustaría agendar una cita?",
+                "te recomiendo programar una cita", "brindarte la mejor asesoría"
             ]):
                 active_conversations[user_id] = AppointmentConversation()
                 return "¡Perfecto! Te ayudo a agendar tu cita. Para comenzar, necesito algunos datos:\n\n¿Cuál es tu nombre completo?"
@@ -1069,8 +1113,26 @@ def process_message(text: str, language: str = "es", conversation_history: list 
         elif last_topic == "contact":
             return "¿Hay algo más en lo que pueda ayudarte o te gustaría agendar una cita?"
     
-    # Respuesta por defecto más coherente
-    return "Entiendo tu consulta. Para brindarte la mejor asesoría, te recomiendo programar una cita con nuestros abogados especializados. ¿Te gustaría que te ayude con eso?"
+    # Respuesta por defecto más coherente con opciones claras
+    return f"""**Has indicado:** "{text}"
+
+Entiendo tu consulta. ¿Qué te gustaría hacer?
+
+📋 **Opciones disponibles:**
+
+1️⃣ **Agendar una cita**
+   Para consulta personalizada con nuestros abogados
+
+2️⃣ **Información general**
+   Sobre servicios, honorarios, horarios
+
+3️⃣ **Contacto directo**
+   Teléfono, email, ubicación
+
+4️⃣ **Otro asunto**
+   Especifica tu consulta
+
+Responde con el número de la opción que prefieras o escribe tu consulta directamente."""
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

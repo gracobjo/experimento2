@@ -25,19 +25,60 @@ export class AppointmentsService {
         orderBy: { date: 'desc' }
       });
     } else if (user.role === 'ABOGADO') {
-      // Abogado ve solo sus citas
-      return this.prisma.appointment.findMany({
-        where: { lawyerId: user.id },
-        include: {
-          lawyer: { select: { id: true, name: true, email: true } },
-          client: {
-            include: {
-              user: { select: { id: true, name: true, email: true } }
+      // Abogado ve sus citas regulares y citas de visitantes asignadas
+      const [regularAppointments, visitorAppointments] = await Promise.all([
+        this.prisma.appointment.findMany({
+          where: { lawyerId: user.id },
+          include: {
+            lawyer: { select: { id: true, name: true, email: true } },
+            client: {
+              include: {
+                user: { select: { id: true, name: true, email: true } }
+              }
             }
+          },
+          orderBy: { date: 'desc' }
+        }),
+        this.prisma.visitorAppointment.findMany({
+          where: { assignedLawyerId: user.id },
+          include: {
+            assignedLawyer: { select: { id: true, name: true, email: true } }
+          },
+          orderBy: { createdAt: 'desc' }
+        })
+      ]);
+
+      // Formatear citas de visitantes para que sean compatibles con el formato de citas regulares
+      const formattedVisitorAppointments = visitorAppointments.map(apt => ({
+        id: apt.id,
+        date: apt.confirmedDate || apt.preferredDate,
+        location: apt.location,
+        notes: apt.notes,
+        clientId: null,
+        lawyerId: apt.assignedLawyerId,
+        client: {
+          id: apt.id,
+          user: {
+            name: apt.fullName,
+            email: apt.email
           }
         },
-        orderBy: { date: 'desc' }
-      });
+        lawyer: apt.assignedLawyer,
+        type: 'VISITOR',
+        status: apt.status,
+        fullName: apt.fullName,
+        email: apt.email,
+        phone: apt.phone,
+        consultationReason: apt.consultationReason,
+        consultationType: apt.consultationType,
+        age: apt.age,
+        preferredDate: apt.preferredDate,
+        confirmedDate: apt.confirmedDate
+      }));
+
+      // Combinar y ordenar todas las citas por fecha
+      const allAppointments = [...regularAppointments, ...formattedVisitorAppointments];
+      return allAppointments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     } else {
       // Cliente ve solo sus citas
       const client = await this.prisma.client.findUnique({

@@ -31,3 +31,32 @@ __pycache__/
 # Archivos de sistema
 .DS_Store
 Thumbs.db 
+
+# === SCRIPTS Y ARCHIVOS DE PRUEBA/DIAGNÓSTICO ===
+
+# Scripts de prueba y utilidades temporales
+backend/scripts/
+chatbot/scripts/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# Archivos de diagnóstico y temporales de facturación
+backend/debug-template-generated.html
+backend/factura_DEBUG_*.pdf
+backend/test-signed-simple.pdf
+backend/src/invoices/templates/invoice-template-simple.html
+
+# Subidas temporales y PDFs firmados de pruebas
+backend/uploads/signed-invoices/
+backend/uploads/*.pdf
+
+# Archivos de pruebas manuales
+check-*.js
+check-*.ps1
+check-*.bat
+
+# Otros archivos de pruebas locales
+*.bak
+*.old 

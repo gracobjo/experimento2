@@ -275,6 +275,7 @@ const DocumentsPage = () => {
         {/* Estadísticas */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 col-span-full">Estadísticas de Documentos</h2>
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -377,6 +378,7 @@ const DocumentsPage = () => {
 
         {/* Filtros */}
         <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Filtros de Búsqueda</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -423,6 +425,7 @@ const DocumentsPage = () => {
 
         {/* Lista de documentos */}
         <div className="bg-white shadow rounded-lg overflow-hidden">
+          <h2 className="text-xl font-semibold text-gray-900 p-6 border-b border-gray-200">Lista de Documentos</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">

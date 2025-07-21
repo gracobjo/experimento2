@@ -459,9 +459,30 @@ export class AdminService {
       });
     } catch (error) {
       // Si no se encuentra en citas regulares, intentar en citas de visitantes
+      const visitorData: any = {};
+      
+      // Mapear campos específicos para citas de visitantes
+      if (data.lawyerId) {
+        visitorData.assignedLawyerId = data.lawyerId;
+        // Si se asigna un abogado, marcar como confirmada
+        visitorData.status = 'CONFIRMADA';
+      }
+      
+      if (data.date) {
+        visitorData.confirmedDate = new Date(data.date);
+      }
+      
+      if (data.location) {
+        visitorData.location = data.location;
+      }
+      
+      if (data.notes) {
+        visitorData.notes = data.notes;
+      }
+      
       return await this.prisma.visitorAppointment.update({
         where: { id },
-        data,
+        data: visitorData,
         include: {
           assignedLawyer: true,
         },
