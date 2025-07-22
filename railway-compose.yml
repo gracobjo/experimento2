@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: deployment/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: deployment/Dockerfile
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+      - VITE_CHATBOT_URL=${VITE_CHATBOT_URL}
+      - VITE_ENV=production
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  chatbot:
+    build:
+      context: ./chatbot
+      dockerfile: deployment/Dockerfile
+    environment:
+      - BACKEND_URL=${BACKEND_URL}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - backend
+    restart: unless-stopped 

@@ -1,43 +1,56 @@
-# Build stage
+# ---------- Build stage ----------
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copia los archivos de dependencias y Prisma
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install all dependencies (including dev dependencies)
+# Instala TODAS las dependencias (incluyendo dev)
 RUN npm install
 
-# Copy source code
+# Copia el código fuente
 COPY . .
 
-# Generate Prisma client
+# Genera el cliente de Prisma
 RUN npx prisma generate
 
-# Build the application
+# Compila la aplicación
 RUN npm run build
 
-# Production stage
+# ---------- Production stage ----------
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
+# --- Instala Chromium y dependencias para Puppeteer ---
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+# Copia los archivos de dependencias y Prisma
 COPY package*.json ./
-
-# Install only production dependencies
-RUN npm install --only=production
-
-# Copy Prisma files
 COPY prisma ./prisma/
 
-# Generate Prisma client in production
+# Instala solo dependencias de producción
+RUN npm install --only=production
+
+# Genera el cliente de Prisma en producción
 RUN npx prisma generate
 
-# Copy built application from builder stage
+# Copia la app compilada desde el builder
 COPY --from=builder /app/dist ./dist
+
+# (Opcional) Copia plantillas si las usas en tiempo de ejecución
+COPY --from=builder /app/src/invoices/templates ./dist/invoices/templates
+
+# Variable de entorno para Puppeteer (importante para Alpine)
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 EXPOSE 3000
 

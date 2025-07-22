@@ -153,7 +153,7 @@ const ContactModal: React.FC<{ onClose: () => void; props: any }> = ({ onClose, 
     setSubmitStatus('idle');
 
     try {
-      const response = await fetch('/api/contact', {
+              const response = await fetch(`${(import.meta as any).env.VITE_API_URL}/api/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -309,7 +309,7 @@ const ServicesModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const fetchServices = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/parametros/services');
+        const response = await fetch(`${(import.meta as any).env.VITE_API_URL}/api/parametros/services`);
         
         if (response.ok) {
           const data = await response.json();

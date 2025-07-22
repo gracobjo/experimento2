@@ -99,12 +99,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         role: user.role // Asegúrate que esto viene del backend
       });
       
-      // Redirige según el rol
-      if (user.role === 'ADMIN') {
-        window.location.href = '/admin/dashboard'; // Asegúrate que esta ruta existe
-      } else {
-        window.location.href = '/dashboard';
-      }
+      // No redirigir aquí, dejar que el componente Login maneje la redirección
+      // El componente Login ya tiene la lógica de redirección basada en el rol
     } catch (error: unknown) {
       throw new Error((error as any)?.response?.data?.message || 'Error en el inicio de sesión');
     }

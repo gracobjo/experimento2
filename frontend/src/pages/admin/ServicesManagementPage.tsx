@@ -30,7 +30,7 @@ const ServicesManagementPage: React.FC = () => {
   const fetchServices = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/parametros/services');
+      const response = await fetch(`${(import.meta as any).env.VITE_API_URL}/api/parametros/services`);
       
       if (response.ok) {
         const data = await response.json();
@@ -51,8 +51,8 @@ const ServicesManagementPage: React.FC = () => {
     
     try {
       const url = editingService 
-        ? `/api/parametros/services/${editingService.id}`
-        : '/api/parametros/services';
+        ? `${(import.meta as any).env.VITE_API_URL}/api/parametros/services/${editingService.id}`
+        : `${(import.meta as any).env.VITE_API_URL}/api/parametros/services`;
       
       const method = editingService ? 'PUT' : 'POST';
       
@@ -96,7 +96,7 @@ const ServicesManagementPage: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`/api/parametros/services/${serviceId}`, {
+              const response = await fetch(`${(import.meta as any).env.VITE_API_URL}/api/parametros/services/${serviceId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

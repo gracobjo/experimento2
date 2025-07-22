@@ -1,32 +1,69 @@
 version: '3.8'
+
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: deployment/Dockerfile
+    env_file:
+      - ./backend/config/env.example
+    environment:
+    - DATABASE_URL=postgresql://postgres:postgres@db:5432/despacho_legal
     ports:
       - "3000:3000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/despacho_legal
-    # depends_on:
-    #   - db
+    depends_on:
+      - db
+    networks:
+      - legalnet
+    restart: unless-stopped
+
   frontend:
-    build: ./frontendexit
+    build:
+      context: ./frontend
+      dockerfile: deployment/Dockerfile
+    environment:
+      - VITE_API_URL=http://localhost:3000
+      - VITE_CHATBOT_URL=http://localhost:8000
+      - VITE_ENV=production
     ports:
       - "5173:80"
     depends_on:
       - backend
+    networks:
+      - legalnet
+    restart: unless-stopped
+
   chatbot:
-    build: ./chatbot
+    build:
+      context: ./chatbot
+      dockerfile: deployment/Dockerfile
+    env_file:
+      - ./chatbot/config/config.env
     ports:
-      - "5000:5000"
-  # db:
-  #   image: postgres:15
-  #   environment:
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: postgres
-  #     POSTGRES_DB: despacho_legal
-  #   ports:
-  #     - "5432:5432"
-  #   volumes:
-  #     - pgdata:/var/lib/postgresql/data
-# volumes:
-#   pgdata: 
+      - "8000:8000"
+    depends_on:
+      - backend
+    networks:
+      - legalnet
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: despacho_legal
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - legalnet
+    restart: unless-stopped
+
+networks:
+  legalnet:
+    driver: bridge
+
+volumes:
+  db_data: 

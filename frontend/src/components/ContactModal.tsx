@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import AccessibleModal from './ui/AccessibleModal';
+import api from '../api/axios';
 
 interface ContactModalProps {
   isOpen: boolean;
@@ -32,19 +33,13 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
     setSubmitStatus('idle');
 
     try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          ip: 'unknown',
-          userAgent: navigator.userAgent
-        })
+      const response = await api.post('/contact', {
+        ...formData,
+        ip: 'unknown',
+        userAgent: navigator.userAgent
       });
 
-      if (response.ok) {
+      if (response.status === 200 || response.status === 201) {
         setSubmitStatus('success');
         setFormData({
           nombre: '',

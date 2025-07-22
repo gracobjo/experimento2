@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LayoutConfig } from './HomeBuilder/types';
 import ComponentRenderer from './HomeBuilder/ComponentRenderer';
 import { useAuth } from '../context/AuthContext';
+import api from '../api/axios';
 
 const DynamicHome: React.FC = () => {
   const [layout, setLayout] = useState<LayoutConfig | null>(null);
@@ -13,11 +14,10 @@ const DynamicHome: React.FC = () => {
     const fetchLayout = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/layouts/home');
+        const response = await api.get('/layouts/home');
         
-        if (response.ok) {
-          const data = await response.json();
-          setLayout(data);
+        if (response.status === 200) {
+          setLayout(response.data);
         } else if (response.status === 404) {
           // No hay layout activo, usar layout por defecto
           setLayout(getDefaultLayout());

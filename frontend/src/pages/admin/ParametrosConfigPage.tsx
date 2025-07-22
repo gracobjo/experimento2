@@ -108,7 +108,7 @@ const ParametrosConfigPage: React.FC = () => {
             if (!window.confirm('¿Desea inicializar los parámetros por defecto? Esto creará o actualizará los parámetros básicos del sistema.')) return;
             try {
               if (!token) throw new Error('No autenticado');
-              await fetch('/api/parametros/initialize', {
+              await fetch(`${(import.meta as any).env.VITE_API_URL}/api/parametros/initialize`, {
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${token}`,
