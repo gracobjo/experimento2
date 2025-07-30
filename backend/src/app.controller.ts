@@ -1,9 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { NotesService } from './notes/notes.service';
 
 @ApiTags('app')
 @Controller()
 export class AppController {
+  constructor(private readonly notesService: NotesService) {}
   @Get()
   @ApiOperation({ summary: 'Root endpoint', description: 'Returns a welcome message' })
   @ApiResponse({ status: 200, description: 'Welcome message' })
@@ -29,5 +31,12 @@ export class AppController {
       status: 'ok',
       timestamp: new Date().toISOString()
     };
+  }
+
+  @Get('test-notes')
+  @ApiOperation({ summary: 'Test notes service', description: 'Test endpoint for notes service' })
+  @ApiResponse({ status: 200, description: 'Notes service test' })
+  testNotes() {
+    return this.notesService.getTempNotes();
   }
 } 

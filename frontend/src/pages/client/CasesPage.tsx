@@ -40,7 +40,6 @@ const ClientCasesPage = () => {
 
         // Asegurar que response.data sea un array
         const casesData = Array.isArray(response.data) ? response.data : [];
-        console.log('Cases data:', casesData);
         setCases(casesData);
         setError(null);
       } catch (err) {

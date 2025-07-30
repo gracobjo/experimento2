@@ -1,29 +1,47 @@
-import { Controller, Post, Body, HttpStatus, HttpException } from '@nestjs/common';
+import { Controller, Post, Body, UseInterceptors, UploadedFiles, UseGuards, Request } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiResponse, ApiConsumes } from '@nestjs/swagger';
 import { ContactService } from './contact.service';
-import { CreateContactDto } from './dto/create-contact.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
+interface MulterFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  destination: string;
+  filename: string;
+  path: string;
+  buffer: Buffer;
+}
+
+@ApiTags('contact')
 @Controller('contact')
 export class ContactController {
   constructor(private readonly contactService: ContactService) {}
 
   @Post()
-  async submitContactForm(@Body() createContactDto: CreateContactDto) {
-    try {
-      const result = await this.contactService.submitContactForm(createContactDto);
-      return {
-        success: true,
-        message: 'Mensaje enviado correctamente. Nos pondremos en contacto contigo pronto.',
-        data: result
-      };
-    } catch (error: any) {
-      throw new HttpException(
-        {
-          success: false,
-          message: 'Error al enviar el mensaje. Por favor, inténtalo de nuevo.',
-          error: error.message
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
+  @ApiOperation({ summary: 'Enviar mensaje de contacto general' })
+  @ApiResponse({ status: 201, description: 'Mensaje enviado exitosamente' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  async sendContactMessage(@Body() contactData: any) {
+    return this.contactService.sendContactMessage(contactData);
+  }
+
+  @Post('lawyer')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FilesInterceptor('files', 10)) // Máximo 10 archivos
+  @ApiOperation({ summary: 'Enviar mensaje al abogado con archivos adjuntos' })
+  @ApiResponse({ status: 201, description: 'Mensaje enviado exitosamente' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiConsumes('multipart/form-data')
+  async sendLawyerMessage(
+    @Body() messageData: any,
+    @UploadedFiles() files: MulterFile[],
+    @Request() req: any
+  ) {
+    return this.contactService.sendLawyerMessage(messageData, files, req.user);
   }
 } 

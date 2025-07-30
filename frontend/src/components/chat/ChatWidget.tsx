@@ -134,6 +134,27 @@ const ChatWidget = () => {
       setConnectedUsers(prev => prev.filter(u => u.userId !== user.userId));
     });
 
+    // --- NUEVO: Manejo de cierre automático por backend ---
+    newSocket.on('close', (data: { type: string; message?: string }) => {
+      // Mostrar mensaje de cierre si se desea
+      if (data.message) {
+        alert(data.message);
+      }
+      // Llama a la función de cierre del chat
+      if (typeof endChat === 'function') {
+        endChat();
+      } else {
+        // Fallback: cerrar y limpiar estado
+        setIsOpen(false);
+        setMessages([]);
+        setConversations([]);
+        setSelectedConversation('');
+        setNewMessage('');
+        setError(null);
+        setUnreadCount(0);
+      }
+    });
+
     setSocket(newSocket);
 
     return () => {

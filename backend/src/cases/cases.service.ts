@@ -145,10 +145,10 @@ export class CasesService {
       },
     });
 
-    console.log(`📊 Expedientes encontrados: ${expedientes.length}`);
-    expedientes.forEach(exp => {
-      console.log(`  - ${exp.id}: ${exp.title} (clientId: ${exp.clientId})`);
-    });
+    // Log solo en desarrollo
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📊 Expedientes encontrados: ${expedientes.length}`);
+    }
 
     return expedientes;
   }

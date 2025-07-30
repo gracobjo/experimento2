@@ -44,21 +44,24 @@ const CasesManagementPage = () => {
     try {
       setLoading(true);
       const response = await api.get('/admin/cases');
-      console.log('Cases response:', response.data);
-      if (Array.isArray(response.data)) {
-        response.data.forEach((c, i) => {
-          console.log(`Case ${i}:`, {
-            id: c.id,
-            title: c.title,
-            description: c.description,
-            status: c.status,
-            createdAt: c.createdAt,
-            client: c.client,
-            lawyer: c.lawyer,
-            documents: c.documents,
-            tasks: c.tasks
+      // Log solo en desarrollo
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Cases response:', response.data);
+        if (Array.isArray(response.data)) {
+          response.data.forEach((c, i) => {
+            console.log(`Case ${i}:`, {
+              id: c.id,
+              title: c.title,
+              description: c.description,
+              status: c.status,
+              createdAt: c.createdAt,
+              client: c.client,
+              lawyer: c.lawyer,
+              documents: c.documents,
+              tasks: c.tasks
+            });
           });
-        });
+        }
       }
       setCases(response.data);
       setError(null);

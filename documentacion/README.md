@@ -1,284 +1,159 @@
-# 📚 Documentación del Sistema de Gestión Legal
-# 📚 Documentación del Sistema de Gestión Legal
+# 📚 Documentación del Proyecto - Sistema Integral de Gestión Legal
+
+## 📋 **Descripción General**
+
+Esta carpeta contiene toda la documentación del proyecto organizada por categorías para facilitar la navegación y búsqueda de información específica.
+
+---
+
+## 🗂️ **Estructura de Carpetas**
+
+### **📖 `/accesibilidad/`**
+Documentación relacionada con mejoras de accesibilidad web:
+- `ACCESIBILIDAD_IMPLEMENTADA.md` - Implementación de mejoras de accesibilidad
+- `RESUMEN_ACCESIBILIDAD.md` - Resumen de mejoras de accesibilidad
+- `RESUMEN_ACCESIBILIDAD_COMPLETO.md` - Documentación completa de accesibilidad
+- `MEJORAS_ACCESIBILIDAD_MODALES.md` - Mejoras en modales para accesibilidad
+- `MEJORAS_ESTRUCTURA_ENCABEZADOS.md` - Mejoras en estructura de encabezados
+
+### **🔧 `/correcciones/`**
+Documentación de correcciones y fixes implementados:
+- `CORRECCION_*.md` - Múltiples archivos de correcciones específicas
+- Correcciones de accesibilidad, estructura, funcionalidad, etc.
+
+### **🚀 `/mejoras/`**
+Documentación de mejoras y optimizaciones:
+- `MEJORA_*.md` - Mejoras en funcionalidades específicas
+- `MEJORAS_*.md` - Documentación de mejoras generales
+- `ALIGERAMIENTO_*.md` - Optimizaciones de rendimiento
+
+### **🔗 `/integraciones/`**
+Documentación de integraciones externas:
+- `INTEGRACION_AUTOFIRMA.md` - Integración con AutoFirma
+
+### **🤖 `/chatbot/`**
+Documentación del sistema de chatbot:
+- `CHATBOT_*.md` - Documentación del chatbot
+- `CALENDARIO_VISUAL_CHATBOT.md` - Integración de calendario
+- `CHATBOT_MEJORAS_NATURALES.md` - Mejoras en conversación natural
+- `CHATBOT_WELCOME_PAGE.md` - Página de bienvenida del chatbot
+- `CHATBOT_APPOINTMENT_SYSTEM.md` - Sistema de citas del chatbot
+
+### **📄 `/autofirma/`**
+Documentación y scripts de AutoFirma:
+- `*.ps1` - Scripts de PowerShell para AutoFirma
+- `manual-install.md` - Instalación manual de AutoFirma
+- Scripts de configuración, descarga e instalación
+
+### **🚀 `/deployment/`**
+Archivos de configuración para despliegue:
+- `*.yaml` - Archivos de configuración YAML
+- `*.yml` - Archivos de configuración YML
+- `railway.*` - Configuración para Railway
+- `.railwayignore` - Archivos ignorados en Railway
+- `.renderignore` - Archivos ignorados en Render
+- `docker-compose.yml` - Configuración de Docker Compose
+
+### **🧪 `/testing/`**
+Scripts y archivos de testing:
+- `test_*.py` - Tests en Python
+- `test_*.js` - Tests en JavaScript
+- `test_*.html` - Tests en HTML
+- `check_*.js` - Scripts de verificación
+- `analyze-pdf.js` - Análisis de PDFs
+- `autofirma-http-server.js` - Servidor HTTP para AutoFirma
+- `start-autofirma.bat` - Script de inicio de AutoFirma
+
+---
+
+## 📖 **Archivos Principales en el Raíz**
+
+### **Documentación General:**
+- `README.md` - Documentación principal del proyecto
+- `CHANGELOG.md` - Registro de cambios del proyecto
+- `ACTUALIZACIONES.md` - Actualizaciones recientes
+
+### **Documentación de Funcionalidades:**
+- `FORMULARIO_CONTACTO_ABOGADO.md` - Formulario de contacto
+- `UNIFORMIDAD_MODALES_ROLES.md` - Uniformidad en modales
+- `MEJORAS_CLARIDAD_MODALES.md` - Mejoras en claridad de modales
+- `SOLUCION_*.md` - Soluciones a problemas específicos
+- `VALIDACIONES_IMPLEMENTADAS.md` - Sistema de validaciones
+- `SISTEMA_INACTIVIDAD_IMPLEMENTADO.md` - Sistema de inactividad
+
+---
+
+## 🔍 **Cómo Navegar la Documentación**
+
+### **Para Desarrolladores:**
+1. **Nuevo en el proyecto:** Comenzar con `README.md` en el raíz
+2. **Configuración:** Revisar `/deployment/` para configuración
+3. **Testing:** Usar archivos en `/testing/` para verificar funcionalidades
+4. **Correcciones:** Consultar `/correcciones/` para problemas conocidos
+
+### **Para Administradores:**
+1. **Despliegue:** Revisar `/deployment/` para configuración de producción
+2. **AutoFirma:** Consultar `/autofirma/` para configuración de firma digital
+3. **Chatbot:** Revisar `/chatbot/` para configuración del asistente virtual
+
+### **Para Usuarios Finales:**
+1. **Funcionalidades:** Revisar documentación en el raíz
+2. **Mejoras:** Consultar `/mejoras/` para nuevas funcionalidades
+3. **Accesibilidad:** Revisar `/accesibilidad/` para mejoras de usabilidad
 
-## 🎯 Descripción General
+---
 
-Este sistema de gestión legal es una aplicación completa que incluye:
+## 📝 **Convenciones de Nomenclatura**
 
-- **Backend**: API REST con NestJS y PostgreSQL
-- **Frontend**: Interfaz web con React, TypeScript y Vite
-- **Chatbot**: Servicio de IA con FastAPI y Python
+### **Archivos de Corrección:**
+- `CORRECCION_[AREA]_[PROBLEMA].md`
+- Ejemplo: `CORRECCION_LAWYER_DASHBOARD_H2.md`
 
-## 📋 Requisitos Previos
+### **Archivos de Mejora:**
+- `MEJORA_[FUNCIONALIDAD]_[ASPECTO].md`
+- Ejemplo: `MEJORA_QR_PREVISUALIZACION.md`
 
-### Software Necesario
+### **Archivos de Solución:**
+- `SOLUCION_[PROBLEMA]_[ESTADO].md`
+- Ejemplo: `SOLUCION_FINAL_PDF_FUNCIONAL.md`
 
-#### 1. **Node.js** (v18 o superior)
-- **Windows**: Descargar desde [nodejs.org](https://nodejs.org/)
-- **macOS**: `brew install node`
-- **Linux**: `sudo apt install nodejs npm` (Ubuntu/Debian)
+### **Archivos de Testing:**
+- `test_[FUNCIONALIDAD]_[TIPO].py/js/html`
+- Ejemplo: `test_chatbot_menu_format.py`
 
-#### 2. **Python** (v3.8 o superior)
-- **Windows**: Descargar desde [python.org](https://python.org/)
-- **macOS**: `brew install python`
-- **Linux**: `sudo apt install python3 python3-pip` (Ubuntu/Debian)
+---
 
-#### 3. **PostgreSQL** (v12 o superior)
-- **Windows**: Descargar desde [postgresql.org](https://postgresql.org/)
-- **macOS**: `brew install postgresql`
-- **Linux**: `sudo apt install postgresql postgresql-contrib` (Ubuntu/Debian)
+## 🔄 **Mantenimiento de la Documentación**
 
-#### 4. **Git**
-- **Windows**: Descargar desde [git-scm.com](https://git-scm.com/)
-- **macOS**: `brew install git`
-- **Linux**: `sudo apt install git` (Ubuntu/Debian)
+### **Agregar Nueva Documentación:**
+1. Identificar la categoría apropiada
+2. Usar las convenciones de nomenclatura
+3. Actualizar este README si es necesario
+4. Mantener consistencia en el formato
 
-### Verificación de Instalación
+### **Actualizar Documentación Existente:**
+1. Mantener versionado de cambios
+2. Actualizar fechas de modificación
+3. Verificar enlaces y referencias
+4. Revisar consistencia con otros documentos
 
-```bash
-# Verificar Node.js
-node --version
-npm --version
+---
 
-# Verificar Python
-python --version
-pip --version
+## 📞 **Contacto y Soporte**
 
-# Verificar PostgreSQL
-psql --version
+Para preguntas sobre la documentación:
+- 📧 Email: soporte@despacholegal.com
+- 📞 Teléfono: +34 XXX XXX XXX
+- 💬 Chat: Usar el chatbot integrado en la aplicación
 
-# Verificar Git
-git --version
-```
+---
 
-## 🚀 Instalación Paso a Paso
+## 📅 **Última Actualización**
 
-### Paso 1: Clonar el Repositorio
+- **Fecha:** Diciembre 2024
+- **Versión:** 2.0
+- **Organización:** Documentación completamente reorganizada por categorías
 
-```bash
-git clone <URL_DEL_REPOSITORIO>
-cd experimento
-```
+---
 
-### Paso 2: Configurar la Base de Datos
-
-1. **Crear base de datos PostgreSQL:**
-```sql
-CREATE DATABASE despacho_abogados;
-CREATE USER despacho_user WITH PASSWORD 'tu_password';
-GRANT ALL PRIVILEGES ON DATABASE despacho_abogados TO despacho_user;
-```
-
-2. **Configurar variables de entorno:**
-```bash
-cd backend
-cp .env.example .env
-```
-
-Editar el archivo `.env` con tus credenciales:
-```env
-DATABASE_URL="postgresql://despacho_user:tu_password@localhost:5432/despacho_abogados"
-JWT_SECRET="tu_jwt_secret_super_seguro"
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT=587
-SMTP_USER="tu_email@gmail.com"
-SMTP_PASS="tu_password_de_aplicacion"
-```
-
-### Paso 3: Instalar Dependencias del Backend
-
-```bash
-cd backend
-npm install
-```
-
-### Paso 4: Configurar Prisma
-
-```bash
-# Generar el cliente de Prisma
-npx prisma generate
-
-# Ejecutar migraciones
-npx prisma migrate dev
-
-# (Opcional) Poblar la base de datos con datos de ejemplo
-npm run seed
-```
-
-### Paso 5: Instalar Dependencias del Frontend
-
-```bash
-cd ../frontend
-npm install
-```
-
-### Paso 6: Configurar el Chatbot
-
-```bash
-cd ../chatbot
-
-# Crear entorno virtual
-python -m venv venv
-
-# Activar entorno virtual
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
-# Instalar dependencias
-pip install -r requirements.txt
-
-# Descargar modelos de spaCy (opcional, para mejor rendimiento)
-python -m spacy download es_core_news_sm
-```
-
-## 🏃‍♂️ Ejecución del Sistema
-
-### Opción 1: Scripts Automáticos
-
-#### Windows:
-```bash
-start-all.bat
-```
-
-#### macOS/Linux:
-```bash
-chmod +x start-all.sh
-./start-all.sh
-```
-
-### Opción 2: Ejecución Manual
-
-#### Terminal 1 - Backend:
-```bash
-cd backend
-npm run start:dev
-```
-
-#### Terminal 2 - Frontend:
-```bash
-cd frontend
-npm run dev
-```
-
-#### Terminal 3 - Chatbot:
-```bash
-cd chatbot
-# Activar entorno virtual si no está activado
-python main_improved.py
-```
-
-## 🌐 Acceso a la Aplicación
-
-Una vez iniciados todos los servicios:
-
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:3000
-- **Chatbot API**: http://localhost:8000
-- **Documentación API**: http://localhost:3000/api
-
-## 🔧 Configuración Adicional
-
-### Variables de Entorno del Frontend
-
-Crear archivo `.env` en la carpeta `frontend`:
-```env
-VITE_API_URL=http://localhost:3000
-VITE_CHATBOT_URL=http://localhost:8000
-```
-
-### Configuración de Email (Opcional)
-
-Para funcionalidades de email (recuperación de contraseña, notificaciones):
-
-1. Configurar cuenta de Gmail con autenticación de 2 factores
-2. Generar contraseña de aplicación
-3. Actualizar variables SMTP en el backend
-
-## 🐛 Solución de Problemas
-
-### Error: "Port already in use"
-```bash
-# Windows
-netstat -ano | findstr :3000
-taskkill /PID <PID> /F
-
-# macOS/Linux
-lsof -ti:3000 | xargs kill -9
-```
-
-### Error: "Database connection failed"
-- Verificar que PostgreSQL esté ejecutándose
-- Comprobar credenciales en `.env`
-- Verificar que la base de datos existe
-
-### Error: "Module not found"
-```bash
-# Reinstalar dependencias
-rm -rf node_modules package-lock.json
-npm install
-```
-
-### Error: "Python virtual environment"
-```bash
-# Recrear entorno virtual
-rm -rf venv
-python -m venv venv
-source venv/bin/activate  # o venv\Scripts\activate en Windows
-pip install -r requirements.txt
-```
-
-## 📁 Estructura del Proyecto
-
-```
-experimento/
-├── backend/                 # API NestJS
-│   ├── src/
-│   ├── prisma/
-│   └── package.json
-├── frontend/               # React + Vite
-│   ├── src/
-│   └── package.json
-├── chatbot/               # FastAPI Python
-│   ├── main_improved.py
-│   └── requirements.txt
-├── documentacion/         # Esta carpeta
-├── start-all.bat         # Script Windows
-├── start-all.sh          # Script Unix
-└── .gitignore
-```
-
-## 🔒 Seguridad
-
-- Cambiar todas las contraseñas por defecto
-- Usar variables de entorno para credenciales
-- Configurar HTTPS en producción
-- Mantener dependencias actualizadas
-
-## 📞 Soporte
-
-Para problemas técnicos o preguntas:
-1. Revisar la sección de solución de problemas
-2. Verificar logs en las consolas de cada servicio
-3. Comprobar que todos los puertos estén disponibles
-
-## 🚀 Despliegue en Producción
-
-Para información sobre despliegue en producción, consultar:
-- [Guía de Despliegue](./despliegue-produccion.md)
-- [Configuración de Servidor](./configuracion-servidor.md)
-- [Optimización de Rendimiento](./optimizacion.md) 
-
-## 🧾 Facturación Electrónica Profesional
-
-- Las facturas generadas y descargadas tienen un formato profesional, idéntico a la previsualización.
-- El PDF incluye un **código QR** con los datos fiscales y una URL de verificación.
-- **Importes**: Todos los importes se muestran con formato español (miles con punto, decimales con coma), por ejemplo: `1.496,07 €`.
-- **Descarga e impresión**: Para imprimir una factura, primero descárgala como PDF y luego imprímela desde tu visor de PDF. No uses la impresión directa del navegador para evitar problemas de formato.
-- **Verificación**: El QR y el pie de página de la factura incluyen una URL de verificación configurable por el administrador.
-
-## ⚙️ Gestión de Parámetros de Verificación
-
-- El administrador puede configurar la URL base de verificación de facturas desde el panel de parámetros (`/admin/parametros`).
-- El parámetro se llama `VERIFICACION_URL_BASE` y afecta tanto al QR como al pie de página de la factura. 
+*Esta documentación se mantiene actualizada con cada nueva funcionalidad o corrección del proyecto.* 

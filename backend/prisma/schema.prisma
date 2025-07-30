@@ -35,6 +35,7 @@ model User {
   assistantSessions    TeleassistanceSession[] @relation("AssistantTeleassistanceSessions")
   teleassistanceMessages TeleassistanceMessage[]
   assignedVisitorAppointments VisitorAppointment[] @relation("AssignedVisitorAppointments")
+  notes                Note[]      @relation("UserNotes")
   refreshTokens        RefreshToken[]
   blacklistedTokens    BlacklistedToken[]
   invoiceAuditHistory  InvoiceAuditHistory[]
@@ -78,6 +79,7 @@ model Expediente {
   tasks       Task[]
   facturas    Invoice[]
   provisionFondos ProvisionFondos[]
+  notes       Note[]
 }
 
 model Document {
@@ -287,6 +289,20 @@ model Contact {
   userAgent String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Note {
+  id           String     @id @default(uuid())
+  expedienteId String
+  title        String
+  content      String
+  authorId     String
+  isPrivate    Boolean    @default(false) // Si es true, solo visible para abogados
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  
+  expediente   Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+  author       User       @relation("UserNotes", fields: [authorId], references: [id], onDelete: Cascade)
 }
 
 // Configuración de menús y elementos del sitio

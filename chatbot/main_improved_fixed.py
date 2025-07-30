@@ -91,8 +91,6 @@ except OSError:
     import subprocess
     subprocess.run(["python", "-m", "spacy", "download", "es_core_news_sm"])
     subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
-    nlp_es = spacy.load("es_core_news_sm")
-    nlp_en = spacy.load("en_core_web_sm")
 
 app = FastAPI(title="Despacho Legal Chatbot", version="1.0.0")
 
@@ -154,6 +152,9 @@ conversation_contexts: Dict[str, ConversationContext] = {}
 last_activity: Dict[str, float] = {}
 # Almacenar advertencia enviada
 warned_inactive: Dict[str, bool] = {}
+
+# Almacenar conexiones WebSocket activas por usuario
+active_websockets: Dict[str, WebSocket] = {}
 
 def get_backend_info():
     """Obtiene información del backend"""
@@ -1112,11 +1113,40 @@ def process_message(text: str, language: str = "es", conversation_history: list 
             return "¿En cuál de nuestras especialidades te gustaría profundizar o necesitas ayuda con algún caso específico?"
         elif last_topic == "contact":
             return "¿Hay algo más en lo que pueda ayudarte o te gustaría agendar una cita?"
-    
-    # Respuesta por defecto más coherente con opciones claras
-    return f"""**Has indicado:** "{text}"
 
-Entiendo tu consulta. ¿Qué te gustaría hacer?
+    # --- NUEVO: Respuesta conversacional y menú vertical con explicación de área legal ---
+    # Detectar si el texto menciona un área legal concreta
+    area_legal = None
+    area_explicacion = None
+    text_lower = text.lower().strip()
+    
+    # Mejorar la detección de áreas legales
+    if any(word in text_lower for word in ["laboral", "trabajo", "empleo", "despido", "acoso", "contrato laboral", "salario"]):
+        area_legal = "Derecho Laboral"
+        area_explicacion = "El Derecho Laboral abarca temas como despidos, acoso laboral, contratos de trabajo, salarios y condiciones laborales."
+    elif any(word in text_lower for word in ["civil", "herencia", "testamento", "sucesión", "contrato civil", "reclamación"]):
+        area_legal = "Derecho Civil"
+        area_explicacion = "El Derecho Civil incluye herencias, testamentos, sucesiones, contratos civiles y reclamaciones de cantidad."
+    elif any(word in text_lower for word in ["familiar", "divorcio", "custodia", "pensión", "hijos", "matrimonio", "separación"]):
+        area_legal = "Derecho Familiar"
+        area_explicacion = "El Derecho Familiar trata sobre divorcios, custodias, pensiones alimenticias y otros asuntos familiares."
+    elif any(word in text_lower for word in ["mercantil", "empresa", "comercial", "sociedad", "negocio", "compañía"]):
+        area_legal = "Derecho Mercantil"
+        area_explicacion = "El Derecho Mercantil regula la actividad de empresas, sociedades y contratos comerciales."
+    elif any(word in text_lower for word in ["penal", "delito", "acusación", "defensa", "crimen", "juicio penal"]):
+        area_legal = "Derecho Penal"
+        area_explicacion = "El Derecho Penal se ocupa de delitos, acusaciones y defensa penal."
+    elif any(word in text_lower for word in ["administrativo", "multa", "sanción", "administración", "gobierno"]):
+        area_legal = "Derecho Administrativo"
+        area_explicacion = "El Derecho Administrativo abarca sanciones, multas y relaciones con la administración pública."
+
+    # Construir la explicación de manera más robusta
+    if area_legal:
+        explicacion = f"Has indicado el área: {area_legal}. {area_explicacion}\n\n"
+    else:
+        explicacion = ""
+
+    return f"""{explicacion}Entiendo tu consulta. ¿Qué te gustaría hacer?
 
 📋 **Opciones disponibles:**
 
@@ -1144,6 +1174,8 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             message = json.loads(data)
             user_id = message.get("user_id", "anonymous")
+            # REGISTRA el websocket activo
+            active_websockets[user_id] = websocket
             conversation_history.append({
                 "text": message["text"],
                 "isUser": True,
@@ -1165,6 +1197,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 "timestamp": datetime.now().isoformat()
             }))
     except WebSocketDisconnect:
+        if user_id and user_id in active_websockets:
+            del active_websockets[user_id]
         pass
 
 @app.post("/end_chat")
@@ -1211,6 +1245,7 @@ async def chat(message: Message):
 # Tarea background para limpiar sesiones inactivas y advertir
 
 def cleanup_inactive_sessions():
+    import asyncio
     while True:
         now = time.time()
         for user_id in list(last_activity.keys()):
@@ -1226,10 +1261,23 @@ def cleanup_inactive_sessions():
                     })
                 warned_inactive[user_id] = True
             if inactivity > 60:
-                # Limpiar sesión completamente
+                # ENVÍA mensaje de cierre si el websocket está activo
+                ws = active_websockets.get(user_id)
+                if ws:
+                    try:
+                        # Mensaje especial para el frontend
+                        asyncio.run_coroutine_threadsafe(
+                            ws.send_text('{"type": "close", "message": "El chat se ha cerrado por inactividad."}'),
+                            asyncio.get_event_loop()
+                        )
+                    except Exception as e:
+                        pass
+                    # Elimina la referencia al websocket
+                    del active_websockets[user_id]
+                # Limpia la sesión como antes
                 active_conversations.pop(user_id, None)
                 conversation_histories.pop(user_id, None)
-                conversation_contexts.pop(user_id, None)  # Limpiar contexto de conversación
+                conversation_contexts.pop(user_id, None)
                 last_activity.pop(user_id, None)
                 warned_inactive.pop(user_id, None)
         time.sleep(5)

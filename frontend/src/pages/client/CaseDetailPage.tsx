@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import QuickActions from '../../components/QuickActions';
+import LawyerContactModal from '../../components/LawyerContactModal';
 
 interface Case {
   id: string;
@@ -30,6 +31,7 @@ const ClientCaseDetailPage = () => {
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showLawyerContact, setShowLawyerContact] = useState(false);
 
   useEffect(() => {
     const fetchCase = async () => {
@@ -75,31 +77,13 @@ const ClientCaseDetailPage = () => {
 
   const handleContactLawyer = () => {
     if (caseData?.lawyer?.email) {
-      const subject = encodeURIComponent(`Consulta sobre expediente: ${caseData.title}`);
-      const body = encodeURIComponent(`Estimado/a ${caseData.lawyer.name},\n\nMe gustaría consultar sobre mi expediente "${caseData.title}" (ID: ${caseData.id}).\n\nSaludos cordiales.`);
-      window.open(`mailto:${caseData.lawyer.email}?subject=${subject}&body=${body}`);
+      setShowLawyerContact(true);
     } else {
       alert('No hay información de contacto del abogado disponible.');
     }
   };
 
-  const handleScheduleAppointment = () => {
-    navigate('/client/appointments');
-  };
 
-  const handleSendMessage = () => {
-    navigate('/client/chat');
-  };
-
-  const handleRequestInfo = () => {
-    if (caseData?.lawyer?.email) {
-      const subject = encodeURIComponent(`Solicitud de información: ${caseData.title}`);
-      const body = encodeURIComponent(`Estimado/a ${caseData.lawyer.name},\n\nMe gustaría solicitar información adicional sobre mi expediente "${caseData.title}" (ID: ${caseData.id}).\n\nPor favor, indíqueme qué documentación adicional necesito proporcionar o qué información específica requiere.\n\nSaludos cordiales.`);
-      window.open(`mailto:${caseData.lawyer.email}?subject=${subject}&body=${body}`);
-    } else {
-      alert('No hay información de contacto del abogado disponible.');
-    }
-  };
 
   if (loading) {
     return (
@@ -131,22 +115,20 @@ const ClientCaseDetailPage = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate('/client/cases')}
+              className="text-gray-400 hover:text-gray-600"
+              aria-label="Volver a Expedientes"
+              title="Volver a Expedientes"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
             <div>
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => navigate('/client/cases')}
-                  className="text-gray-400 hover:text-gray-600"
-                  aria-label="Volver a Expedientes"
-                  title="Volver a Expedientes"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <h1 className="text-3xl font-bold text-gray-900">{caseData.title}</h1>
-              </div>
-              <p className="mt-2 text-gray-600">
+              <h1 className="text-3xl font-bold text-gray-900">{caseData.title}</h1>
+              <p className="mt-1 text-gray-600">
                 Expediente creado el {new Date(caseData.createdAt).toLocaleDateString()}
               </p>
             </div>
@@ -156,29 +138,24 @@ const ClientCaseDetailPage = () => {
         {/* Acciones Rápidas */}
         <QuickActions expedienteId={caseData.id} expedienteData={caseData} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
           {/* Información Principal */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Estado del Expediente */}
+            {/* Estado y Descripción */}
             <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Estado del Expediente</h2>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Estado del Expediente</h2>
                 <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(caseData.status)}`}>
                   {getStatusText(caseData.status)}
                 </span>
-                <p className="text-sm text-gray-600">
-                  {caseData.status === 'ABIERTO' && 'Tu caso está siendo revisado por nuestro equipo legal.'}
-                  {caseData.status === 'EN_PROCESO' && 'Tu caso está en proceso activo. Nuestro abogado está trabajando en él.'}
-                  {caseData.status === 'CERRADO' && 'Tu caso ha sido completado y cerrado.'}
-                </p>
               </div>
-            </div>
-
-            {/* Descripción */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Descripción del Caso</h2>
-              <p className="text-gray-700">
+              <p className="text-gray-700 mb-4">
                 {caseData.description || 'No hay descripción disponible para este expediente.'}
+              </p>
+              <p className="text-sm text-gray-600">
+                {caseData.status === 'ABIERTO' && 'Tu caso está siendo revisado por nuestro equipo legal.'}
+                {caseData.status === 'EN_PROCESO' && 'Tu caso está en proceso activo. Nuestro abogado está trabajando en él.'}
+                {caseData.status === 'CERRADO' && 'Tu caso ha sido completado y cerrado.'}
               </p>
             </div>
 
@@ -216,72 +193,6 @@ const ClientCaseDetailPage = () => {
                 <p className="text-gray-500 text-center py-4">No hay documentos disponibles aún.</p>
               )}
             </div>
-
-            {/* Próximos Pasos */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Próximos Pasos</h2>
-              <div className="space-y-3">
-                {caseData.status === 'ABIERTO' && (
-                  <>
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 text-xs font-semibold">1</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Revisión Inicial</p>
-                        <p className="text-sm text-gray-600">Nuestro abogado está revisando los detalles de tu caso.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0 w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center">
-                        <span className="text-gray-400 text-xs font-semibold">2</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-400">Análisis Legal</p>
-                        <p className="text-sm text-gray-400">Se realizará un análisis completo de tu situación legal.</p>
-                      </div>
-                    </div>
-                  </>
-                )}
-                {caseData.status === 'EN_PROCESO' && (
-                  <>
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0 w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                        <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Análisis Completado</p>
-                        <p className="text-sm text-gray-600">El análisis inicial de tu caso ha sido completado.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 text-xs font-semibold">2</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Proceso Activo</p>
-                        <p className="text-sm text-gray-600">Tu abogado está trabajando activamente en tu caso.</p>
-                      </div>
-                    </div>
-                  </>
-                )}
-                {caseData.status === 'CERRADO' && (
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                      <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Caso Completado</p>
-                      <p className="text-sm text-gray-600">Tu caso ha sido completado exitosamente.</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
 
           {/* Sidebar */}
@@ -310,34 +221,9 @@ const ClientCaseDetailPage = () => {
               </div>
             </div>
 
-            {/* Acciones Rápidas */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
-              <div className="space-y-3">
-                <button 
-                  onClick={handleScheduleAppointment}
-                  className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
-                >
-                  Programar Cita
-                </button>
-                <button 
-                  onClick={handleSendMessage}
-                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm"
-                >
-                  Enviar Mensaje
-                </button>
-                <button 
-                  onClick={handleRequestInfo}
-                  className="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm"
-                >
-                  Solicitar Información
-                </button>
-              </div>
-            </div>
-
             {/* Información de Contacto */}
             <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Información de Contacto</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Contacto del Despacho</h2>
               <div className="space-y-3 text-sm">
                 <div className="flex items-center space-x-2">
                   <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -351,18 +237,22 @@ const ClientCaseDetailPage = () => {
                   </svg>
                   <span className="text-gray-600">info@despacholegal.com</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span className="text-gray-600">Av. Principal 123, Ciudad</span>
-                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal de Contacto con Abogado */}
+      {caseData && (
+        <LawyerContactModal
+          isOpen={showLawyerContact}
+          onClose={() => setShowLawyerContact(false)}
+          lawyer={caseData.lawyer}
+          expedienteId={caseData.id}
+          expedienteTitle={caseData.title}
+        />
+      )}
     </div>
   );
 };

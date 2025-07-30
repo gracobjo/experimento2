@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 
 interface Task {
@@ -106,31 +106,45 @@ const TasksPage = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
         
+        // Usar la instancia de axios configurada en lugar de axios directo
         const [tasksResponse, statsResponse, expedientesResponse, clientsResponse] = await Promise.all([
-          axios.get('/tasks', {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          axios.get('/tasks/stats', {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          axios.get('/cases', {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          axios.get('/users/clients', {
-            headers: { Authorization: `Bearer ${token}` }
-          })
+          api.get('/tasks'),
+          api.get('/tasks/stats'),
+          api.get('/cases'),
+          api.get('/users/clients')
         ]);
+
+        // Log de depuración
+        console.log('TasksPage - Expedientes response:', expedientesResponse.data);
+        console.log('TasksPage - Clients response:', clientsResponse.data);
 
         setTasks(tasksResponse.data);
         setStats(statsResponse.data);
-        setExpedientes(expedientesResponse.data);
-        setClients(clientsResponse.data);
+        // Verificar que expedientesResponse.data sea un array
+        if (Array.isArray(expedientesResponse.data)) {
+          setExpedientes(expedientesResponse.data);
+        } else {
+          console.error('Expedientes response is not an array:', expedientesResponse.data);
+          setExpedientes([]);
+        }
+        // Verificar que clientsResponse.data sea un array
+        if (Array.isArray(clientsResponse.data)) {
+          setClients(clientsResponse.data);
+        } else {
+          console.error('Clients response is not an array:', clientsResponse.data);
+          setClients([]);
+        }
         setError(null);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching data:', err);
+        console.error('Error response:', err.response?.data);
+        console.error('Error status:', err.response?.status);
         setError('Error al cargar los datos');
+        
+        // Establecer arrays vacíos en caso de error
+        setExpedientes([]);
+        setClients([]);
       } finally {
         setLoading(false);
       }
@@ -224,9 +238,7 @@ const TasksPage = () => {
         assignedTo: createForm.assignedTo || undefined,
       };
 
-      const response = await axios.post('/tasks', requestData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+              const response = await api.post('/tasks', requestData);
 
       setTasks(prev => [response.data, ...prev]);
       closeCreateModal();
@@ -238,11 +250,7 @@ const TasksPage = () => {
 
   const handleStatusChange = async (taskId: string, newStatus: string) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.patch(`/tasks/${taskId}/status`, 
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.patch(`/tasks/${taskId}/status`, { status: newStatus });
       
       // Actualizar el estado local
       setTasks(prevTasks => 
@@ -262,10 +270,7 @@ const TasksPage = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`/tasks/${taskId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/tasks/${taskId}`);
 
       setTasks(prev => prev.filter(t => t.id !== taskId));
     } catch (err: any) {
@@ -375,21 +380,23 @@ const TasksPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex items-center justify-center min-h-screen" role="status" aria-live="polite">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500" aria-hidden="true"></div>
+        <span className="sr-only">Cargando tareas...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen" role="alert" aria-live="assertive">
         <div className="text-center">
           <div className="text-red-600 text-xl mb-4">Error</div>
           <div className="text-gray-600">{error}</div>
           <button 
             onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            aria-label="Reintentar cargar la página"
           >
             Reintentar
           </button>
@@ -399,7 +406,7 @@ const TasksPage = () => {
   }
 
   return (
-    <div className="py-6">
+    <div className="py-6" role="main">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
@@ -413,6 +420,7 @@ const TasksPage = () => {
             <button
               onClick={openCreateModal}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              aria-label="Crear nueva tarea"
             >
               Nueva Tarea
             </button>
@@ -421,13 +429,13 @@ const TasksPage = () => {
 
         {/* Estadísticas */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 col-span-full">Estadísticas de Tareas</h2>
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-6" role="region" aria-labelledby="stats-heading">
+            <h2 id="stats-heading" className="text-2xl font-bold text-gray-900 mb-6 col-span-full">Estadísticas de Tareas</h2>
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                   </div>
@@ -442,7 +450,7 @@ const TasksPage = () => {
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 bg-yellow-600 rounded-md flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
@@ -457,7 +465,7 @@ const TasksPage = () => {
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                   </div>
@@ -472,7 +480,7 @@ const TasksPage = () => {
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 bg-green-600 rounded-md flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
@@ -487,7 +495,7 @@ const TasksPage = () => {
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 bg-gray-600 rounded-md flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
                     </svg>
                   </div>
@@ -502,7 +510,7 @@ const TasksPage = () => {
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 bg-red-600 rounded-md flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                     </svg>
                   </div>
@@ -517,14 +525,15 @@ const TasksPage = () => {
         )}
 
         {/* Filtros */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Filtros de Búsqueda</h2>
+        <div className="bg-white p-6 rounded-lg shadow mb-6" role="region" aria-labelledby="filters-heading">
+          <h2 id="filters-heading" className="text-xl font-semibold text-gray-900 mb-4">Filtros de Búsqueda</h2>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="search-input" className="block text-sm font-medium text-gray-700 mb-2">
                 Buscar
               </label>
               <input
+                id="search-input"
                 type="text"
                 placeholder="Buscar por título, descripción o expediente..."
                 value={searchTerm}
@@ -533,19 +542,21 @@ const TasksPage = () => {
                 className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                   isSearching && searchTerm ? 'bg-blue-50 border-blue-300' : ''
                 }`}
+                aria-label="Buscar tareas por título, descripción o expediente"
               />
               {isSearching && searchTerm && (
-                <div className="mt-1 text-xs text-blue-600 flex items-center">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
+                <div id="search-status" className="mt-1 text-xs text-blue-600 flex items-center" role="status" aria-live="polite">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1" aria-hidden="true"></div>
                   Buscando...
                 </div>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-2">
                 Estado
               </label>
               <select
+                id="status-filter"
                 value={statusFilter}
                 onChange={handleStatusFilterChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -559,10 +570,11 @@ const TasksPage = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="priority-filter" className="block text-sm font-medium text-gray-700 mb-2">
                 Prioridad
               </label>
               <select
+                id="priority-filter"
                 value={priorityFilter}
                 onChange={handlePriorityFilterChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -580,10 +592,12 @@ const TasksPage = () => {
                 onClick={handleSearch}
                 disabled={isSearching}
                 className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label={isSearching ? "Buscando tareas..." : "Buscar tareas"}
+                aria-describedby={isSearching && searchTerm ? "search-status" : undefined}
               >
                 {isSearching ? (
                   <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" aria-hidden="true"></div>
                     Buscando...
                   </div>
                 ) : (
@@ -595,6 +609,7 @@ const TasksPage = () => {
               <button
                 onClick={handleClearFilters}
                 className="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                aria-label="Limpiar filtros de búsqueda"
               >
                 🗑️ Limpiar
               </button>
@@ -626,40 +641,45 @@ const TasksPage = () => {
         </div>
 
         {/* Lista de tareas */}
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <h2 className="text-xl font-semibold text-gray-900 p-6 border-b border-gray-200">Lista de Tareas</h2>
+        <div className="bg-white shadow rounded-lg overflow-hidden" role="region" aria-labelledby="tasks-heading">
+          <h2 id="tasks-heading" className="text-xl font-semibold text-gray-900 p-6 border-b border-gray-200">Lista de Tareas</h2>
+          {filteredTasks.length > 0 && (
+            <p className="sr-only" id="tasks-summary">
+              Mostrando {filteredTasks.length} de {tasks.length} tareas. Cada fila contiene: título de la tarea, prioridad, estado, fecha límite, persona asignada y acciones disponibles.
+            </p>
+          )}
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-gray-200" role="table" aria-labelledby="tasks-heading" aria-describedby="tasks-summary">
               <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <tr role="row">
+                  <th role="columnheader" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tarea
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th role="columnheader" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Prioridad
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th role="columnheader" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Estado
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th role="columnheader" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Fecha Límite
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th role="columnheader" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Asignado
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th role="columnheader" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {(Array.isArray(filteredTasks) ? filteredTasks : []).map((task) => (
-                  <tr key={task.id} className={`hover:bg-gray-50 ${
+                  <tr key={task.id} role="row" className={`hover:bg-gray-50 ${
                     task.dueDate && isOverdue(task.dueDate) && task.status !== 'COMPLETADA' 
                       ? 'bg-red-50' 
                       : ''
                   }`}>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td role="cell" className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
                           {task.title}
@@ -679,12 +699,12 @@ const TasksPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td role="cell" className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(task.priority)}`}>
                         {getPriorityText(task.priority)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td role="cell" className="px-6 py-4 whitespace-nowrap">
                       <select
                         value={task.status}
                         onChange={(e) => handleStatusChange(task.id, e.target.value)}
@@ -697,7 +717,7 @@ const TasksPage = () => {
                         <option value="CANCELADA">Cancelada</option>
                       </select>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td role="cell" className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {task.dueDate ? (
                         <div>
                           <div className={task.dueDate && isOverdue(task.dueDate) && task.status !== 'COMPLETADA' ? 'text-red-600 font-medium' : ''}>
@@ -711,20 +731,22 @@ const TasksPage = () => {
                         'Sin fecha límite'
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td role="cell" className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {task.assignedToUser?.name || 'Sin asignar'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td role="cell" className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => openTaskModal(task)}
                           className="text-blue-600 hover:text-blue-900"
+                          aria-label={`Ver detalles de tarea: ${task.title}`}
                         >
                           Ver
                         </button>
                         <button
                           onClick={() => handleDeleteTask(task.id)}
                           className="text-red-600 hover:text-red-900"
+                          aria-label={`Eliminar tarea: ${task.title}`}
                         >
                           Eliminar
                         </button>
@@ -738,8 +760,9 @@ const TasksPage = () => {
         </div>
 
         {filteredTasks.length === 0 && (
-          <div className="text-center py-12">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="text-center py-12" id="tasks-summary">
+            <p className="sr-only">No se encontraron tareas que coincidan con los filtros aplicados</p>
+            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
             <h3 className="mt-2 text-sm font-medium text-gray-900">No se encontraron tareas</h3>
@@ -760,9 +783,10 @@ const TasksPage = () => {
                 <button
                   onClick={closeTaskModal}
                   className="text-gray-400 hover:text-gray-600"
+                  aria-label="Cerrar modal de detalles de tarea"
                   title="Cerrar modal"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -843,6 +867,7 @@ const TasksPage = () => {
                 <button
                   onClick={closeTaskModal}
                   className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                  aria-label="Cerrar modal de detalles de tarea"
                 >
                   Cerrar
                 </button>
@@ -862,9 +887,10 @@ const TasksPage = () => {
                 <button
                   onClick={closeCreateModal}
                   className="text-gray-400 hover:text-gray-600"
+                  aria-label="Cerrar modal de nueva tarea"
                   title="Cerrar modal"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -878,36 +904,41 @@ const TasksPage = () => {
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="task-title" className="block text-sm font-medium text-gray-700 mb-2">
                     Título *
                   </label>
                   <input
+                    id="task-title"
                     type="text"
                     value={createForm.title}
                     onChange={(e) => setCreateForm(prev => ({ ...prev, title: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Título de la tarea"
+                    aria-label="Título de la tarea"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="task-description" className="block text-sm font-medium text-gray-700 mb-2">
                     Descripción
                   </label>
                   <textarea
+                    id="task-description"
                     value={createForm.description}
                     onChange={(e) => setCreateForm(prev => ({ ...prev, description: e.target.value }))}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Descripción de la tarea"
+                    aria-label="Descripción de la tarea"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="task-due-date" className="block text-sm font-medium text-gray-700 mb-2">
                     Fecha Límite
                   </label>
                   <input
+                    id="task-due-date"
                     type="datetime-local"
                     value={createForm.dueDate}
                     onChange={(e) => setCreateForm(prev => ({ ...prev, dueDate: e.target.value }))}
@@ -917,10 +948,11 @@ const TasksPage = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="task-priority" className="block text-sm font-medium text-gray-700 mb-2">
                     Prioridad
                   </label>
                   <select
+                    id="task-priority"
                     value={createForm.priority}
                     onChange={(e) => setCreateForm(prev => ({ ...prev, priority: e.target.value as any }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -934,17 +966,18 @@ const TasksPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="task-expediente" className="block text-sm font-medium text-gray-700 mb-2">
                     Expediente (opcional)
                   </label>
                   <select
+                    id="task-expediente"
                     value={createForm.expedienteId}
                     onChange={(e) => setCreateForm(prev => ({ ...prev, expedienteId: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     aria-label="Seleccionar expediente"
                   >
                     <option value="">Seleccionar expediente</option>
-                    {expedientes.map(exp => (
+                    {Array.isArray(expedientes) && expedientes.map(exp => (
                       <option key={exp.id} value={exp.id}>
                         {exp.title} - {exp.client.user.name}
                       </option>
@@ -953,17 +986,18 @@ const TasksPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="task-client" className="block text-sm font-medium text-gray-700 mb-2">
                     Cliente (opcional)
                   </label>
                   <select
+                    id="task-client"
                     value={createForm.clientId}
                     onChange={(e) => setCreateForm(prev => ({ ...prev, clientId: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     aria-label="Seleccionar cliente"
                   >
                     <option value="">Seleccionar cliente</option>
-                    {clients.map(client => (
+                    {Array.isArray(clients) && clients.map(client => (
                       <option key={client.id} value={client.id}>
                         {client.user.name} - {client.user.email}
                       </option>
@@ -976,12 +1010,14 @@ const TasksPage = () => {
                 <button
                   onClick={closeCreateModal}
                   className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                  aria-label="Cancelar creación de tarea"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleCreateTask}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  aria-label="Crear nueva tarea"
                 >
                   Crear Tarea
                 </button>

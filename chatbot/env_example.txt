@@ -1,0 +1,16 @@
+# Configuración del Bot de Telegram
+# Copia este archivo como .env y configura tus valores
+
+# Token del bot de Telegram (obtenido de @BotFather)
+TELEGRAM_BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
+
+# URL del chatbot principal
+CHATBOT_URL=http://localhost:8000
+
+# Configuración opcional
+LOG_LEVEL=INFO
+CLEANUP_INTERVAL=300
+
+# Configuración de producción (cambiar en producción)
+# CHATBOT_URL=https://tu-dominio.com
+# TELEGRAM_BOT_TOKEN=tu_token_de_produccion 

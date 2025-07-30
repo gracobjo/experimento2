@@ -70,13 +70,16 @@ const Dashboard = () => {
 
       const results = await Promise.allSettled(requests);
 
-      results.forEach((res, idx) => {
-        if (res.status === 'fulfilled') {
-          console.log(`Dashboard stats result[${idx}]`, (res as PromiseFulfilledResult<any>).value.data);
-        } else {
-          console.error(`Dashboard stats error[${idx}]`, (res as PromiseRejectedResult).reason);
-        }
-      });
+      // Log solo en desarrollo
+      if (process.env.NODE_ENV === 'development') {
+        results.forEach((res, idx) => {
+          if (res.status === 'fulfilled') {
+            console.log(`Dashboard stats result[${idx}]`, (res as PromiseFulfilledResult<any>).value.data);
+          } else {
+            console.error(`Dashboard stats error[${idx}]`, (res as PromiseRejectedResult).reason);
+          }
+        });
+      }
 
       // Casos
       const casesStats = results[0].status === 'fulfilled' ? (results[0] as PromiseFulfilledResult<any>).value.data : {};
