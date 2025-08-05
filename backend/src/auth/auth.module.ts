@@ -8,24 +8,20 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { EmailService } from './email.service';
 import { PrismaModule } from '../prisma/prisma.module';
-import { EnvConfigService } from '../config/env.config';
 
 @Module({
   imports: [
     UsersModule,
     PrismaModule,
     PassportModule,
-    JwtModule.registerAsync({
-      inject: [EnvConfigService],
-      useFactory: async (envConfigService: EnvConfigService) => ({
-        secret: envConfigService.getJwtSecret(),
-        signOptions: {
-          expiresIn: envConfigService.getJwtExpiresIn(),
-        },
-      }),
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'default-jwt-secret-change-in-production',
+      signOptions: {
+        expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+      },
     }),
   ],
-  providers: [AuthService, JwtStrategy, EmailService, EnvConfigService],
+  providers: [AuthService, JwtStrategy, EmailService],
   controllers: [AuthController],
   exports: [AuthService, EmailService],
 })
