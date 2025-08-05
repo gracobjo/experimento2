@@ -38,10 +38,23 @@ if [ -z "$DATABASE_URL" ]; then
     exit 1
 fi
 
+# Verificar que DATABASE_URL no sea localhost
+if echo "$DATABASE_URL" | grep -q "localhost"; then
+    echo "❌ ERROR: DATABASE_URL contiene localhost, debe usar la URL de Railway"
+    echo "🔍 Valor actual: $DATABASE_URL"
+    echo ""
+    echo "🔧 SOLUCIÓN:"
+    echo "Usa la URL correcta de Railway:"
+    echo "postgresql://postgres:exOUcHSIbHGMeCqTlkaXEzHswlhYbwKZ@nozomi.proxy.rlwy.net:59148/railway"
+    echo ""
+    exit 1
+fi
+
 # Configurar valores por defecto si no están configurados
 export JWT_SECRET=${JWT_SECRET:-"default-jwt-secret-change-in-production"}
 
 echo "✅ DATABASE_URL configurado correctamente"
+echo "🔍 Valor de DATABASE_URL: $DATABASE_URL"
 echo "🎯 Iniciando servidor directamente..."
 echo "🔍 Comando: node dist/main.js"
 echo "🔍 Variables de entorno para node:"
