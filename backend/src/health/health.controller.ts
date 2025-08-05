@@ -18,4 +18,17 @@ export class HealthController {
       nodeEnv: process.env.NODE_ENV || 'NO CONFIGURADO',
     };
   }
+
+  @Get('test-health')
+  getTestHealth(): { message: string; timestamp: string; endpoints: string[] } {
+    return {
+      message: 'Health endpoints funcionando correctamente',
+      timestamp: new Date().toISOString(),
+      endpoints: [
+        '/health',
+        '/debug-env',
+        '/test-health'
+      ]
+    };
+  }
 } 

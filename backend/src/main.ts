@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import * as express from 'express';
@@ -161,8 +161,15 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   
-  // Prefijo global para la API
-  app.setGlobalPrefix('api');
+  // Prefijo global para la API (excluir health endpoints)
+  app.setGlobalPrefix('api', {
+    exclude: [
+      { path: 'health', method: RequestMethod.GET },
+      { path: 'debug-env', method: RequestMethod.GET },
+      { path: 'test-health', method: RequestMethod.GET },
+      { path: 'api-test', method: RequestMethod.GET },
+    ],
+  });
 
   // Configurar Swagger UI con opciones personalizadas
   SwaggerModule.setup('docs', app, document, {
