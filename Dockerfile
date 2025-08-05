@@ -52,6 +52,10 @@ COPY --from=builder /app/src/invoices/templates ./dist/invoices/templates
 # Variable de entorno para Puppeteer (importante para Alpine)
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
+# Copia el script de inicio
+COPY backend/start.sh ./start.sh
+RUN chmod +x ./start.sh
+
 EXPOSE 3000
 
-CMD ["npm", "run", "start:prod"] 
+CMD ["./start.sh"] 

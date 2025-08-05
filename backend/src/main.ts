@@ -12,8 +12,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
   // Configuración de CORS - debe ir ANTES de otros middleware
+  const corsOrigins = process.env.CORS_ORIGIN 
+    ? process.env.CORS_ORIGIN.split(',') 
+    : ['http://localhost:5173', 'http://localhost:3000', 'https://*.railway.app', 'https://*.vercel.app', 'https://*.netlify.app'];
+  
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -34,7 +38,7 @@ async function bootstrap() {
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", "http://localhost:5173", "http://localhost:3000"],
+        connectSrc: ["'self'", "http://localhost:5173", "http://localhost:3000", "https://*.railway.app", "https://*.vercel.app", "https://*.netlify.app"],
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
@@ -183,9 +187,11 @@ async function bootstrap() {
   app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
-  console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
-  console.log(`📁 Archivos estáticos disponibles en http://localhost:${port}/uploads`);
-  console.log(`📚 Documentación Swagger disponible en http://localhost:${port}/api/docs`);
+  await app.listen(port, '0.0.0.0');
+  console.log(`🚀 Servidor corriendo en puerto ${port}`);
+  console.log(`🌍 CORS origins configurados: ${corsOrigins.join(', ')}`);
+  console.log(`📁 Archivos estáticos disponibles en /uploads`);
+  console.log(`📚 Documentación Swagger disponible en /api/docs`);
+  console.log(`💚 Health check disponible en /health`);
 }
 bootstrap();
