@@ -17,4 +17,19 @@ export class AppController {
       timestamp: new Date().toISOString(),
     };
   }
+
+  @Get('api-test')
+  getApiTest(): { message: string; timestamp: string; endpoints: string[] } {
+    return {
+      message: 'API funcionando correctamente',
+      timestamp: new Date().toISOString(),
+      endpoints: [
+        '/health',
+        '/debug-env',
+        '/api/test',
+        '/api/docs',
+        '/api-test'
+      ]
+    };
+  }
 } 
