@@ -80,10 +80,7 @@ async function bootstrap() {
     }
   }));
 
-  // Prefijo global para la API
-  app.setGlobalPrefix('api');
-
-  // Configuración de Swagger
+  // Configuración de Swagger (debe ir ANTES del prefijo global)
   const config = new DocumentBuilder()
     .setTitle('Sistema de Gestión Legal API')
     .setDescription(`
@@ -182,6 +179,9 @@ async function bootstrap() {
       .swagger-ui .opblock.opblock-patch .opblock-summary-method { background: #50e3c2; }
     `,
   });
+
+  // Prefijo global para la API (después de configurar Swagger)
+  app.setGlobalPrefix('api');
 
   // Servir archivos estáticos desde la carpeta uploads
   app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));

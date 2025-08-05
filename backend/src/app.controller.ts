@@ -26,4 +26,12 @@ export class AppController {
       nodeEnv: process.env.NODE_ENV || 'NO CONFIGURADO',
     };
   }
+
+  @Get('test')
+  getTest(): { message: string; timestamp: string } {
+    return {
+      message: 'API funcionando correctamente',
+      timestamp: new Date().toISOString(),
+    };
+  }
 } 
