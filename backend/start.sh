@@ -47,4 +47,4 @@ node scripts/check-database.js
 
 # Iniciar la aplicación
 echo "🎯 Iniciando servidor..."
-npm run start:prod 
+node dist/main 
