@@ -161,8 +161,11 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   
+  // Prefijo global para la API
+  app.setGlobalPrefix('api');
+
   // Configurar Swagger UI con opciones personalizadas
-  SwaggerModule.setup('api/docs', app, document, {
+  SwaggerModule.setup('docs', app, document, {
     swaggerOptions: {
       persistAuthorization: true,
       docExpansion: 'none',
@@ -180,9 +183,6 @@ async function bootstrap() {
     `,
   });
 
-  // Prefijo global para la API (después de configurar Swagger)
-  app.setGlobalPrefix('api');
-
   // Servir archivos estáticos desde la carpeta uploads
   app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
@@ -193,5 +193,6 @@ async function bootstrap() {
   console.log(`📁 Archivos estáticos disponibles en /uploads`);
   console.log(`📚 Documentación Swagger disponible en /api/docs`);
   console.log(`💚 Health check disponible en /health`);
+  console.log(`🔧 Debug environment disponible en /debug-env`);
 }
 bootstrap();
