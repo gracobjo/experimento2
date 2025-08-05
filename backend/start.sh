@@ -25,4 +25,9 @@ echo "  - PORT: ${PORT:-3000}"
 export JWT_SECRET=${JWT_SECRET:-"default-jwt-secret-change-in-production"}
 
 echo "🎯 Iniciando servidor directamente..."
-exec node dist/main.js 
+echo "🔍 Comando: node dist/main.js"
+echo "🔍 Variables de entorno para node:"
+env | grep -E "(JWT_SECRET|DATABASE_URL|NODE_ENV|PORT)" || echo "No se encontraron variables de entorno relevantes"
+
+# Ejecutar con más logging
+node --trace-warnings dist/main.js 
