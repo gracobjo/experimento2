@@ -49,4 +49,11 @@ export class AppController {
       nodeEnv: process.env.NODE_ENV || 'NO CONFIGURADO',
     };
   }
+
+  @Get('simple-test')
+  getSimpleTest(): { message: string } {
+    return {
+      message: 'Endpoint simple funcionando',
+    };
+  }
 } 
