@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nes
 import { AppointmentsService } from './appointments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import { CreateLawyerAppointmentDto } from './dto/create-lawyer-appointment.dto';
 
 @ApiTags('appointments')
 @UseGuards(JwtAuthGuard)
@@ -87,6 +88,36 @@ export class AppointmentsController {
   @ApiResponse({ status: 401, description: 'No autorizado' })
   async create(@Body() createAppointmentDto: CreateAppointmentDto, @Request() req) {
     return this.appointmentsService.create(createAppointmentDto, req.user);
+  }
+
+  @Post('lawyer')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ 
+    summary: 'Crear nueva cita como abogado',
+    description: 'Permite a un abogado crear una cita para un cliente'
+  })
+  @ApiBody({ type: CreateLawyerAppointmentDto })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Cita creada exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        date: { type: 'string', format: 'date-time' },
+        location: { type: 'string' },
+        notes: { type: 'string' },
+        clientId: { type: 'string' },
+        lawyerId: { type: 'string' },
+        createdAt: { type: 'string', format: 'date-time' }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Solo abogados y administradores pueden crear citas para clientes' })
+  async createAsLawyer(@Body() createLawyerAppointmentDto: CreateLawyerAppointmentDto, @Request() req) {
+    return this.appointmentsService.createAsLawyer(createLawyerAppointmentDto, req.user);
   }
 
   @Delete(':id')

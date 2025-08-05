@@ -184,6 +184,7 @@ const CasesPage = () => {
           <button 
             onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            aria-label="Reintentar cargar los expedientes"
           >
             Reintentar
           </button>
@@ -207,6 +208,7 @@ const CasesPage = () => {
             <Link
               to="/lawyer/cases/new"
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              aria-label="Crear un nuevo expediente"
             >
               Nuevo Expediente
             </Link>
@@ -285,32 +287,42 @@ const CasesPage = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Filtros de Búsqueda</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="search-cases" className="block text-sm font-medium text-gray-700 mb-2">
                 Buscar
               </label>
               <input
+                id="search-cases"
                 type="text"
                 placeholder="Buscar por título, cliente o descripción..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                aria-describedby="search-cases-help"
               />
+              <div id="search-cases-help" className="sr-only">
+                Busque expedientes por título, nombre del cliente o descripción
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-2">
                 Estado
               </label>
               <select
+                id="status-filter"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 aria-label="Filtrar por estado"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                aria-describedby="status-filter-help"
               >
                 <option value="todos">Todos los estados</option>
                 <option value="ABIERTO">Abierto</option>
                 <option value="EN_PROCESO">En Proceso</option>
                 <option value="CERRADO">Cerrado</option>
               </select>
+              <div id="status-filter-help" className="sr-only">
+                Filtre los expedientes por su estado actual
+              </div>
             </div>
             <div className="flex items-end">
               <button
@@ -319,6 +331,7 @@ const CasesPage = () => {
                   setStatusFilter('todos');
                 }}
                 className="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                aria-label="Limpiar todos los filtros de búsqueda"
               >
                 Limpiar Filtros
               </button>
@@ -352,6 +365,7 @@ const CasesPage = () => {
                           className="ml-2 px-2 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300"
                           title="Copiar ID"
                           onClick={() => navigator.clipboard.writeText(caseItem.id)}
+                          aria-label={`Copiar ID del expediente ${caseItem.id} al portapapeles`}
                         >
                           Copiar
                         </button>
@@ -360,8 +374,15 @@ const CasesPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex items-center gap-2">
                         {caseItem.client.user.name}
                         {conv && conv.unreadCount > 0 && (
-                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800" title="Mensajes no leídos">
-                            <svg className="w-3 h-3 mr-1 text-yellow-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 12H9v-2h2v2zm0-4H9V6h2v4z" /></svg>
+                          <span 
+                            className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800" 
+                            title="Mensajes no leídos"
+                            role="status"
+                            aria-label={`${conv.unreadCount} mensaje${conv.unreadCount > 1 ? 's' : ''} no leído${conv.unreadCount > 1 ? 's' : ''} de ${caseItem.client.user.name}`}
+                          >
+                            <svg className="w-3 h-3 mr-1 text-yellow-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                              <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 12H9v-2h2v2zm0-4H9V6h2v4z" />
+                            </svg>
                             {conv.unreadCount}
                           </span>
                         )}
@@ -372,12 +393,14 @@ const CasesPage = () => {
                           <Link
                             to={`/lawyer/cases/${caseItem.id}`}
                             className="text-blue-600 hover:text-blue-900"
+                            aria-label={`Ver detalles del expediente ${caseItem.title}`}
                           >
                             Ver
                           </Link>
                           <Link
                             to={`/lawyer/cases/${caseItem.id}/edit`}
                             className="text-green-600 hover:text-green-900"
+                            aria-label={`Editar expediente ${caseItem.title}`}
                           >
                             Editar
                           </Link>

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, Patch, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Patch, UseGuards, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { ProvisionFondosService } from './provision-fondos.service';
 import { CreateProvisionFondosDto } from './dto/create-provision-fondos.dto';
@@ -66,10 +66,10 @@ export class ProvisionFondosController {
   @Get(':id')
   @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
   @ApiOperation({ 
-    summary: 'Obtener provisión de fondos por ID',
+    summary: 'Obtener una provisión de fondos por ID',
     description: 'Devuelve una provisión de fondos específica'
   })
-  @ApiParam({ name: 'id', description: 'ID de la provisión', type: 'string' })
+  @ApiParam({ name: 'id', description: 'ID de la provisión', type: String })
   @ApiResponse({ 
     status: 200, 
     description: 'Provisión de fondos encontrada',
@@ -84,29 +84,13 @@ export class ProvisionFondosController {
         clientId: { type: 'string' },
         expedienteId: { type: 'string' },
         invoiceId: { type: 'string' },
-        createdAt: { type: 'string', format: 'date-time' },
-        client: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-            name: { type: 'string' },
-            email: { type: 'string' }
-          }
-        },
-        expediente: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-            title: { type: 'string' },
-            status: { type: 'string' }
-          }
-        }
+        createdAt: { type: 'string', format: 'date-time' }
       }
     }
   })
+  @ApiResponse({ status: 404, description: 'Provisión no encontrada' })
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente' })
-  @ApiResponse({ status: 404, description: 'Provisión no encontrada' })
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
   }
@@ -142,49 +126,97 @@ export class ProvisionFondosController {
     return this.service.create(dto);
   }
 
-  @Patch('link-to-invoice')
+  @Patch(':id')
   @Roles(Role.ADMIN, Role.ABOGADO)
   @ApiOperation({ 
-    summary: 'Vincular provisión a factura',
-    description: 'Vincula una provisión de fondos a una factura (ADMIN y ABOGADO)'
+    summary: 'Actualizar provisión de fondos',
+    description: 'Actualiza una provisión de fondos existente (ADMIN y ABOGADO)'
   })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        provisionId: { 
-          type: 'string', 
-          description: 'ID de la provisión de fondos',
-          example: '123e4567-e89b-12d3-a456-426614174001'
-        },
-        invoiceId: { 
-          type: 'string', 
-          description: 'ID de la factura',
-          example: '123e4567-e89b-12d3-a456-426614174002'
-        }
-      }
-    }
-  })
+  @ApiParam({ name: 'id', description: 'ID de la provisión', type: String })
+  @ApiBody({ type: CreateProvisionFondosDto })
   @ApiResponse({ 
     status: 200, 
-    description: 'Provisión vinculada exitosamente',
+    description: 'Provisión de fondos actualizada exitosamente',
     schema: {
       type: 'object',
       properties: {
         id: { type: 'string' },
         monto: { type: 'number' },
         descripcion: { type: 'string' },
-        estado: { type: 'string', example: 'VINCULADA' },
+        fechaProvision: { type: 'string', format: 'date' },
+        estado: { type: 'string' },
+        clientId: { type: 'string' },
+        expedienteId: { type: 'string' },
         invoiceId: { type: 'string' },
-        updatedAt: { type: 'string', format: 'date-time' }
+        createdAt: { type: 'string', format: 'date-time' }
       }
     }
   })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Provisión no encontrada' })
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente' })
+  update(@Param('id') id: string, @Body() dto: CreateProvisionFondosDto) {
+    return this.service.update(id, dto);
+  }
+
+  @Delete(':id')
+  @Roles(Role.ADMIN, Role.ABOGADO)
+  @ApiOperation({ 
+    summary: 'Eliminar provisión de fondos',
+    description: 'Elimina una provisión de fondos (ADMIN y ABOGADO)'
+  })
+  @ApiParam({ name: 'id', description: 'ID de la provisión', type: String })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Provisión de fondos eliminada exitosamente'
+  })
+  @ApiResponse({ status: 404, description: 'Provisión no encontrada' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente' })
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
+  }
+
+  @Patch('link-to-invoice')
+  @Roles(Role.ADMIN, Role.ABOGADO)
+  @ApiOperation({ 
+    summary: 'Vincular provisión a factura',
+    description: 'Vincula una provisión de fondos a una factura específica'
+  })
+  @ApiBody({ 
+    schema: {
+      type: 'object',
+      properties: {
+        provisionId: { type: 'string', description: 'ID de la provisión' },
+        invoiceId: { type: 'string', description: 'ID de la factura' }
+      },
+      required: ['provisionId', 'invoiceId']
+    }
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Provisión vinculada exitosamente a la factura',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        monto: { type: 'number' },
+        descripcion: { type: 'string' },
+        fechaProvision: { type: 'string', format: 'date' },
+        estado: { type: 'string' },
+        clientId: { type: 'string' },
+        expedienteId: { type: 'string' },
+        invoiceId: { type: 'string' },
+        createdAt: { type: 'string', format: 'date-time' }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
   @ApiResponse({ status: 404, description: 'Provisión o factura no encontrada' })
-  linkToInvoice(@Body() dto: { provisionId: string; invoiceId: string }) {
-    return this.service.linkToInvoice(dto.provisionId, dto.invoiceId);
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente' })
+  linkToInvoice(@Body() body: { provisionId: string; invoiceId: string }) {
+    return this.service.linkToInvoice(body.provisionId, body.invoiceId);
   }
 } 

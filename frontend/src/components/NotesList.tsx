@@ -263,16 +263,24 @@ const NotesList: React.FC<NotesListProps> = ({ expedienteId, onNoteAdded }) => {
             onClick={fetchNotes}
             className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
             aria-label="Recargar notas"
+            aria-describedby="recargar-notas-help"
           >
             🔄 Recargar
           </button>
+          <div id="recargar-notas-help" className="sr-only">
+            Actualizar la lista de notas del expediente
+          </div>
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             aria-label="Crear nueva nota"
+            aria-describedby="crear-nota-help"
           >
             {showCreateForm ? 'Cancelar' : 'Crear Nota'}
           </button>
+          <div id="crear-nota-help" className="sr-only">
+            {showCreateForm ? 'Cancelar la creación de una nueva nota' : 'Abrir formulario para crear una nueva nota'}
+          </div>
         </div>
       </div>
       
@@ -287,31 +295,56 @@ const NotesList: React.FC<NotesListProps> = ({ expedienteId, onNoteAdded }) => {
         <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
           <h3 className="text-md font-medium text-gray-900 mb-3">Nueva Nota</h3>
           <div className="space-y-3">
-            <input
-              type="text"
-              placeholder="Título de la nota"
-              value={createForm.title}
-              onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <textarea
-              placeholder="Contenido de la nota"
-              value={createForm.content}
-              onChange={(e) => setCreateForm({ ...createForm, content: e.target.value })}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div>
+              <label htmlFor="create-note-title" className="block text-sm font-medium text-gray-700 mb-1">
+                Título de la nota
+              </label>
+              <input
+                id="create-note-title"
+                type="text"
+                placeholder="Título de la nota"
+                value={createForm.title}
+                onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-describedby="create-note-title-help"
+              />
+              <div id="create-note-title-help" className="sr-only">
+                Ingrese un título descriptivo para la nota
+              </div>
+            </div>
+            <div>
+              <label htmlFor="create-note-content" className="block text-sm font-medium text-gray-700 mb-1">
+                Contenido de la nota
+              </label>
+              <textarea
+                id="create-note-content"
+                placeholder="Contenido de la nota"
+                value={createForm.content}
+                onChange={(e) => setCreateForm({ ...createForm, content: e.target.value })}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-describedby="create-note-content-help"
+              />
+              <div id="create-note-content-help" className="sr-only">
+                Escriba el contenido de la nota que desea agregar al expediente
+              </div>
+            </div>
             {(user?.role === 'ABOGADO' || user?.role === 'ADMIN') && (
               <div className="flex items-center">
                 <input
+                  id="create-note-private"
                   type="checkbox"
                   checked={createForm.isPrivate}
                   onChange={(e) => setCreateForm({ ...createForm, isPrivate: e.target.checked })}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  aria-describedby="create-note-private-help"
                 />
-                <label className="ml-2 text-sm text-gray-700">
+                <label htmlFor="create-note-private" className="ml-2 text-sm text-gray-700">
                   Nota privada (solo visible para abogados)
                 </label>
+                <div id="create-note-private-help" className="sr-only">
+                  Marque esta opción si la nota debe ser visible solo para abogados y administradores
+                </div>
               </div>
             )}
             <div className="flex gap-2">
@@ -319,15 +352,25 @@ const NotesList: React.FC<NotesListProps> = ({ expedienteId, onNoteAdded }) => {
                 onClick={handleCreateNote}
                 disabled={!createForm.title || !createForm.content}
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Guardar nueva nota"
+                aria-describedby="save-create-note-help"
               >
                 Guardar Nota
               </button>
               <button
                 onClick={() => setShowCreateForm(false)}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                aria-label="Cancelar creación de nota"
+                aria-describedby="cancel-create-note-help"
               >
                 Cancelar
               </button>
+              <div id="save-create-note-help" className="sr-only">
+                Guardar la nueva nota en el expediente
+              </div>
+              <div id="cancel-create-note-help" className="sr-only">
+                Cancelar la creación de la nota y cerrar el formulario
+              </div>
             </div>
           </div>
         </div>
@@ -337,37 +380,58 @@ const NotesList: React.FC<NotesListProps> = ({ expedienteId, onNoteAdded }) => {
       <div className="mb-4">
         <div className="flex flex-col sm:flex-row gap-3 mb-2">
           <div className="flex-1 relative">
+            <label htmlFor="search-notes" className="sr-only">
+              Buscar en notas
+            </label>
             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
             <input
+              id="search-notes"
               type="text"
               placeholder="Buscar en notas..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-describedby="search-notes-help"
             />
+            <div id="search-notes-help" className="sr-only">
+              Busque en el título y contenido de las notas
+            </div>
           </div>
           <div className="flex items-center gap-2">
+            <label htmlFor="filter-privacy" className="sr-only">
+              Filtrar por privacidad
+            </label>
             <span className="text-gray-500">🔒</span>
             <select
+              id="filter-privacy"
               value={filterPrivate}
               onChange={(e) => setFilterPrivate(e.target.value as 'all' | 'public' | 'private')}
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-describedby="filter-privacy-help"
             >
               <option value="all">Todas las notas</option>
               <option value="public">Solo públicas</option>
               <option value="private">Solo privadas</option>
             </select>
+            <div id="filter-privacy-help" className="sr-only">
+              Seleccione el tipo de notas que desea ver
+            </div>
           </div>
         </div>
         
         {/* Filtros de fecha */}
         <div className="flex flex-col sm:flex-row gap-3 mb-2">
           <div className="flex items-center gap-2">
+            <label htmlFor="filter-date" className="sr-only">
+              Filtrar por fecha
+            </label>
             <span className="text-gray-500">📅</span>
             <select
+              id="filter-date"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value as 'all' | 'today' | 'week' | 'month' | 'custom')}
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-describedby="filter-date-help"
             >
               <option value="all">Todas las fechas</option>
               <option value="today">Hoy</option>
@@ -375,24 +439,47 @@ const NotesList: React.FC<NotesListProps> = ({ expedienteId, onNoteAdded }) => {
               <option value="month">Este mes</option>
               <option value="custom">Rango personalizado</option>
             </select>
+            <div id="filter-date-help" className="sr-only">
+              Seleccione el período de tiempo para filtrar las notas
+            </div>
           </div>
           
           {dateFilter === 'custom' && (
             <div className="flex gap-2">
-              <input
-                type="date"
-                value={customDateFrom}
-                onChange={(e) => setCustomDateFrom(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Desde"
-              />
-              <input
-                type="date"
-                value={customDateTo}
-                onChange={(e) => setCustomDateTo(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Hasta"
-              />
+              <div>
+                <label htmlFor="custom-date-from" className="sr-only">
+                  Fecha desde
+                </label>
+                <input
+                  id="custom-date-from"
+                  type="date"
+                  value={customDateFrom}
+                  onChange={(e) => setCustomDateFrom(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Desde"
+                  aria-describedby="custom-date-from-help"
+                />
+                <div id="custom-date-from-help" className="sr-only">
+                  Seleccione la fecha de inicio para el filtro personalizado
+                </div>
+              </div>
+              <div>
+                <label htmlFor="custom-date-to" className="sr-only">
+                  Fecha hasta
+                </label>
+                <input
+                  id="custom-date-to"
+                  type="date"
+                  value={customDateTo}
+                  onChange={(e) => setCustomDateTo(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Hasta"
+                  aria-describedby="custom-date-to-help"
+                />
+                <div id="custom-date-to-help" className="sr-only">
+                  Seleccione la fecha de fin para el filtro personalizado
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -420,6 +507,7 @@ const NotesList: React.FC<NotesListProps> = ({ expedienteId, onNoteAdded }) => {
                 setCustomDateTo('');
               }}
               className="text-sm text-blue-600 hover:text-blue-800 underline"
+              aria-label="Limpiar todos los filtros aplicados"
             >
               Limpiar filtros
             </button>
@@ -441,33 +529,63 @@ const NotesList: React.FC<NotesListProps> = ({ expedienteId, onNoteAdded }) => {
             <div key={note.id} className="border border-gray-200 rounded-lg p-4">
               {editingNote === note.id ? (
                 <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={editForm.title}
-                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Título de la nota"
-                  />
-                  <textarea
-                    value={editForm.content}
-                    onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Contenido de la nota"
-                  />
+                  <div>
+                    <label htmlFor={`edit-note-title-${note.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+                      Título de la nota
+                    </label>
+                    <input
+                      id={`edit-note-title-${note.id}`}
+                      type="text"
+                      value={editForm.title}
+                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Título de la nota"
+                      aria-describedby={`edit-note-title-help-${note.id}`}
+                    />
+                    <div id={`edit-note-title-help-${note.id}`} className="sr-only">
+                      Edite el título de la nota
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor={`edit-note-content-${note.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+                      Contenido de la nota
+                    </label>
+                    <textarea
+                      id={`edit-note-content-${note.id}`}
+                      value={editForm.content}
+                      onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Contenido de la nota"
+                      aria-describedby={`edit-note-content-help-${note.id}`}
+                    />
+                    <div id={`edit-note-content-help-${note.id}`} className="sr-only">
+                      Edite el contenido de la nota
+                    </div>
+                  </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleSaveEdit(note.id)}
                       className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                      aria-label="Guardar cambios en la nota"
+                      aria-describedby={`save-edit-help-${note.id}`}
                     >
                       Guardar
                     </button>
                     <button
                       onClick={() => setEditingNote(null)}
                       className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300"
+                      aria-label="Cancelar edición de la nota"
+                      aria-describedby={`cancel-edit-help-${note.id}`}
                     >
                       Cancelar
                     </button>
+                    <div id={`save-edit-help-${note.id}`} className="sr-only">
+                      Confirmar los cambios realizados en la nota
+                    </div>
+                    <div id={`cancel-edit-help-${note.id}`} className="sr-only">
+                      Descartar los cambios y volver a la vista normal de la nota
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -495,6 +613,7 @@ const NotesList: React.FC<NotesListProps> = ({ expedienteId, onNoteAdded }) => {
                           onClick={() => handleEdit(note)}
                           className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-sm font-medium"
                           aria-label="Editar nota"
+                          aria-describedby={`edit-note-help-${note.id}`}
                         >
                           Editar
                         </button>
@@ -504,10 +623,17 @@ const NotesList: React.FC<NotesListProps> = ({ expedienteId, onNoteAdded }) => {
                           onClick={() => handleDelete(note.id)}
                           className="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-sm font-medium"
                           aria-label="Eliminar nota"
+                          aria-describedby={`delete-note-help-${note.id}`}
                         >
                           Eliminar
                         </button>
                       )}
+                      <div id={`edit-note-help-${note.id}`} className="sr-only">
+                        Modificar el contenido de esta nota
+                      </div>
+                      <div id={`delete-note-help-${note.id}`} className="sr-only">
+                        Eliminar permanentemente esta nota del expediente
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -228,6 +228,16 @@ export class CreateInvoiceDto {
   aplicarIVA?: boolean;
 
   @ApiProperty({
+    description: 'Tipo de impuesto (iva o retencion)',
+    example: 'iva',
+    required: false,
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  tipoImpuesto?: string;
+
+  @ApiProperty({
     description: 'Items de la factura',
     type: [InvoiceItemDto],
   })
@@ -245,4 +255,34 @@ export class CreateInvoiceDto {
   @IsString()
   @IsNotEmpty()
   estado: string;
+
+  @ApiProperty({
+    description: 'ID de la factura original (para rectificativas)',
+    example: '123e4567-e89b-12d3-a456-426614174005',
+    required: false,
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  facturaOriginalId?: string;
+
+  @ApiProperty({
+    description: 'Tipo de rectificación (R1, R2, R3, R4)',
+    example: 'R1',
+    required: false,
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  tipoRectificacion?: string;
+
+  @ApiProperty({
+    description: 'Motivo de la rectificación',
+    example: 'Anulación por error en datos',
+    required: false,
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  motivoRectificacion?: string;
 } 

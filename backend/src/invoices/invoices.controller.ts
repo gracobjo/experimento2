@@ -55,12 +55,21 @@ export class InvoicesController {
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente' })
   async create(@Body() createInvoiceDto: CreateInvoiceDto, @Request() req) {
+    console.log('=== INVOICE CREATE ENDPOINT CALLED ===');
+    console.log('Request user:', req.user);
+    console.log('CreateInvoiceDto received:', JSON.stringify(createInvoiceDto, null, 2));
+    
     // Forzar que el emisorId sea el del usuario autenticado
     createInvoiceDto.emisorId = req.user.id;
+    console.log('EmisorId set to:', createInvoiceDto.emisorId);
+    
     try {
-      return await this.invoicesService.create(createInvoiceDto);
+      const result = await this.invoicesService.create(createInvoiceDto);
+      console.log('Invoice created successfully:', result);
+      return result;
     } catch (error: any) {
       console.error('Invoice creation error:', error);
+      console.error('Error details:', error?.response?.data || error?.message || String(error));
       throw new HttpException({
         status: HttpStatus.INTERNAL_SERVER_ERROR,
         error: 'Error creating invoice',
@@ -284,10 +293,24 @@ export class InvoicesController {
     @Body() updateInvoiceDto: UpdateInvoiceDto,
     @Request() req
   ) {
+    console.log('=== INVOICE UPDATE ENDPOINT CALLED ===');
+    console.log('Invoice ID:', id);
+    console.log('Request user:', req.user);
+    console.log('UpdateInvoiceDto received:', JSON.stringify(updateInvoiceDto, null, 2));
+    
     const userId = req.user?.id;
     const ipAddress = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || null;
     const userAgent = req.headers['user-agent'] || null;
-    return this.invoicesService.update(id, updateInvoiceDto, userId, ipAddress, userAgent);
+    
+    try {
+      const result = await this.invoicesService.update(id, updateInvoiceDto, userId, ipAddress, userAgent);
+      console.log('Invoice updated successfully:', result);
+      return result;
+    } catch (error: any) {
+      console.error('Invoice update error:', error);
+      console.error('Error details:', error?.response?.data || error?.message || String(error));
+      throw error;
+    }
   }
 
   @Delete(':id')

@@ -535,17 +535,25 @@ const ChatWidget = () => {
       <button
         onClick={toggleChat}
         className="fixed bottom-4 right-4 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 z-50"
-        aria-label="Abrir chat"
+        aria-label={isOpen ? "Cerrar chat" : "Abrir chat"}
+        aria-describedby="chat-button-help"
       >
-        <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+          <span 
+            className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center"
+            role="status"
+            aria-label={`${unreadCount} mensaje${unreadCount > 1 ? 's' : ''} no leído${unreadCount > 1 ? 's' : ''}`}
+          >
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
+      <div id="chat-button-help" className="sr-only">
+        {isOpen ? "Cerrar la ventana de chat" : "Abrir la ventana de chat para enviar mensajes"}
+      </div>
 
       {/* Chat Window */}
       {isOpen && (
@@ -561,15 +569,16 @@ const ChatWidget = () => {
                   onClick={endChat}
                   className="text-white hover:text-red-200 text-xs px-2 py-1 bg-red-600 rounded"
                   title="Finalizar chat"
+                  aria-label="Finalizar chat"
                 >
                   Finalizar
                 </button>
                 <button
                   onClick={() => setIsMinimized(!isMinimized)}
                   className="text-white hover:text-gray-200"
-                  aria-label={isMinimized ? "Maximizar" : "Minimizar"}
+                  aria-label={isMinimized ? "Maximizar chat" : "Minimizar chat"}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     {isMinimized ? (
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                     ) : (
@@ -582,7 +591,7 @@ const ChatWidget = () => {
                   className="text-white hover:text-gray-200"
                   aria-label="Cerrar chat"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -605,6 +614,7 @@ const ChatWidget = () => {
                 <button
                   onClick={extendInactivityTime}
                   className="ml-2 text-yellow-800 hover:text-yellow-900 text-sm font-medium underline"
+                  aria-label="Mantener chat abierto por más tiempo"
                 >
                   Mantener abierto
                 </button>
@@ -622,6 +632,7 @@ const ChatWidget = () => {
                   <button
                     onClick={() => setShowNewConversation(!showNewConversation)}
                     className="text-blue-600 hover:text-blue-700 text-sm"
+                    aria-label={showNewConversation ? "Cancelar nueva conversación" : "Iniciar nueva conversación"}
                   >
                     {showNewConversation ? 'Cancelar' : 'Nueva'}
                   </button>
@@ -758,6 +769,7 @@ const ChatWidget = () => {
                       onClick={handleResetConversation}
                       className="text-blue-600 hover:text-blue-800 text-xs px-2 py-1 border border-blue-200 rounded"
                       title="Reiniciar conversación"
+                      aria-label="Reiniciar conversación"
                     >
                       Reiniciar
                     </button>
@@ -766,7 +778,7 @@ const ChatWidget = () => {
                       className="text-gray-500 hover:text-red-600 ml-2"
                       aria-label="Cerrar chat"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
@@ -817,19 +829,30 @@ const ChatWidget = () => {
                 {/* Message Input */}
                 <form onSubmit={handleSendMessage} className="p-3 border-t">
                   <div className="flex space-x-2">
-                    <textarea
-                      value={newMessage}
-                      onChange={handleTyping}
-                      placeholder="Escribe tu mensaje..."
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[40px] max-h-[100px] resize-none"
-                      disabled={sending}
-                      rows={1}
-                      onKeyDown={handleKeyDown}
-                    />
+                    <div className="flex-1">
+                      <label htmlFor="chat-message-input" className="sr-only">
+                        Mensaje
+                      </label>
+                      <textarea
+                        id="chat-message-input"
+                        value={newMessage}
+                        onChange={handleTyping}
+                        placeholder="Escribe tu mensaje..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[40px] max-h-[100px] resize-none"
+                        disabled={sending}
+                        rows={1}
+                        onKeyDown={handleKeyDown}
+                        aria-describedby="chat-message-help"
+                      />
+                      <div id="chat-message-help" className="sr-only">
+                        Escriba su mensaje aquí. Presione Enter para enviar o use el botón de envío.
+                      </div>
+                    </div>
                     <button
                       type="submit"
                       disabled={!newMessage.trim() || sending}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed min-h-[40px] min-w-[40px]"
+                      aria-label="Enviar mensaje"
                     >
                       {sending ? '...' : '→'}
                     </button>

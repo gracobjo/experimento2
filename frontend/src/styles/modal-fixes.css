@@ -1,0 +1,132 @@
+/* Fixes para problemas de z-index en modales */
+
+/* Asegurar que el modal esté por encima de todo */
+.modal-overlay {
+  z-index: 9999 !important;
+}
+
+/* Contenedor del modal */
+.modal-container {
+  position: relative;
+  z-index: 10000 !important;
+}
+
+/* Inputs datetime-local dentro de modales */
+.modal-container input[type="datetime-local"] {
+  position: relative;
+  z-index: 10 !important;
+}
+
+/* Botones de acción del modal - SOLUCIÓN AGRESIVA */
+.modal-actions {
+  position: sticky !important;
+  bottom: 0 !important;
+  background: white !important;
+  border-top: 2px solid #e5e7eb !important;
+  margin-top: 1rem !important;
+  margin-left: -1.5rem !important;
+  margin-right: -1.5rem !important;
+  padding: 1rem 1.5rem !important;
+  z-index: 99999 !important;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Asegurar que los botones estén siempre visibles */
+.modal-actions button {
+  position: relative;
+  z-index: 100000 !important;
+  font-weight: 600 !important;
+  min-width: 80px !important;
+}
+
+/* Calendario del navegador (pseudo-elementos) */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  z-index: 15 !important;
+}
+
+input[type="datetime-local"]::-webkit-datetime-edit {
+  z-index: 10 !important;
+}
+
+/* Para Firefox */
+input[type="datetime-local"]::-moz-calendar-picker-indicator {
+  z-index: 15 !important;
+}
+
+/* Para Edge */
+input[type="datetime-local"]::-ms-clear,
+input[type="datetime-local"]::-ms-expand {
+  z-index: 15 !important;
+}
+
+/* Overlay del modal con mayor z-index */
+.modal-backdrop {
+  z-index: 9999 !important;
+}
+
+/* Contenido del modal */
+.modal-content {
+  z-index: 10000 !important;
+  position: relative;
+}
+
+/* Asegurar que el contenido del modal tenga scroll apropiado */
+.modal-scroll-content {
+  max-height: calc(85vh - 120px); /* Restar espacio para botones */
+  overflow-y: auto;
+  padding-bottom: 1rem;
+}
+
+/* SOLUCIÓN ESPECÍFICA PARA EL CALENDARIO NATIVO */
+/* Forzar que el modal esté por encima del calendario del navegador */
+.modal-container {
+  isolation: isolate !important;
+}
+
+/* Asegurar que el modal tenga el z-index más alto posible */
+.modal-overlay {
+  z-index: 2147483647 !important; /* Máximo z-index posible */
+}
+
+.modal-content {
+  z-index: 2147483647 !important; /* Máximo z-index posible */
+}
+
+/* Botones con z-index extremadamente alto */
+.modal-actions {
+  z-index: 2147483647 !important; /* Máximo z-index posible */
+}
+
+.modal-actions button {
+  z-index: 2147483647 !important; /* Máximo z-index posible */
+}
+
+/* Asegurar que el modal tenga un contexto de apilamiento */
+.modal-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+}
+
+/* Estilos específicos para DateTimePicker en modales */
+.modal-container .relative {
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+.modal-container .relative input[type="text"] {
+  z-index: 10 !important;
+}
+
+/* Dropdown del DateTimePicker */
+.modal-container .relative .absolute {
+  z-index: 99999 !important;
+  max-height: 320px !important; /* Reducir altura para evitar solapamiento */
+}
+
+/* Asegurar que el contenido del modal tenga espacio para los botones */
+.modal-content .p-6 {
+  padding-bottom: 80px !important; /* Espacio para botones sticky */
+} 

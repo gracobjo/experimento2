@@ -195,6 +195,16 @@ enum Status {
   CERRADO
 }
 
+enum InvoiceStatus {
+  BORRADOR
+  EMITIDA
+  ENVIADA
+  NOTIFICADA
+  ACEPTADA
+  RECHAZADA
+  ANULADA
+}
+
 enum Sender {
   USER
   BOT
@@ -215,19 +225,24 @@ model Invoice {
   descuento         Float?        // Porcentaje de descuento
   retencion         Float?        // Porcentaje de retención
   aplicarIVA        Boolean       @default(true) // Si se debe aplicar IVA
+  tipoImpuesto      String?       // Tipo de impuesto: 'iva' o 'retencion'
   regimenIvaEmisor  String
   claveOperacion    String        // Por defecto '01'
   metodoPago        String
   fechaOperacion    DateTime
   xml               String?       // XML Facturae generado
   xmlFirmado        String?       // XML firmado digitalmente
-  estado            String        // borrador, emitida, enviada, aceptada, rechazada, anulada
+  estado            String        @default("borrador") // borrador, emitida, enviada, notificada, aceptada, rechazada, anulada
   motivoAnulacion    String?       // Motivo de anulación (nullable)
   selloTiempo       DateTime?     // Sello de tiempo TSA
   externalId        String?       // ID en sistema externo (AEAT, FACE, etc.)
   sistemaEnvio      String?       // Sistema al que se envió (AEAT, FACE, etc.)
   fechaEnvio        DateTime?     // Fecha de envío a sistema externo
   paymentDate       DateTime?     // Fecha de pago de la factura
+  // Campos para facturas rectificativas
+  facturaOriginalId String?       // ID de la factura original (para rectificativas)
+  tipoRectificacion String?       // R1, R2, R3, R4 (para rectificativas)
+  motivoRectificacion String?     // Motivo de la rectificación
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   emisor            User          @relation("EmisorFacturas", fields: [emisorId], references: [id])
@@ -236,6 +251,9 @@ model Invoice {
   items             InvoiceItem[]
   provisionFondos    ProvisionFondos[]
   auditHistory      InvoiceAuditHistory[]
+  // Relación con factura original (para rectificativas)
+  facturaOriginal   Invoice?      @relation("FacturaRectificativa", fields: [facturaOriginalId], references: [id])
+  facturasRectificativas Invoice[] @relation("FacturaRectificativa")
 }
 
 model InvoiceItem {

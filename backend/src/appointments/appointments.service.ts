@@ -1,6 +1,7 @@
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import { CreateLawyerAppointmentDto } from './dto/create-lawyer-appointment.dto';
 import { EmailService } from '../auth/email.service';
 
 @Injectable()
@@ -126,6 +127,51 @@ export class AppointmentsService {
         }
       }
     });
+    return appointment;
+  }
+
+  async createAsLawyer(dto: CreateLawyerAppointmentDto, user: any) {
+    // Solo abogados y administradores pueden crear citas para clientes
+    if (user.role !== 'ABOGADO' && user.role !== 'ADMIN') {
+      throw new ForbiddenException('Solo los abogados y administradores pueden crear citas para clientes');
+    }
+
+    // Verificar que el cliente existe
+    const client = await this.prisma.client.findUnique({ 
+      where: { id: dto.clientId },
+      include: { user: true }
+    });
+    if (!client) {
+      throw new NotFoundException('Cliente no encontrado');
+    }
+
+    // Verificar que el abogado existe
+    const lawyer = await this.prisma.user.findUnique({ 
+      where: { id: user.id, role: 'ABOGADO' } 
+    });
+    if (!lawyer) {
+      throw new ForbiddenException('No eres abogado');
+    }
+
+    // Crear cita
+    const appointment = await this.prisma.appointment.create({
+      data: {
+        clientId: dto.clientId,
+        lawyerId: user.id,
+        date: new Date(dto.date),
+        location: dto.location || null,
+        notes: dto.notes || null,
+      },
+      include: {
+        lawyer: { select: { id: true, name: true, email: true } },
+        client: {
+          include: {
+            user: { select: { id: true, name: true, email: true } }
+          }
+        }
+      }
+    });
+
     return appointment;
   }
 

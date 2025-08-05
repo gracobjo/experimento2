@@ -238,6 +238,7 @@ const LawyerContactModal: React.FC<LawyerContactModalProps> = ({
                 onChange={handleChange}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                aria-describedby="asunto-help"
               >
                 <option value="">Selecciona un asunto</option>
                 <option value="Consulta sobre expediente">Consulta sobre expediente</option>
@@ -247,6 +248,9 @@ const LawyerContactModal: React.FC<LawyerContactModalProps> = ({
                 <option value="Programación de cita">Programación de cita</option>
                 <option value="Otro">Otro</option>
               </select>
+              <div id="asunto-help" className="sr-only">
+                Seleccione el tipo de asunto para su mensaje
+              </div>
             </div>
 
             <div>
@@ -262,33 +266,43 @@ const LawyerContactModal: React.FC<LawyerContactModalProps> = ({
                 rows={4}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Escriba su mensaje aquí..."
+                aria-describedby="mensaje-help"
               />
+              <div id="mensaje-help" className="sr-only">
+                Escriba el contenido de su mensaje para el abogado
+              </div>
             </div>
 
             {/* Subida de Archivos */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="file-upload" className="block text-sm font-medium text-gray-700 mb-1">
                 Adjuntar Archivos (opcional)
               </label>
               <div className="border-2 border-dashed border-gray-300 rounded-md p-4 text-center">
                 <input
                   ref={fileInputRef}
+                  id="file-upload"
                   type="file"
                   multiple
                   accept=".txt,.pdf,.jpg,.jpeg,.png,.gif"
                   onChange={handleFileChange}
                   className="hidden"
+                  aria-describedby="file-upload-help"
                 />
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  aria-label="Seleccionar archivos para adjuntar"
                 >
                   Seleccionar Archivos
                 </button>
                 <p className="text-sm text-gray-500 mt-2">
                   Arrastra archivos aquí o haz clic para seleccionar
                 </p>
+                <div id="file-upload-help" className="sr-only">
+                  Seleccione archivos para adjuntar al mensaje. Tipos permitidos: PDF, imágenes y archivos de texto. Tamaño máximo: 5MB por archivo.
+                </div>
               </div>
             </div>
 
@@ -310,8 +324,9 @@ const LawyerContactModal: React.FC<LawyerContactModalProps> = ({
                         type="button"
                         onClick={() => removeFile(index)}
                         className="text-red-600 hover:text-red-800"
+                        aria-label={`Eliminar archivo ${file.name}`}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
@@ -342,6 +357,7 @@ const LawyerContactModal: React.FC<LawyerContactModalProps> = ({
                 type="button"
                 onClick={onClose}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                aria-label="Cancelar envío de mensaje"
               >
                 Cancelar
               </button>
@@ -349,6 +365,7 @@ const LawyerContactModal: React.FC<LawyerContactModalProps> = ({
                 type="submit"
                 disabled={isSubmitting}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Enviar mensaje al abogado"
               >
                 {isSubmitting ? 'Enviando...' : 'Enviar Mensaje'}
               </button>

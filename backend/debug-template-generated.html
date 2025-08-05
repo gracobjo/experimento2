@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=800, initial-scale=1.0">
-    <title>Factura FAC-C1-001</title>
+    <title>Factura SPACE-001</title>
     <style>
         @import url('https://fonts.googleapis.com/css?family=Open+Sans:400,700&display=swap');
         body {
@@ -17,7 +17,7 @@
             width: 210mm;
             min-height: 297mm;
             margin: 0 auto;
-            padding: 24px 32px 0 32px;
+            padding: 20px 28px 120px 28px;
             background: #fff;
             position: relative;
             box-sizing: border-box;
@@ -25,12 +25,30 @@
             flex-direction: column;
             justify-content: flex-start;
         }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .invoice-container {
+                width: 100%;
+                max-width: 210mm;
+                min-height: auto;
+                margin: 0;
+                padding: 16px 20px 80px 20px;
+            }
+        }
         /* Encabezado */
         .header {
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
+        }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .header {
+                margin-bottom: 8px;
+            }
         }
         .header-row {
             width: 100%;
@@ -52,7 +70,7 @@
         .title {
             flex: 1;
             text-align: center;
-            font-size: 2.1rem;
+            font-size: 2rem;
             font-weight: bold;
             color: #003366;
             letter-spacing: 1px;
@@ -62,20 +80,28 @@
             font-size: 1rem;
             color: #666;
             margin-top: 2px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         /* Bloques de datos */
         .data-blocks {
             display: flex;
             justify-content: space-between;
-            gap: 32px;
-            margin-bottom: 10px;
+            gap: 28px;
+            margin-bottom: 8px;
+        }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .data-blocks {
+                gap: 20px;
+                margin-bottom: 6px;
+            }
         }
         .party-block {
             flex: 1;
             background: #f8fafc;
             border-radius: 8px;
-            padding: 14px 16px;
+            padding: 12px 14px;
             font-size: 1rem;
             min-width: 0;
         }
@@ -96,8 +122,16 @@
         /* Datos de factura */
         .factura-datos {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             font-size: 1.1rem;
+        }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .factura-datos {
+                margin-bottom: 6px;
+                font-size: 1rem;
+            }
         }
         .factura-datos .factura-num {
             font-weight: bold;
@@ -114,6 +148,30 @@
             background: #dcfce7;
             color: #166534;
             margin-left: 8px;
+        }
+        /* Información adicional */
+        .additional-info {
+            margin: 8px 0;
+            padding: 8px;
+            background: #f9fafb;
+            border-radius: 4px;
+            border-left: 3px solid #3b82f6;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 0.85rem;
+        }
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #374151;
+        }
+        .info-value {
+            color: #6b7280;
         }
         /* Tabla de conceptos */
         .items-section {
@@ -186,27 +244,72 @@
             color: #92400e;
             font-weight: bold;
         }
-        /* QR en esquina inferior derecha */
-        .qr-absolute {
-            position: absolute;
-            right: 32px;
-            bottom: 60px;
-            width: 95px;
-            height: 95px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        /* QR integrado en el campo de firma */
+        .qr-integrated {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .qr-integrated .firma-text {
+            flex: 1;
+            text-align: center;
+            color: #bbb;
+            font-size: 1rem;
+        }
+        
+        .qr-integrated .qr-section {
+            margin-left: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
-            z-index: 10;
+        }
+        
+        .qr-integrated .qr-section img {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 4px;
+        }
+        
+        .qr-integrated .qr-legend {
+            font-size: 6px;
+            color: #666;
+            background: #f3f4f6;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            text-align: center;
+            max-width: 60px;
+        }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .qr-integrated .qr-section img {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .qr-integrated .qr-legend {
+                font-size: 5px;
+                max-width: 50px;
+            }
         }
         .qr-absolute img {
             width: 90px;
             height: 90px;
             display: block;
             margin: 0 auto;
+        }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .qr-absolute img {
+                width: 65px;
+                height: 65px;
+            }
         }
         .qr-legend {
             font-size: 8px;
@@ -226,14 +329,22 @@
             position: absolute;
             left: 0;
             bottom: 0;
-            padding: 0 32px 18px 32px;
+            padding: 0 32px 24px 32px;
             box-sizing: border-box;
             text-align: left;
             color: #666;
             font-size: 0.95rem;
         }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .footer {
+                padding: 0 20px 16px 20px;
+                font-size: 0.85rem;
+            }
+        }
         .firma-block {
-            margin-top: 12px;
+            margin-top: 16px;
             height: 3cm;
             border: 1px dashed #bbb;
             border-radius: 8px;
@@ -243,6 +354,17 @@
             justify-content: center;
             color: #bbb;
             font-size: 1rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .firma-block {
+                height: 2cm;
+                font-size: 0.8rem;
+                margin-top: 8px;
+            }
         }
         /* Responsive */
         @media (max-width: 900px) {
@@ -276,16 +398,78 @@
                 <div class="party-info"><span class="party-label">Nombre:</span> Cliente Uno</div>
                 <div class="party-info"><span class="party-label">Email:</span> client1@example.com</div>
                 
-                <div class="party-info"><span class="party-label">Expediente:</span> Divorcio Contencioso</div>
+                <div class="party-info"><span class="party-label">Expediente:</span> Expediente A de Cliente Uno</div>
                 
             </div>
         </div>
+        <!-- Espacio adicional para aprovechar el área disponible -->
+        <div style="height: 20px;"></div>
         <!-- Datos de factura -->
         <div class="factura-datos">
-            <span class="factura-num">FACTURA FAC-C1-001</span>
-            <span>2025-07-14</span>
+            <span class="factura-num">FACTURA SPACE-001</span>
+            <span>Fecha de Factura: 03/08/2025</span>
             <span class="factura-status">emitida</span>
         </div>
+        <!-- Información adicional - Movida más cerca del expediente -->
+        <div class="additional-info" style="margin-top: 8px; margin-bottom: 16px;">
+            <div class="info-row">
+                <span class="info-label">Fecha de Operación:</span>
+                <span class="info-value">03/08/2025</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Fecha de Creación:</span>
+                <span class="info-value">03/08/2025</span>
+            </div>
+        </div>
+        
+        <!-- Información de Factura Rectificativa -->
+        <div id="rectificativa-section" class="rectificativa-info" style="margin: 5px 0; padding: 5px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; color: #856404; font-size: 5px; display: none;">
+            <div style="font-weight: bold; margin-bottom: 3px; color: #d63031; font-size: 6px;">
+                ⚠️ FACTURA RECTIFICATIVA
+            </div>
+            <div style="margin-bottom: 2px;">
+                <strong>Factura Original:</strong> <span id="factura-original-numero"></span> (emitida el <span id="factura-original-fecha"></span>)
+            </div>
+            <div style="margin-bottom: 2px;">
+                <strong>Tipo de Rectificación:</strong> <span id="tipo-rectificacion"></span>
+            </div>
+            <div style="margin-bottom: 2px;">
+                <strong>Motivo de Rectificación:</strong> <span id="motivo-rectificacion"></span>
+            </div>
+            <div id="importe-original-section" style="margin-bottom: 2px; display: none;">
+                <strong>Importe de la Factura Original:</strong> <span id="factura-original-importe"></span> €
+            </div>
+        </div>
+        
+        <script>
+        // JavaScript para mostrar/ocultar sección rectificativa
+        (function() {
+            const rectificativaSection = document.getElementById('rectificativa-section');
+            const facturaOriginalId = '';
+            const tipoRectificacion = '';
+            const motivoRectificacion = '';
+            const facturaOriginalNumero = '';
+            const facturaOriginalFecha = '';
+            const facturaOriginalImporte = '';
+            
+            // Solo mostrar si es una factura rectificativa real
+            if (facturaOriginalId && facturaOriginalId.trim() !== '' && 
+                facturaOriginalNumero && facturaOriginalNumero.trim() !== '') {
+                
+                rectificativaSection.style.display = 'block';
+                
+                // Mostrar importe original si existe
+                if (facturaOriginalImporte && facturaOriginalImporte.trim() !== '') {
+                    document.getElementById('importe-original-section').style.display = 'block';
+                }
+            } else {
+                // Eliminar completamente la sección si no es rectificativa
+                if (rectificativaSection && rectificativaSection.parentNode) {
+                    rectificativaSection.parentNode.removeChild(rectificativaSection);
+                }
+            }
+        })();
+        </script>
         <!-- Conceptos -->
         
         <div class="items-section">
@@ -301,70 +485,87 @@
                 <tbody>
                     
                     <tr>
-                        <td>Servicio de asesoría legal actualizado</td>
-                        <td class="text-center">5</td>
-                        <td class="text-right">200,00 €</td>
-                        <td class="text-right">1000,00 €</td>
+                        <td>Asesoramiento legal completo y documentación</td>
+                        <td class="text-center">2</td>
+                        <td class="text-right">15.000,00 €</td>
+                        <td class="text-right">30.000,00 €</td>
                     </tr>
                     
                     <tr>
-                        <td>Documentación y trámites actualizados</td>
+                        <td>Gestión administrativa y trámites legales</td>
                         <td class="text-center">1</td>
-                        <td class="text-right">150,00 €</td>
-                        <td class="text-right">150,00 €</td>
-                    </tr>
-                    
-                    <tr>
-                        <td>nuevo concepto</td>
-                        <td class="text-center">1</td>
-                        <td class="text-right">150,00 €</td>
-                        <td class="text-right">150,00 €</td>
-                    </tr>
-                    
-                    <tr>
-                        <td>fotocopias</td>
-                        <td class="text-center">3</td>
-                        <td class="text-right">0,50 €</td>
-                        <td class="text-right">1,50 €</td>
+                        <td class="text-right">10.000,00 €</td>
+                        <td class="text-right">10.000,00 €</td>
                     </tr>
                     
                 </tbody>
             </table>
         </div>
         
+        
+        <!-- Detalle de provisiones aplicadas -->
+        
+        <div class="items-section" style="margin-top: 10px;">
+            <div style="font-size: 1rem; font-weight: bold; color: #003366; margin-bottom: 8px;">
+                Provisiones de Fondos Aplicadas
+            </div>
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Descripción</th>
+                        <th class="text-center">Fecha</th>
+                        <th class="text-right">Importe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                    <tr>
+                        <td>apertura</td>
+                        <td class="text-center">02/08/2025</td>
+                        <td class="text-right">1.000,00 €</td>
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        
+        
         <!-- Totales y descuentos -->
         <div class="totals-section">
             <table class="totals-table">
                 
-                <tr class="discount-row">
-                    <td>Descuento (5%)</td>
-                    <td class="text-right">-65,08 €</td>
-                </tr>
-                
                 <tr>
                     <td>Base Imponible</td>
-                    <td class="text-right">1236,43 €</td>
+                    <td class="text-right">40.000,00 €</td>
                 </tr>
                 <tr>
                     <td>IVA (21%)</td>
-                    <td class="text-right">259,65 €</td>
+                    <td class="text-right">8.400,00 €</td>
                 </tr>
+                
                 <tr class="total-row">
                     <td>TOTAL</td>
-                    <td class="text-right">1496,07 €</td>
+                    <td class="text-right">48.400,00 €</td>
                 </tr>
+                
             </table>
         </div>
-        <!-- QR en esquina inferior derecha -->
-        <div class="qr-absolute">
-            <img src="data:image/png;base64,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" alt="QR Code" />
-            <div class="qr-legend">NIF:lawyer1@example.com|NUM:FAC-C1-001|FEC:2025-07-14|IMP:1496.07425</div>
-        </div>
-        <!-- Pie de página y espacio para firma/certificado -->
+        <!-- Pie de página -->
         <div class="footer">
             <div>Firmado electrónicamente conforme a la ley vigente. Código de verificación incluido.</div>
-            <div style="font-size:0.93rem; color:#003366; margin-top:2px;">Verifica la autenticidad en: <span style="text-decoration:underline;">{{verificacionUrl}}</span></div>
-            <div class="firma-block">Espacio reservado para certificado/firma (3cm)</div>
+            <div style="font-size:0.93rem; color:#003366; margin-top:2px;">Verifica la autenticidad en: <span style="text-decoration:underline;">https://tudominio.com/verificar/SPACE-001</span></div>
+        </div>
+        <!-- QR y espacio para firma/certificado -->
+        <div class="firma-block">
+            <div class="qr-integrated">
+                <div class="firma-text">
+                    Espacio reservado para certificado/firma
+                </div>
+                <div class="qr-section">
+                    <img src="data:image/png;base64,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" alt="QR Code" />
+                    <div class="qr-legend">NIF:lawyer1@example.com|NUM:SPACE-001|FEC:2025-08-03|IMP:48400</div>
+                </div>
+            </div>
         </div>
     </div>
 </body>

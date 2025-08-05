@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import api from '../api/axios';
 import AccessibleModal from './ui/AccessibleModal';
+import DateTimePicker from './forms/DateTimePicker';
 import { useAuth } from '../context/AuthContext';
 
 interface QuickActionsProps {
@@ -52,8 +53,8 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
           const payload = {
             lawyerId,
             date: form.datetime,
-            location: form.location,
-            notes: form.notes,
+            location: form.location || '',
+            notes: form.notes || '',
           };
           const response = await api.post('/appointments', payload, {
             headers: { Authorization: `Bearer ${token}` }
@@ -78,14 +79,14 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
 
         try {
           const token = localStorage.getItem('token');
+          // Para abogados, usamos el endpoint específico para abogados
           const payload = {
-            clientId,
-            lawyerId: user.id, // El abogado actual
+            clientId: clientId, // ID del cliente del expediente
             date: form.datetime,
-            location: form.location,
-            notes: form.notes,
+            location: form.location || '',
+            notes: form.notes || '',
           };
-          const response = await api.post('/appointments', payload, {
+          const response = await api.post('/appointments/lawyer', payload, {
             headers: { Authorization: `Bearer ${token}` }
           });
           setSuccess('Cita programada con éxito');
@@ -241,14 +242,11 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
             <label htmlFor="datetime" className="block text-sm font-medium text-gray-700 mb-1">
               Fecha y hora
             </label>
-            <input
-              id="datetime"
-              type="datetime-local"
-              name="datetime"
+            <DateTimePicker
+              value={form.datetime || ''}
+              onChange={(value) => setForm({ ...form, datetime: value })}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              onChange={handleChange}
-              aria-describedby="datetime-help"
+              placeholder="Seleccionar fecha y hora para la cita"
             />
             <div id="datetime-help" className="sr-only">
               Seleccione la fecha y hora para la cita
@@ -299,20 +297,22 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
               <p className="text-green-600 text-sm">{success}</p>
             </div>
           )}
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-3 pt-4 sticky bottom-0 bg-white border-t border-gray-200 mt-4 -mx-6 px-6 py-4 modal-actions">
             <button 
               type="button" 
               onClick={closeModal} 
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 relative z-20"
               aria-label="Cancelar programación de cita"
+              style={{ position: 'relative', zIndex: 20 }}
             >
               Cancelar
             </button>
             <button 
               type="submit" 
               disabled={loading} 
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed relative z-20"
               aria-label="Guardar cita programada"
+              style={{ position: 'relative', zIndex: 20 }}
             >
               {loading ? 'Guardando...' : 'Guardar'}
             </button>

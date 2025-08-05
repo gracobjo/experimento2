@@ -60,6 +60,36 @@ export class ProvisionFondosService {
     });
   }
 
+  async update(id: string, dto: CreateProvisionFondosDto) {
+    return this.prisma.provisionFondos.update({
+      where: { id },
+      data: {
+        ...dto,
+        date: dto.date ? new Date(dto.date) : undefined,
+      },
+      include: { 
+        invoice: true, 
+        expediente: {
+          include: {
+            lawyer: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          }
+        } 
+      },
+    });
+  }
+
+  async remove(id: string) {
+    return this.prisma.provisionFondos.delete({
+      where: { id },
+    });
+  }
+
   async linkToInvoice(provisionId: string, invoiceId: string) {
     return this.prisma.provisionFondos.update({
       where: { id: provisionId },

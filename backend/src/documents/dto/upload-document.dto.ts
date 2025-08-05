@@ -13,10 +13,10 @@ export class UploadDocumentDto {
 
   @ApiProperty({
     description: 'ID del expediente asociado',
-    example: '123e4567-e89b-12d3-a456-426614174001',
+    example: 'exp-003',
     type: String,
   })
-  @IsUUID()
+  @IsString()
   @IsNotEmpty()
   expedienteId: string;
 

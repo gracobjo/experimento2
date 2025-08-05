@@ -37,4 +37,39 @@ export const getClientProvisions = async (clientId: string, token: string) => {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;
+};
+
+// Nuevas funciones para CRUD completo
+export const getAllProvisions = async (token: string, filters?: {
+  clientId?: string;
+  expedienteId?: string;
+  soloPendientes?: boolean;
+}) => {
+  const params = { ...filters };
+  const res = await axios.get('/provision-fondos', {
+    params,
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
+export const getProvisionById = async (id: string, token: string) => {
+  const res = await axios.get(`/provision-fondos/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
+export const updateProvision = async (id: string, data: any, token: string) => {
+  const res = await axios.patch(`/provision-fondos/${id}`, data, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
+export const deleteProvision = async (id: string, token: string) => {
+  const res = await axios.delete(`/provision-fondos/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
 }; 

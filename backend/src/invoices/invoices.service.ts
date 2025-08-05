@@ -11,6 +11,7 @@ import * as fs from 'fs';
 import { PDFDocument, rgb } from 'pdf-lib';
 import * as QRCode from 'qrcode';
 import { InvoiceAuditService } from './invoice-audit.service';
+import { isInvoiceEditable, isInvoiceAuditable, isInvoiceCancellable, INVOICE_STATUS } from './invoice-status.constants';
 
 @Injectable()
 export class InvoicesService {
@@ -29,6 +30,16 @@ export class InvoicesService {
     try {
       console.log('DATA RECIBIDA EN SERVICE:', JSON.stringify(data, null, 2));
       let { items, expedienteId, provisionIds = [], ...invoiceData } = data;
+      
+      // Función para formatear números en español
+      const formatNumberES = (num: number) => {
+        const number = Number(num);
+        const parts = number.toFixed(2).split('.');
+        const integerPart = parts[0];
+        const decimalPart = parts[1];
+        const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return `${formattedInteger},${decimalPart}`;
+      };
       console.log('items:', items);
       console.log('expedienteId:', expedienteId);
       console.log('provisionIds recibidos:', provisionIds);
@@ -58,22 +69,28 @@ export class InvoicesService {
       // Generar numeroFactura si no viene en la petición
       let numeroFactura = invoiceData.numeroFactura;
       if (!numeroFactura) {
-        const year = new Date().getFullYear();
-        // Buscar el último número de factura de este año
-        const lastInvoice = await this.prisma.invoice.findFirst({
-          where: {
-            numeroFactura: { startsWith: `fac-${year}-` },
-          },
-          orderBy: { createdAt: 'desc' },
-        });
-        let nextNumber = 1;
-        if (lastInvoice && lastInvoice.numeroFactura) {
-          const match = lastInvoice.numeroFactura.match(/fac-\d{4}-(\d{4})/);
-          if (match) {
-            nextNumber = parseInt(match[1], 10) + 1;
+        // Si es una factura rectificativa, generar número basado en la factura original
+        if (invoiceData.tipoFactura === 'R' && data.facturaOriginalId) {
+          numeroFactura = await this.generateRectificativaNumber(data.facturaOriginalId, data.tipoRectificacion);
+        } else {
+          // Generar número normal para facturas completas
+          const year = new Date().getFullYear();
+          // Buscar el último número de factura de este año
+          const lastInvoice = await this.prisma.invoice.findFirst({
+            where: {
+              numeroFactura: { startsWith: `fac-${year}-` },
+            },
+            orderBy: { createdAt: 'desc' },
+          });
+          let nextNumber = 1;
+          if (lastInvoice && lastInvoice.numeroFactura) {
+            const match = lastInvoice.numeroFactura.match(/fac-\d{4}-(\d{4})/);
+            if (match) {
+              nextNumber = parseInt(match[1], 10) + 1;
+            }
           }
+          numeroFactura = `fac-${year}-${nextNumber.toString().padStart(4, '0')}`;
         }
-        numeroFactura = `fac-${year}-${nextNumber.toString().padStart(4, '0')}`;
       }
 
       // Construir el objeto data para Prisma, solo incluyendo expedienteId si existe
@@ -84,10 +101,14 @@ export class InvoicesService {
         fechaOperacion: new Date(invoiceData.fechaOperacion),
         items: { create: items },
         estado: 'emitida',
+        // Convertir strings vacíos a null para campos opcionales
+        facturaOriginalId: invoiceData.facturaOriginalId || null,
+        tipoRectificacion: invoiceData.tipoRectificacion || null,
+        motivoRectificacion: invoiceData.motivoRectificacion || null,
       };
 
       // Calcular totales automáticamente basándose en los items
-      const baseImponible = items.reduce((sum: number, item: any) => {
+      let baseImponible = items.reduce((sum: number, item: any) => {
         const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
         const unitPrice = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
         return sum + (quantity * unitPrice);
@@ -95,7 +116,12 @@ export class InvoicesService {
       
       // Aplicar descuento si existe
       const descuento = typeof invoiceData.descuento === 'number' ? invoiceData.descuento : 0;
-      const baseConDescuento = baseImponible * (1 - descuento / 100);
+      let baseConDescuento = baseImponible * (1 - descuento / 100);
+      
+      // Obtener valores de IVA y retención para cálculos
+      const aplicarIVA = invoiceData.aplicarIVA !== false; // Por defecto true
+      const tipoIVA = typeof invoiceData.tipoIVA === 'number' ? invoiceData.tipoIVA : 21;
+      const retencion = typeof invoiceData.retencion === 'number' ? invoiceData.retencion : 0;
       
       // Calcular descuento por provisiones asociadas
       let descuentoProvisiones = 0;
@@ -104,24 +130,79 @@ export class InvoicesService {
           where: { id: { in: provisionIds } },
         });
         descuentoProvisiones = provisiones.reduce((sum, prov) => sum + prov.amount, 0);
+        console.log('🔍 Descuento por provisiones:', descuentoProvisiones);
+        
+        // Validar que las provisiones no excedan el subtotal (base + IVA - retención)
+        // Primero calculamos el subtotal para la validación
+        const subtotalParaValidacion = baseConDescuento + (baseConDescuento * (tipoIVA / 100)) - (baseConDescuento * (retencion / 100));
+        
+        if (descuentoProvisiones > subtotalParaValidacion) {
+          const exceso = descuentoProvisiones - subtotalParaValidacion;
+          console.log('⚠️ ADVERTENCIA: Las provisiones exceden el subtotal');
+          console.log('  - Subtotal estimado:', subtotalParaValidacion);
+          console.log('  - Provisiones aplicadas:', descuentoProvisiones);
+          console.log('  - Exceso:', exceso);
+          
+          // Agregar concepto de devolución de provisión
+          const conceptoDevolucion = {
+            description: `Devolución de Provisión (exceso de ${formatNumberES(exceso)}€)`,
+            quantity: 1,
+            unitPrice: -exceso,
+            total: -exceso
+          };
+          
+          // Agregar el concepto de devolución a los items
+          items.push(conceptoDevolucion);
+          console.log('  - Concepto de devolución agregado:', conceptoDevolucion);
+          
+          // Recalcular la base imponible incluyendo la devolución
+          const nuevaBaseImponible = items.reduce((sum: number, item: any) => {
+            const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+            const unitPrice = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
+            return sum + (quantity * unitPrice);
+          }, 0);
+          
+          console.log('  - Nueva base imponible con devolución:', nuevaBaseImponible);
+          
+          // Actualizar la base imponible para los cálculos posteriores
+          baseImponible = nuevaBaseImponible;
+          baseConDescuento = baseImponible * (1 - descuento / 100);
+          
+          // Recalcular el subtotal con la nueva base
+          const nuevoSubtotal = baseConDescuento + (baseConDescuento * (tipoIVA / 100)) - (baseConDescuento * (retencion / 100));
+          
+          // Ahora las provisiones no exceden el subtotal
+          descuentoProvisiones = Math.min(descuentoProvisiones, nuevoSubtotal);
+          console.log('  - Provisiones ajustadas a:', descuentoProvisiones);
+        }
       }
       
-      // Aplicar IVA solo si se especifica
-      const aplicarIVA = invoiceData.aplicarIVA !== false; // Por defecto true
-      const tipoIVA = typeof invoiceData.tipoIVA === 'number' ? invoiceData.tipoIVA : 21;
+      // Calcular base imponible después de descuentos (SIN restar provisiones)
+      // Las provisiones se restan del importe total a pagar, no de la base imponible
+      const baseConDescuentos = Math.max(0, baseConDescuento);
       
-      // Calcular base imponible después de descuentos (incluyendo provisiones)
-      const baseConDescuentos = baseConDescuento - descuentoProvisiones;
+      console.log('🔍 Cálculos:');
+      console.log('  - Base imponible original:', baseImponible);
+      console.log('  - Base con descuento (%):', baseConDescuento);
+      console.log('  - Base final (sin provisiones):', baseConDescuentos);
+      console.log('  - Provisiones a aplicar:', descuentoProvisiones);
       
-      // Calcular IVA sobre la base con descuentos
+      // Calcular IVA sobre la base con descuentos (sin provisiones)
       const cuotaIVA = aplicarIVA ? baseConDescuentos * (tipoIVA / 100) : 0;
       
       // Aplicar retención si existe
-      const retencion = typeof invoiceData.retencion === 'number' ? invoiceData.retencion : 0;
       const cuotaRetencion = baseConDescuentos * (retencion / 100);
       
-      // Calcular total final
-      const importeTotal = baseConDescuentos + cuotaIVA - cuotaRetencion;
+      // Calcular subtotal (base + IVA - retención)
+      const subtotal = baseConDescuentos + cuotaIVA - cuotaRetencion;
+      
+      // Calcular total final restando las provisiones del importe a pagar
+      const importeTotal = Math.max(0, subtotal - descuentoProvisiones);
+      
+      console.log('🔍 Cálculos finales:');
+      console.log('  - Subtotal (base + IVA - retención):', subtotal);
+      console.log('  - Provisiones aplicadas:', descuentoProvisiones);
+      console.log('  - Importe total a pagar:', importeTotal);
 
       // Actualizar los totales calculados
       prismaData.baseImponible = baseConDescuentos;
@@ -133,7 +214,23 @@ export class InvoicesService {
       prismaData.aplicarIVA = aplicarIVA;
 
       if (expedienteId) {
-        prismaData.expedienteId = expedienteId;
+        // Verificar que el expediente existe antes de asignarlo
+        const expediente = await this.prisma.expediente.findUnique({
+          where: { id: expedienteId }
+        });
+        if (expediente) {
+          prismaData.expedienteId = expedienteId;
+        } else {
+          console.warn(`⚠️ Expediente con ID ${expedienteId} no encontrado, omitiendo expedienteId`);
+        }
+      }
+
+      // Verificar que el receptor existe
+      const receptor = await this.prisma.user.findUnique({
+        where: { id: prismaData.receptorId }
+      });
+      if (!receptor) {
+        throw new Error(`Receptor con ID ${prismaData.receptorId} no encontrado`);
       }
 
       console.log('PRISMA DATA:', JSON.stringify(prismaData, null, 2));
@@ -201,6 +298,12 @@ export class InvoicesService {
         }
       }
       
+      // Lógica específica para facturas rectificativas - Devolver provisiones
+      if (data.facturaOriginalId && data.tipoRectificacion) {
+        console.log('🔄 Procesando factura rectificativa:', data.tipoRectificacion);
+        await this.handleRectificativaProvisiones(data.facturaOriginalId, invoice.id, data.tipoRectificacion, invoice.importeTotal);
+      }
+
       // Devolver la factura con el XML (y XML firmado si está disponible)
       return { 
         ...invoice, 
@@ -281,7 +384,21 @@ export class InvoicesService {
   async findOne(id: string) {
     const invoice = await this.prisma.invoice.findUnique({
       where: { id },
-      include: { emisor: true, receptor: true, expediente: true, items: true, provisionFondos: true },
+      include: { 
+        emisor: true, 
+        receptor: true, 
+        expediente: true, 
+        items: true, 
+        provisionFondos: true,
+        // Incluir la factura original si es una factura rectificativa
+        facturaOriginal: {
+          include: {
+            emisor: true,
+            receptor: true,
+            expediente: true
+          }
+        }
+      },
     });
     if (!invoice) return null;
     // Generar qrData dinámicamente y devolver junto con la factura
@@ -299,6 +416,16 @@ export class InvoicesService {
   async update(id: string, data: UpdateInvoiceDto, userId?: string, ipAddress?: string, userAgent?: string) {
     const { items, provisionIds, ...invoiceData } = data;
     
+    // Función para formatear números en español
+    const formatNumberES = (num: number) => {
+      const number = Number(num);
+      const parts = number.toFixed(2).split('.');
+      const integerPart = parts[0];
+      const decimalPart = parts[1];
+      const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      return `${formattedInteger},${decimalPart}`;
+    };
+    
     // Obtener la factura actual para ver las provisiones asociadas y valores previos
     const currentInvoice = await this.prisma.invoice.findUnique({
       where: { id },
@@ -307,6 +434,11 @@ export class InvoicesService {
     
     if (!currentInvoice) {
       throw new Error('Factura no encontrada');
+    }
+
+    // Verificar si la factura es editable según su estado
+    if (!isInvoiceEditable(currentInvoice.estado)) {
+      throw new Error(`No se puede editar una factura con estado '${currentInvoice.estado}'. Solo se pueden editar facturas en estado 'borrador' o 'emitida'.`);
     }
 
     // Preparar datos de actualización - solo campos permitidos
@@ -340,6 +472,9 @@ export class InvoicesService {
     if (invoiceData.aplicarIVA !== undefined) {
       updateData.aplicarIVA = invoiceData.aplicarIVA;
     }
+    if (invoiceData.tipoImpuesto !== undefined) {
+      updateData.tipoImpuesto = invoiceData.tipoImpuesto;
+    }
     if (invoiceData.regimenIvaEmisor !== undefined) {
       updateData.regimenIvaEmisor = invoiceData.regimenIvaEmisor;
     }
@@ -359,7 +494,7 @@ export class InvoicesService {
     // Calcular totales automáticamente si hay items
     if (items) {
       // Calcular base imponible
-      const baseImponible = items.reduce((sum: number, item: any) => {
+      let baseImponible = items.reduce((sum: number, item: any) => {
         const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
         const unitPrice = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
         return sum + (quantity * unitPrice);
@@ -367,30 +502,87 @@ export class InvoicesService {
       
       // Aplicar descuento si existe
       const descuento = typeof invoiceData.descuento === 'number' ? invoiceData.descuento : 0;
-      const baseConDescuento = baseImponible * (1 - descuento / 100);
+      let baseConDescuento = baseImponible * (1 - descuento / 100);
       
       // Calcular descuento por provisiones asociadas
       let descuentoProvisiones = 0;
-      if (currentInvoice.provisionFondos.length > 0) {
+      if (provisionIds && provisionIds.length > 0) {
+        // Buscar las provisiones seleccionadas
+        const provisiones = await this.prisma.provisionFondos.findMany({
+          where: { id: { in: provisionIds } },
+        });
+        descuentoProvisiones = provisiones.reduce((sum, prov) => sum + prov.amount, 0);
+        console.log('🔍 UPDATE - Descuento por provisiones:', descuentoProvisiones);
+      } else if (currentInvoice.provisionFondos.length > 0) {
+        // Si no hay nuevas provisiones seleccionadas, usar las existentes
         descuentoProvisiones = currentInvoice.provisionFondos.reduce((sum, prov) => sum + prov.amount, 0);
+        console.log('🔍 UPDATE - Usando provisiones existentes:', descuentoProvisiones);
+      }
+      
+      // Validar que las provisiones no excedan la base imponible
+      if (descuentoProvisiones > baseConDescuento) {
+        const exceso = descuentoProvisiones - baseConDescuento;
+        console.log('⚠️ UPDATE - ADVERTENCIA: Las provisiones exceden la base imponible');
+        console.log('  - Base imponible:', baseConDescuento);
+        console.log('  - Provisiones aplicadas:', descuentoProvisiones);
+        console.log('  - Exceso:', exceso);
+        
+        // Agregar concepto de devolución de provisión
+        const conceptoDevolucion = {
+          description: `Devolución de Provisión (exceso de ${formatNumberES(exceso)}€)`,
+          quantity: 1,
+          unitPrice: -exceso,
+          total: -exceso
+        };
+        
+        // Agregar el concepto de devolución a los items
+        items.push(conceptoDevolucion);
+        console.log('  - Concepto de devolución agregado:', conceptoDevolucion);
+        
+        // Recalcular la base imponible incluyendo la devolución
+        const nuevaBaseImponible = items.reduce((sum: number, item: any) => {
+          const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+          const unitPrice = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
+          return sum + (quantity * unitPrice);
+        }, 0);
+        
+        console.log('  - Nueva base imponible con devolución:', nuevaBaseImponible);
+        
+        // Actualizar la base imponible para los cálculos posteriores
+        baseImponible = nuevaBaseImponible;
+        baseConDescuento = baseImponible * (1 - descuento / 100);
+        
+        // Ahora las provisiones no exceden la base
+        descuentoProvisiones = Math.min(descuentoProvisiones, baseConDescuento);
+        console.log('  - Provisiones ajustadas a:', descuentoProvisiones);
       }
       
       // Aplicar IVA solo si se especifica
       const aplicarIVA = invoiceData.aplicarIVA !== false; // Por defecto true
       const tipoIVA = typeof invoiceData.tipoIVA === 'number' ? invoiceData.tipoIVA : 21;
       
-      // Calcular base imponible después de descuentos (incluyendo provisiones)
-      const baseConDescuentos = baseConDescuento - descuentoProvisiones;
+      // Calcular base imponible después de descuentos (SIN restar provisiones)
+      // Las provisiones se restan del importe total a pagar, no de la base imponible
+      const baseConDescuentos = Math.max(0, baseConDescuento);
       
-      // Calcular IVA sobre la base con descuentos
+      console.log('🔍 UPDATE - Cálculos:');
+      console.log('  - Base imponible original:', baseImponible);
+      console.log('  - Base con descuento (%):', baseConDescuento);
+      console.log('  - Base final (sin provisiones):', baseConDescuentos);
+      console.log('  - Provisiones a aplicar:', descuentoProvisiones);
+      
+      // Calcular IVA sobre la base con descuentos (sin provisiones)
       const cuotaIVA = aplicarIVA ? baseConDescuentos * (tipoIVA / 100) : 0;
       
       // Aplicar retención si existe
       const retencion = typeof invoiceData.retencion === 'number' ? invoiceData.retencion : 0;
       const cuotaRetencion = baseConDescuentos * (retencion / 100);
       
-      // Calcular total final
-      const importeTotal = baseConDescuentos + cuotaIVA - cuotaRetencion;
+      // Calcular subtotal (base + IVA - retención)
+      const subtotal = baseConDescuentos + cuotaIVA - cuotaRetencion;
+      
+      // Calcular total final restando las provisiones del importe a pagar
+      const importeTotal = Math.max(0, subtotal - descuentoProvisiones);
       
       // Actualizar los totales calculados
       updateData.baseImponible = baseConDescuentos;
@@ -501,6 +693,11 @@ export class InvoicesService {
     
     if (!invoice) {
       throw new Error('Factura no encontrada');
+    }
+
+    // Verificar si la factura puede ser anulada
+    if (!isInvoiceCancellable(invoice.estado)) {
+      throw new Error(`No se puede eliminar una factura con estado '${invoice.estado}'. Solo se pueden eliminar facturas en estado 'borrador', 'emitida' o 'enviada'.`);
     }
 
     // Usamos una transacción para asegurar que todo se elimine correctamente
@@ -1043,29 +1240,121 @@ export class InvoicesService {
         deviceScaleFactor: 2
       });
 
-      // Establecer contenido HTML
-      this.logger.log('[PUPPETEER] Estableciendo contenido HTML...');
-      await page.setContent(htmlContent, { 
+      // CSS optimizado para forzar una sola página A4 con fuentes muy grandes
+      const compactCss = `
+        <style>
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
+
+          html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-size: 16px;
+            overflow: hidden;
+          }
+
+          .invoice-container {
+            width: 100%;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            page-break-after: avoid;
+            break-after: avoid;
+            padding: 16px !important;
+          }
+
+          /* Compactar todo */
+          * {
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+            line-height: 1.4 !important;
+          }
+
+          .header .title { font-size: 28px !important; }
+          .header .lema { font-size: 16px !important; }
+
+          .data-blocks,
+          .items-section,
+          .totals-section,
+          .footer,
+          .factura-datos,
+          .party-block,
+          .additional-info,
+          .firma-block {
+            font-size: 16px !important;
+            line-height: 1.4 !important;
+            padding: 6px !important;
+          }
+
+          .items-table, .totals-table {
+            font-size: 16px !important;
+            border-collapse: collapse !important;
+            width: 100%;
+          }
+
+          .items-table th,
+          .items-table td,
+          .totals-table td {
+            padding: 6px 8px !important;
+            border: none !important;
+            text-align: left;
+          }
+
+          .qr-integrated .qr-section img {
+            width: 80px !important;
+            height: 80px !important;
+          }
+
+          .qr-integrated .qr-legend {
+            font-size: 10px !important;
+            max-width: 80px !important;
+          }
+
+          .firma-block {
+            margin-top: 10px !important;
+            height: auto !important;
+          }
+
+          .logo span {
+            font-size: 20px !important;
+          }
+
+          /* Evitar saltos de página */
+          table, tr, td, th, div, section {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+        </style>
+      `;
+
+      // Establecer contenido HTML con CSS compacto
+      this.logger.log('[PUPPETEER] Estableciendo contenido HTML con CSS compacto...');
+      const htmlWithCompactCss = htmlContent.replace('</head>', `${compactCss}</head>`);
+      await page.setContent(htmlWithCompactCss, { 
         waitUntil: ['networkidle0', 'domcontentloaded', 'load'] 
       });
 
       // Esperar un poco más para asegurar que todo se renderice
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Generar PDF
-      this.logger.log('[PUPPETEER] Generando PDF...');
+      // Generar PDF optimizado para una sola página
+      this.logger.log('[PUPPETEER] Generando PDF optimizado...');
       const pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
         preferCSSPageSize: true,
         margin: {
-          top: '8mm',
-          right: '8mm',
-          bottom: '8mm',
-          left: '8mm'
+          top: '5mm',
+          right: '5mm',
+          bottom: '5mm',
+          left: '5mm'
         },
         displayHeaderFooter: false,
-        scale: 1.0,
+        scale: 0.8,
         timeout: 30000,
         waitForFunction: 'document.readyState === "complete"'
       });
@@ -1481,14 +1770,65 @@ export class InvoicesService {
   }
 
   async generateInvoiceHtml(invoice: any): Promise<string> {
-    // Generar qrData igual que en el PDF
+    // Log para debug de provisiones
+    console.log('🔍 [generateInvoiceHtml] Invoice recibida:', {
+      id: invoice.id,
+      numeroFactura: invoice.numeroFactura,
+      baseImponible: invoice.baseImponible,
+      cuotaIVA: invoice.cuotaIVA,
+      importeTotal: invoice.importeTotal,
+      provisionFondos: invoice.provisionFondos?.length || 0,
+      facturaOriginalId: invoice.facturaOriginalId,
+      tipoRectificacion: invoice.tipoRectificacion
+    });
+    
+    if (invoice.provisionFondos && invoice.provisionFondos.length > 0) {
+      console.log('🔍 [generateInvoiceHtml] Provisiones encontradas:', invoice.provisionFondos.map((p: any) => ({
+        id: p.id,
+        description: p.description,
+        amount: p.amount
+      })));
+    }
+    
+    // Calcular el TOTAL para el QR (base + IVA - retención, sin restar provisiones)
+    const totalParaQR = Number(invoice.baseImponible || 0) + 
+      Number(invoice.cuotaIVA || 0) - 
+      (Number(invoice.baseImponible || 0) * (Number(invoice.retencion || 0) / 100));
+    
+    console.log('🔍 [generateInvoiceHtml] Total para QR calculado:', totalParaQR);
+    
+    // Generar qrData con el total correcto
     const qrData = [
       `NIF:${invoice.emisor?.email || ''}`,
       `NUM:${invoice.numeroFactura || ''}`,
       `FEC:${invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : ''}`,
-      `IMP:${invoice.importeTotal || ''}`
+      `IMP:${Math.round(totalParaQR * 100) / 100}`
     ].join('|');
+    
+    console.log('🔍 [generateInvoiceHtml] QR Data generado:', qrData);
+    
     const qrImageDataUrl = await (await import('qrcode')).toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
+    
+    // Si es una factura rectificativa, obtener los datos de la factura original
+    if (invoice.facturaOriginalId) {
+      console.log('🔄 [generateInvoiceHtml] Es factura rectificativa, obteniendo datos de factura original');
+      const facturaOriginal = await this.prisma.invoice.findUnique({
+        where: { id: invoice.facturaOriginalId },
+        include: { emisor: true, receptor: true, expediente: true }
+      });
+      
+      if (facturaOriginal) {
+        console.log('✅ [generateInvoiceHtml] Datos de factura original obtenidos:', {
+          numeroFactura: facturaOriginal.numeroFactura,
+          fechaFactura: facturaOriginal.fechaFactura,
+          importeTotal: facturaOriginal.importeTotal
+        });
+        invoice.facturaOriginal = facturaOriginal;
+      } else {
+        console.warn('⚠️ [generateInvoiceHtml] No se encontró la factura original:', invoice.facturaOriginalId);
+      }
+    }
+    
     const templateData = await this.pdfGeneratorService.prepareTemplateData(invoice, qrData, qrImageDataUrl);
     const fullHtml = await this.pdfGeneratorService.generateHtml(templateData);
     // Extraer solo <style> y <body> para la previsualización
@@ -1497,5 +1837,148 @@ export class InvoicesService {
     const style = styleMatch ? styleMatch[0] : '';
     const body = bodyMatch ? bodyMatch[1] : fullHtml;
     return `${style}\n${body}`;
+  }
+
+  /**
+   * Maneja la devolución de provisiones para facturas rectificativas
+   */
+  private async handleRectificativaProvisiones(
+    facturaOriginalId: string, 
+    facturaRectificativaId: string, 
+    tipoRectificacion: string, 
+    importeRectificativa: number
+  ) {
+    try {
+      console.log('🔄 Iniciando devolución de provisiones para rectificativa');
+      
+      // Obtener la factura original con sus provisiones
+      const facturaOriginal = await this.prisma.invoice.findUnique({
+        where: { id: facturaOriginalId },
+        include: { provisionFondos: true }
+      });
+
+      if (!facturaOriginal) {
+        console.warn('⚠️ Factura original no encontrada:', facturaOriginalId);
+        return;
+      }
+
+      const provisionesOriginales = facturaOriginal.provisionFondos || [];
+      console.log('📋 Provisiones de factura original:', provisionesOriginales.length);
+
+      if (provisionesOriginales.length === 0) {
+        console.log('ℹ️ No hay provisiones que devolver');
+        return;
+      }
+
+      // Calcular factor de devolución según tipo de rectificación
+      let factorDevolucion = 1.0; // 100% por defecto
+      
+      switch (tipoRectificacion) {
+        case 'R1': // Anulación completa
+          factorDevolucion = 1.0; // Devolver 100%
+          console.log('🔄 R1 - Anulación completa: Devolver 100% de provisiones');
+          break;
+          
+        case 'R2': // Corrección (solo datos, no importes)
+          factorDevolucion = 0.0; // No devolver nada
+          console.log('🔄 R2 - Corrección: No devolver provisiones');
+          break;
+          
+        case 'R3': // Descuento
+        case 'R4': // Devolución
+          // Calcular proporción basada en la diferencia de importes
+          const diferencia = facturaOriginal.importeTotal - importeRectificativa;
+          if (diferencia > 0) {
+            factorDevolucion = diferencia / facturaOriginal.importeTotal;
+            console.log(`🔄 ${tipoRectificacion} - Diferencia: ${diferencia}€, Factor: ${(factorDevolucion * 100).toFixed(2)}%`);
+          } else {
+            factorDevolucion = 0.0;
+            console.log(`🔄 ${tipoRectificacion} - Sin diferencia, no devolver provisiones`);
+          }
+          break;
+          
+        default:
+          console.warn('⚠️ Tipo de rectificación no reconocido:', tipoRectificacion);
+          return;
+      }
+
+      // Procesar devolución de provisiones
+      if (factorDevolucion > 0) {
+        console.log(`💰 Devolviendo ${(factorDevolucion * 100).toFixed(2)}% de provisiones`);
+        
+        for (const provision of provisionesOriginales) {
+          const importeDevolver = provision.amount * factorDevolucion;
+          
+          if (importeDevolver > 0) {
+            console.log(`  - Provisión ${provision.id}: ${provision.amount}€ → Devolver ${importeDevolver.toFixed(2)}€`);
+            
+            // Crear nueva provisión con el importe devuelto
+            await this.prisma.provisionFondos.create({
+              data: {
+                clientId: provision.clientId,
+                expedienteId: provision.expedienteId,
+                amount: importeDevolver,
+                description: `Devolución por rectificativa ${tipoRectificacion} - ${provision.description}`,
+                date: new Date(),
+                invoiceId: null, // Disponible para uso futuro
+              }
+            });
+            
+            console.log(`  ✅ Provisión devuelta: ${importeDevolver.toFixed(2)}€`);
+          }
+        }
+        
+        console.log('✅ Devolución de provisiones completada');
+      } else {
+        console.log('ℹ️ No se requieren devoluciones de provisiones');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error en devolución de provisiones:', error);
+      // No fallar la creación de la factura por error en devolución de provisiones
+    }
+  }
+
+  /**
+   * Genera el número de factura rectificativa basado en la factura original
+   */
+  private async generateRectificativaNumber(facturaOriginalId: string, tipoRectificacion: string): Promise<string> {
+    try {
+      // Obtener la factura original
+      const facturaOriginal = await this.prisma.invoice.findUnique({
+        where: { id: facturaOriginalId },
+        select: { numeroFactura: true }
+      });
+
+      if (!facturaOriginal) {
+        throw new Error('Factura original no encontrada');
+      }
+
+      // Contar cuántas rectificativas ya existen para esta factura original
+      const rectificativasExistentes = await this.prisma.invoice.count({
+        where: {
+          facturaOriginalId: facturaOriginalId,
+          tipoFactura: 'R'
+        }
+      });
+
+      // Generar sufijo basado en el tipo de rectificación y el número de rectificativa
+      const numeroRectificativa = rectificativasExistentes + 1;
+      const sufijo = `${tipoRectificacion}-${numeroRectificativa.toString().padStart(2, '0')}`;
+
+      // Crear número de factura rectificativa
+      const numeroRectificativaCompleto = `${facturaOriginal.numeroFactura}-${sufijo}`;
+
+      console.log(`🔄 Generando número de factura rectificativa: ${numeroRectificativaCompleto}`);
+      console.log(`  - Factura original: ${facturaOriginal.numeroFactura}`);
+      console.log(`  - Tipo rectificación: ${tipoRectificacion}`);
+      console.log(`  - Número de rectificativa: ${numeroRectificativa}`);
+
+      return numeroRectificativaCompleto;
+
+    } catch (error) {
+      console.error('❌ Error generando número de factura rectificativa:', error);
+      throw error;
+    }
   }
 } 

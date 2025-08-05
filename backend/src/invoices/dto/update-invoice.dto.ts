@@ -91,6 +91,16 @@ export class UpdateInvoiceDto {
   aplicarIVA?: boolean;
 
   @ApiProperty({
+    description: 'Tipo de impuesto (iva o retencion)',
+    example: 'iva',
+    required: false,
+    type: String,
+  })
+  @IsString()
+  @IsOptional()
+  tipoImpuesto?: string;
+
+  @ApiProperty({
     description: 'Régimen IVA del emisor',
     example: 'General',
     required: false,

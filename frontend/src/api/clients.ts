@@ -1,8 +1,6 @@
-import axios from './axios';
+import api from './axios';
 
 export async function getClients(token: string) {
-  const res = await axios.get('/users/clients', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await api.get('/users/clients');
   return res.data;
 } 

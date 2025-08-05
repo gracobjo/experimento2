@@ -47,6 +47,7 @@ const DocumentsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('todos');
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -65,13 +66,13 @@ const DocumentsPage = () => {
         const token = localStorage.getItem('token');
         
         const [documentsResponse, statsResponse, expedientesResponse] = await Promise.all([
-          axios.get('/documents', {
+          axios.get('/api/documents', {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          axios.get('/documents/stats', {
+          axios.get('/api/documents/stats', {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          axios.get('/cases', {
+          axios.get('/api/cases', {
             headers: { Authorization: `Bearer ${token}` }
           })
         ]);
@@ -167,7 +168,7 @@ const DocumentsPage = () => {
           formData.append('description', uploadForm.description);
         }
 
-        return axios.post('/documents/upload', formData, {
+        return axios.post('/api/documents/upload', formData, {
           headers: { 
             Authorization: `Bearer ${token}`,
             'Content-Type': 'multipart/form-data'
@@ -181,7 +182,7 @@ const DocumentsPage = () => {
 
       // Recargar documentos
       console.log('Recargando documentos...');
-      const response = await axios.get('/documents', {
+      const response = await axios.get('/api/documents', {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('Documentos cargados:', response.data);
@@ -216,14 +217,24 @@ const DocumentsPage = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`/documents/${documentId}`, {
+      await axios.delete(`/api/documents/${documentId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      // Mostrar mensaje de éxito
+      setError(null);
+      setSuccess('Documento eliminado exitosamente');
+      // Ocultar mensaje de éxito después de 3 segundos
+      setTimeout(() => setSuccess(null), 3000);
+      // Recargar estadísticas después de eliminar
+      const statsResponse = await axios.get('/api/documents/stats', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setStats(statsResponse.data);
     } catch (err: any) {
       console.error('Error deleting document:', err);
-      setError('Error al eliminar el documento');
+      setError(err.response?.data?.message || 'Error al eliminar el documento');
     }
   };
 
@@ -254,6 +265,19 @@ const DocumentsPage = () => {
   return (
     <div className="py-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Mensajes de éxito y error */}
+        {success && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
+            <p className="text-green-700 text-sm">{success}</p>
+          </div>
+        )}
+        
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-red-700 text-sm">{error}</p>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-center">
@@ -495,16 +519,22 @@ const DocumentsPage = () => {
                       <div className="flex space-x-2">
                         <a
                           href={`/api/documents/${doc.id}/download`}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          Descargar
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Ver
                         </a>
                         <button
                           onClick={() => handleDelete(doc.id)}
-                          className="text-red-600 hover:text-red-900"
+                          className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                         >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
                           Eliminar
                         </button>
                       </div>

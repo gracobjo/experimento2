@@ -3,14 +3,14 @@ import * as puppeteer from 'puppeteer';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as QRCode from 'qrcode';
-import { ParametrosService } from '../parametros/parametros.service'; // Added import for ParametrosService
+import { ParametrosService } from '../parametros/parametros.service';
 
 @Injectable()
 export class PdfGeneratorService {
   private readonly logger = new Logger(PdfGeneratorService.name);
   private templatePath: string;
 
-  constructor(private readonly parametrosService: ParametrosService) { // inyectar el servicio de parámetros
+  constructor(private readonly parametrosService: ParametrosService) {
     // Buscar el template en múltiples ubicaciones posibles
     const possiblePaths = [
       // Template original con formato profesional
@@ -50,17 +50,25 @@ export class PdfGeneratorService {
       // 1. Generar QR
       // QR: ahora como JSON con datos fiscales y URL de verificación
       const verificacionUrl = `https://tudominio.com/verificar/${invoice.numeroFactura}`;
-      const qrJson = JSON.stringify({
-        NIF: invoice.emisor?.email || '',
-        NUM: invoice.numeroFactura || '',
-        FEC: invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : '',
-        IMP: invoice.importeTotal || '',
-        verificacion: verificacionUrl
-      });
-      const qrImageDataUrl = await QRCode.toDataURL(qrJson, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
+      
+      // Calcular el TOTAL para el QR (base + IVA - retención, sin restar provisiones)
+      const totalParaQR = Number(invoice.baseImponible || 0) + 
+        Number(invoice.cuotaIVA || 0) - 
+        (Number(invoice.baseImponible || 0) * (Number(invoice.retencion || 0) / 100));
+      
+      // Log para debug del QR
+      this.logger.log(`[QR-DEBUG] Base imponible: ${invoice.baseImponible}, IVA: ${invoice.cuotaIVA}, Retención: ${invoice.retencion}`);
+      this.logger.log(`[QR-DEBUG] Total para QR calculado: ${totalParaQR}`);
+      this.logger.log(`[QR-DEBUG] Importe total original: ${invoice.importeTotal}`);
+      
+      // Formato pipe-separated como en el ejemplo
+      const qrData = `NIF:${invoice.emisor?.email || ''}|NUM:${invoice.numeroFactura || ''}|FEC:${invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : ''}|IMP:${Math.round(totalParaQR * 100) / 100}`;
+      
+      this.logger.log(`[QR-DEBUG] QR Data generado: ${qrData}`);
+      const qrImageDataUrl = await QRCode.toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
 
       // 2. Preparar datos para el template
-      const templateData = await this.prepareTemplateData(invoice, qrJson, qrImageDataUrl);
+      const templateData = await this.prepareTemplateData(invoice, qrData, qrImageDataUrl);
 
       // 3. Generar HTML con los datos
       const htmlContent = await this.generateHtml(templateData);
@@ -98,30 +106,77 @@ export class PdfGeneratorService {
         verificacionUrlBase = param.valor;
       }
     } catch {}
+
     const verificacionUrl = `${verificacionUrlBase}${invoice.numeroFactura}`;
 
-    // Utilidad para formato español
-    const formatNumberES = (num: number) => Number(num).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // Función para formatear números en español
+    const formatNumberES = (num: number) => {
+      const number = Number(num);
+      const parts = number.toFixed(2).split('.');
+      const integerPart = parts[0];
+      const decimalPart = parts[1];
+      const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      return `${formattedInteger},${decimalPart}`;
+    };
+
+    // Función para formatear fechas en español
+    const formatDateES = (dateString: string) => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    };
+
+    // Log de los totales formateados
+    this.logger.log(`[FORMAT-NUMBERS] Totales formateados: baseImponible: ${formatNumberES(Number(invoice.baseImponible || 0))}, cuotaIVA: ${formatNumberES(Number(invoice.cuotaIVA || 0))}, importeTotal: ${formatNumberES(Number(invoice.importeTotal || 0))}`);
+
+    // Log de datos de factura rectificativa
+    this.logger.log(`[RECTIFICATIVA-DEBUG] facturaOriginalId: ${invoice.facturaOriginalId}`);
+    this.logger.log(`[RECTIFICATIVA-DEBUG] tipoRectificacion: ${invoice.tipoRectificacion}`);
+    this.logger.log(`[RECTIFICATIVA-DEBUG] motivoRectificacion: ${invoice.motivoRectificacion}`);
+    this.logger.log(`[RECTIFICATIVA-DEBUG] facturaOriginal: ${JSON.stringify(invoice.facturaOriginal, null, 2)}`);
+
+    // Calcular subtotal (base + IVA - retención)
+    const subtotalCalculado = Number(invoice.baseImponible || 0) + 
+      Number(invoice.cuotaIVA || 0) - 
+      (Number(invoice.baseImponible || 0) * (Number(invoice.retencion || 0) / 100));
+    
+    // Log específico del subtotal
+    this.logger.log(`[SUBTOTAL-CALC] Base: ${Number(invoice.baseImponible || 0)}, IVA: ${Number(invoice.cuotaIVA || 0)}, Retención: ${Number(invoice.retencion || 0)}`);
+    this.logger.log(`[SUBTOTAL-CALC] Subtotal calculado: ${subtotalCalculado}`);
+    this.logger.log(`[SUBTOTAL-CALC] Subtotal formateado: ${formatNumberES(subtotalCalculado)}`);
 
     return {
       // Datos básicos
       numeroFactura: invoice.numeroFactura || 'N/A',
-      fechaFactura: invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : 'N/A',
+      fechaFactura: formatDateES(invoice.fechaFactura),
       estado: invoice.estado || 'N/A',
-      fechaOperacion: invoice.fechaOperacion ? new Date(invoice.fechaOperacion).toISOString().slice(0, 10) : 'N/A',
+      fechaOperacion: formatDateES(invoice.fechaOperacion),
       metodoPago: invoice.metodoPago || 'N/A',
       claveOperacion: invoice.claveOperacion || 'N/A',
       regimenIvaEmisor: invoice.regimenIvaEmisor || 'N/A',
       tipoIVA: invoice.tipoIVA || 21,
       motivoAnulacion: invoice.motivoAnulacion || null,
-      fechaCreacion: new Date(invoice.createdAt).toISOString().slice(0, 10),
+      fechaCreacion: formatDateES(invoice.createdAt),
 
       // Totales
-      baseImponible: formatNumberES(invoice.baseImponible || 0),
-      cuotaIVA: formatNumberES(invoice.cuotaIVA || 0),
-      importeTotal: formatNumberES(invoice.importeTotal || 0),
+      baseImponible: formatNumberES(Number(invoice.baseImponible || 0)),
+      cuotaIVA: formatNumberES(Number(invoice.cuotaIVA || 0)),
+      importeTotal: formatNumberES(Number(invoice.importeTotal || 0)),
       descuento: invoice.descuento || 0,
       descuentoCalculado: formatNumberES(descuentoCalculado),
+      retencion: invoice.retencion || 0,
+      cuotaRetencion: formatNumberES((Number(invoice.baseImponible || 0) * (Number(invoice.retencion || 0) / 100))),
+      
+      // Calcular subtotal (base + IVA - retención)
+      subtotal: formatNumberES(subtotalCalculado),
+      
+      // Descuento por provisiones
+      descuentoProvisiones: formatNumberES(
+        (invoice.provisionFondos || []).reduce((sum: number, prov: any) => sum + (prov.amount || 0), 0)
+      ),
 
       // Emisor
       emisor: {
@@ -141,24 +196,38 @@ export class PdfGeneratorService {
       } : null,
 
       // Items
-      items: (invoice.items || []).map((item: any) => ({
-        descripcion: item.description || '',
-        cantidad: Number(item.quantity || 0),
-        precioUnitario: formatNumberES(Number(item.unitPrice || 0)),
-        total: formatNumberES(Number(item.total || 0))
-      })),
+      items: (invoice.items || []).map((item: any) => {
+        const precioUnitario = Number(item.unitPrice || 0);
+        const total = Number(item.total || 0);
+        this.logger.log(`[FORMAT-NUMBERS] Item: ${item.description}, precioUnitario: ${precioUnitario} -> ${formatNumberES(precioUnitario)}, total: ${total} -> ${formatNumberES(total)}`);
+        return {
+          descripcion: item.description || '',
+          cantidad: Number(item.quantity || 0),
+          precioUnitario: formatNumberES(precioUnitario),
+          total: formatNumberES(total)
+        };
+      }),
 
       // Provisiones
       provisiones: (invoice.provisionFondos || []).map((provision: any) => ({
         descripcion: provision.description || 'Sin descripción',
-        fecha: provision.date ? new Date(provision.date).toISOString().slice(0, 10) : 'N/A',
+        fecha: formatDateES(provision.date),
         importe: formatNumberES(provision.amount || 0)
       })),
 
       // QR
       qrData: qrData,
       qrImage: qrImageDataUrl,
-      verificacionUrl: verificacionUrl
+      verificacionUrl: verificacionUrl,
+
+      // Datos de factura rectificativa - solo si realmente es una factura rectificativa
+      facturaOriginal: (invoice.facturaOriginalId && invoice.facturaOriginal) ? {
+        numeroFactura: invoice.facturaOriginal.numeroFactura || 'N/A',
+        fechaFactura: formatDateES(invoice.facturaOriginal.fechaFactura),
+        importeTotal: formatNumberES(Number(invoice.facturaOriginal.importeTotal || 0))
+      } : null,
+      tipoRectificacion: (invoice.facturaOriginalId && invoice.tipoRectificacion) ? invoice.tipoRectificacion : null,
+      motivoRectificacion: (invoice.facturaOriginalId && invoice.motivoRectificacion) ? invoice.motivoRectificacion : null
     };
   }
 
@@ -186,8 +255,22 @@ export class PdfGeneratorService {
         emisor: data.emisor,
         receptor: data.receptor,
         itemsCount: data.items?.length || 0,
-        importeTotal: data.importeTotal
+        importeTotal: data.importeTotal,
+        provisionesCount: data.provisiones?.length || 0,
+        descuentoProvisiones: data.descuentoProvisiones,
+        subtotal: data.subtotal,
+        baseImponible: data.baseImponible,
+        cuotaIVA: data.cuotaIVA,
+        facturaOriginal: data.facturaOriginal,
+        tipoRectificacion: data.tipoRectificacion,
+        motivoRectificacion: data.motivoRectificacion
       });
+      
+      // Log específico de provisiones
+      this.logger.log(`[PDF-TEMPLATE] Provisiones recibidas:`, JSON.stringify(data.provisiones, null, 2));
+      
+      // Log específico de items
+      this.logger.log(`[PDF-TEMPLATE] Items recibidos:`, JSON.stringify(data.items, null, 2));
 
       // Reemplazar variables del template
       template = this.replaceTemplateVariables(template, data);
@@ -217,7 +300,8 @@ export class PdfGeneratorService {
       'numeroFactura', 'fechaFactura', 'estado', 'fechaOperacion', 'metodoPago',
       'claveOperacion', 'regimenIvaEmisor', 'tipoIVA', 'motivoAnulacion', 'fechaCreacion',
       'baseImponible', 'cuotaIVA', 'importeTotal', 'descuento', 'descuentoCalculado',
-      'qrData', 'qrImage'
+      'subtotal', 'descuentoProvisiones', 'retencion', 'cuotaRetencion', 'qrData', 'qrImage', 'verificacionUrl',
+      'tipoRectificacion', 'motivoRectificacion'
     ];
 
     simpleReplacements.forEach(key => {
@@ -297,13 +381,28 @@ export class PdfGeneratorService {
     // Reemplazar provisiones - ARREGLADO para manejar correctamente la sintaxis de Handlebars
     if (data.provisiones && data.provisiones.length > 0) {
       this.logger.log(`[TEMPLATE-VARS] Procesando ${data.provisiones.length} provisiones`);
+      this.logger.log(`[TEMPLATE-VARS] Datos de provisiones:`, JSON.stringify(data.provisiones, null, 2));
       
-      const provisionesMatch = template.match(/{{#if provisiones}}([\s\S]*?){{\/if}}/);
-      if (provisionesMatch) {
-        const provisionesSection = provisionesMatch[1];
+      // Procesar TODAS las secciones de provisiones en el template
+      let provisionesProcessed = 0;
+      
+      // Buscar y procesar cada sección {{#if provisiones}} en el template
+      const provisionesRegex = /{{#if provisiones}}([\s\S]*?){{\/if}}/g;
+      let match;
+      
+      while ((match = provisionesRegex.exec(template)) !== null) {
+        provisionesProcessed++;
+        this.logger.log(`[TEMPLATE-VARS] Procesando sección de provisiones #${provisionesProcessed}, longitud: ${match[1].length}`);
+        
+        const provisionesSection = match[1];
+        
+        // Buscar el loop dentro de la sección
         const eachMatch = provisionesSection.match(/{{#each provisiones}}([\s\S]*?){{\/each}}/);
         if (eachMatch) {
           const provisionTemplate = eachMatch[1];
+          this.logger.log(`[TEMPLATE-VARS] Template de provisión encontrado en sección #${provisionesProcessed}, longitud: ${provisionTemplate.length}`);
+          
+          // Generar HTML para cada provisión
           const provisionesHtml = data.provisiones.map((provision: any) => {
             let provisionHtml = provisionTemplate;
             provisionHtml = provisionHtml.replace(/{{descripcion}}/g, provision.descripcion || '');
@@ -312,12 +411,37 @@ export class PdfGeneratorService {
             return provisionHtml;
           }).join('');
           
+          this.logger.log(`[TEMPLATE-VARS] HTML de provisiones generado para sección #${provisionesProcessed}, longitud: ${provisionesHtml.length}`);
+          
+          // Reemplazar el loop con el HTML generado
           const newProvisionesSection = provisionesSection.replace(/{{#each provisiones}}[\s\S]*?{{\/each}}/, provisionesHtml);
-          template = template.replace(/{{#if provisiones}}[\s\S]*?{{\/if}}/, newProvisionesSection);
+          
+          // Reemplazar la sección completa en el template
+          template = template.replace(match[0], newProvisionesSection);
+          
+          this.logger.log(`[TEMPLATE-VARS] Sección #${provisionesProcessed} actualizada con provisiones`);
+        } else {
+          this.logger.warn(`[TEMPLATE-VARS] No se encontró {{#each provisiones}} en la sección #${provisionesProcessed}`);
+          // Si no hay loop, eliminar toda la sección
+          template = template.replace(match[0], '');
         }
       }
+      
+      this.logger.log(`[TEMPLATE-VARS] Total de secciones de provisiones procesadas: ${provisionesProcessed}`);
+      
+      if (provisionesProcessed === 0) {
+        this.logger.warn(`[TEMPLATE-VARS] No se encontró ninguna sección {{#if provisiones}}`);
+      }
     } else {
+      this.logger.log(`[TEMPLATE-VARS] No hay provisiones, eliminando sección de provisiones`);
       template = template.replace(/{{#if provisiones}}[\s\S]*?{{\/if}}/g, '');
+    }
+
+    // Reemplazar retención
+    if (data.retencion && data.retencion > 0) {
+      template = template.replace(/{{#if retencion}}([\s\S]*?){{\/if}}/g, '$1');
+    } else {
+      template = template.replace(/{{#if retencion}}[\s\S]*?{{\/if}}/g, '');
     }
 
     // Reemplazar motivo de anulación
@@ -327,6 +451,52 @@ export class PdfGeneratorService {
       template = template.replace(/{{#if motivoAnulacion}}[\s\S]*?{{\/if}}/g, '');
     }
 
+    // Reemplazar sección de factura rectificativa
+    if (data.facturaOriginal) {
+      this.logger.log(`[TEMPLATE-VARS] Procesando factura rectificativa`);
+      this.logger.log(`[TEMPLATE-VARS] Datos de factura original:`, JSON.stringify(data.facturaOriginal, null, 2));
+      
+      // Buscar la sección de factura rectificativa
+      const rectificativaMatch = template.match(/{{#if facturaOriginal}}([\s\S]*?){{\/if}}/);
+      if (rectificativaMatch) {
+        const rectificativaSection = rectificativaMatch[1];
+        this.logger.log(`[TEMPLATE-VARS] Sección de factura rectificativa encontrada, longitud: ${rectificativaSection.length}`);
+        
+        // Reemplazar variables de la factura original
+        let rectificativaHtml = rectificativaSection;
+        rectificativaHtml = rectificativaHtml.replace(/{{facturaOriginal\.numeroFactura}}/g, data.facturaOriginal.numeroFactura || 'N/A');
+        rectificativaHtml = rectificativaHtml.replace(/{{facturaOriginal\.fechaFactura}}/g, data.facturaOriginal.fechaFactura || 'N/A');
+        rectificativaHtml = rectificativaHtml.replace(/{{facturaOriginal\.importeTotal}}/g, data.facturaOriginal.importeTotal || 'N/A');
+        
+        // Procesar bloques anidados dentro de la sección de factura rectificativa
+        // Procesar {{#if facturaOriginal.importeTotal}}
+        if (data.facturaOriginal.importeTotal) {
+          rectificativaHtml = rectificativaHtml.replace(/{{#if facturaOriginal\.importeTotal}}([\s\S]*?){{\/if}}/g, '$1');
+        } else {
+          rectificativaHtml = rectificativaHtml.replace(/{{#if facturaOriginal\.importeTotal}}[\s\S]*?{{\/if}}/g, '');
+        }
+        
+        this.logger.log(`[TEMPLATE-VARS] HTML de factura rectificativa generado, longitud: ${rectificativaHtml.length}`);
+        
+        // Reemplazar la sección completa
+        template = template.replace(/{{#if facturaOriginal}}[\s\S]*?{{\/if}}/, rectificativaHtml);
+      } else {
+        this.logger.warn(`[TEMPLATE-VARS] No se encontró la sección {{#if facturaOriginal}}`);
+      }
+    } else {
+      this.logger.log(`[TEMPLATE-VARS] No es factura rectificativa, eliminando sección`);
+      template = template.replace(/{{#if facturaOriginal}}[\s\S]*?{{\/if}}/g, '');
+    }
+
+    // Limpieza final de cualquier código Handlebars sin procesar
+    this.logger.log(`[TEMPLATE-VARS] Limpieza final de código Handlebars sin procesar`);
+    template = template.replace(/{{#if[^}]*}}/g, '');
+    template = template.replace(/{{#each[^}]*}}/g, '');
+    template = template.replace(/{{\/if}}/g, '');
+    template = template.replace(/{{\/each}}/g, '');
+    template = template.replace(/{{[^}]*}}/g, '');
+
+    this.logger.log(`[TEMPLATE-VARS] Procesamiento completado. Longitud final del template: ${template.length}`);
     return template;
   }
 
@@ -357,25 +527,104 @@ export class PdfGeneratorService {
       this.logger.log('[PUPPETEER] Browser iniciado correctamente');
       const page = await browser.newPage();
 
-      // Configurar viewport más pequeño para forzar compactación
+      // Configurar viewport optimizado para A4 con scale 0.75
       await page.setViewport({ 
-        width: 900, 
-        height: 1200,
-        deviceScaleFactor: 2
+        width: 794, // A4 width en píxeles a 96 DPI
+        height: 1123, // A4 height en píxeles a 96 DPI
+        deviceScaleFactor: 1
       });
+      
+      // Esperar a que el contenido se renderice completamente
+      await page.waitForTimeout(1000);
 
-      // Inyectar CSS para compactar el diseño y reducir márgenes y fuentes
+      // CSS optimizado para forzar una sola página A4 con fuentes muy grandes
       const compactCss = `
         <style>
-          body { font-size: 10px !important; }
-          .invoice-container { padding: 8px !important; }
-          .header, .parties, .items-section, .totals-section, .footer, .additional-info { margin-bottom: 8px !important; }
-          .qr-code, .qr-code img { width: 60px !important; height: 60px !important; }
-          .items-table th, .items-table td, .totals-table td, .provisions-table th, .provisions-table td { padding: 4px 3px !important; font-size: 10px !important; }
-          .section-title, .invoice-title { font-size: 18px !important; }
-          .company-logo { font-size: 16px !important; }
-          .discount-box, .party, .additional-info { padding: 6px !important; }
-          /* Permite ajustar el tamaño aquí si necesitas más compactación */
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
+
+          html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-size: 16px;
+            overflow: hidden;
+          }
+
+          .invoice-container {
+            width: 100%;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            page-break-after: avoid;
+            break-after: avoid;
+            padding: 16px !important;
+          }
+
+          /* Compactar todo */
+          * {
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+            line-height: 1.4 !important;
+          }
+
+          .header .title { font-size: 28px !important; }
+          .header .lema { font-size: 16px !important; }
+
+          .data-blocks,
+          .items-section,
+          .totals-section,
+          .footer,
+          .factura-datos,
+          .party-block,
+          .additional-info,
+          .firma-block {
+            font-size: 16px !important;
+            line-height: 1.4 !important;
+            padding: 6px !important;
+          }
+
+          .items-table, .totals-table {
+            font-size: 16px !important;
+            border-collapse: collapse !important;
+            width: 100%;
+          }
+
+          .items-table th,
+          .items-table td,
+          .totals-table td {
+            padding: 6px 8px !important;
+            border: none !important;
+            text-align: left;
+          }
+
+          .qr-integrated .qr-section img {
+            width: 80px !important;
+            height: 80px !important;
+          }
+
+          .qr-integrated .qr-legend {
+            font-size: 10px !important;
+            max-width: 80px !important;
+          }
+
+          .firma-block {
+            margin-top: 10px !important;
+            height: auto !important;
+          }
+
+          .logo span {
+            font-size: 20px !important;
+          }
+
+          /* Evitar saltos de página */
+          table, tr, td, th, div, section {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
         </style>
       `;
       const htmlWithCompactCss = htmlContent.replace('</head>', `${compactCss}</head>`);
@@ -389,20 +638,20 @@ export class PdfGeneratorService {
       // Esperar un poco más para asegurar que todo se renderice
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Generar PDF con márgenes reducidos
+      // Generar PDF optimizado para una sola página
       this.logger.log('[PUPPETEER] Generando PDF...');
       let pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
         preferCSSPageSize: true,
         margin: {
-          top: '8mm',
-          right: '8mm',
-          bottom: '8mm',
-          left: '8mm'
+          top: '5mm',
+          right: '5mm',
+          bottom: '5mm',
+          left: '5mm'
         },
+        scale: 0.8,
         displayHeaderFooter: false,
-        scale: 1.0,
         timeout: 30000,
         waitForFunction: 'document.readyState === "complete"'
       });

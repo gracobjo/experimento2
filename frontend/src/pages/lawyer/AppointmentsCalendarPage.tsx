@@ -117,6 +117,7 @@ const AppointmentsCalendarPage = () => {
     notes: ''
   });
   const [rescheduling, setRescheduling] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   // Estados para filtros
   const [showFilters, setShowFilters] = useState(false);
@@ -247,6 +248,36 @@ const AppointmentsCalendarPage = () => {
       setError(err.response?.data?.message || 'Error al reprogramar la cita');
     } finally {
       setRescheduling(false);
+    }
+  };
+
+  const handleDeleteAppointment = async () => {
+    if (!selected) return;
+
+    if (!window.confirm('¿Estás seguro de que quieres eliminar esta cita? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      const token = localStorage.getItem('token');
+      
+      await axios.delete(`/api/appointments/${selected.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Remover la cita de la lista
+      setAppointments(prev => prev.filter(app => app.id !== selected.id));
+
+      setSuccess('Cita eliminada exitosamente.');
+      setSelected(null);
+      
+      // Limpiar mensaje de éxito después de 5 segundos
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al eliminar la cita');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -674,6 +705,15 @@ const AppointmentsCalendarPage = () => {
               </div>
               
               <div className="flex justify-end space-x-3 mt-6">
+                <button 
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleDeleteAppointment}
+                  disabled={deleting}
+                  aria-label="Eliminar esta cita"
+                  type="button"
+                >
+                  {deleting ? 'Eliminando...' : 'Eliminar'}
+                </button>
                 <button 
                   className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
                   onClick={() => handleRescheduleClick(selected)}
