@@ -17,4 +17,13 @@ export class AppController {
       timestamp: new Date().toISOString(),
     };
   }
+
+  @Get('debug-env')
+  getDebugEnv(): { jwtSecret: string; databaseUrl: string; nodeEnv: string } {
+    return {
+      jwtSecret: process.env.JWT_SECRET ? 'CONFIGURADO' : 'NO CONFIGURADO',
+      databaseUrl: process.env.DATABASE_URL ? 'CONFIGURADO' : 'NO CONFIGURADO',
+      nodeEnv: process.env.NODE_ENV || 'NO CONFIGURADO',
+    };
+  }
 } 

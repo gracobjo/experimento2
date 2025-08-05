@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { EmailService } from './email.service';
+import { EnvConfigService } from '../config/env.config';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { LoginDto } from './dto/login.dto';
@@ -17,6 +18,7 @@ export class AuthService {
     private jwtService: JwtService,
     private usersService: UsersService,
     private emailService: EmailService,
+    private envConfigService: EnvConfigService,
   ) { }
 
   async validateUser(email: string, password: string): Promise<any> {
