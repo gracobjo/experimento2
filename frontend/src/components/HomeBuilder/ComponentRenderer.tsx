@@ -91,20 +91,74 @@ const HeroBanner: React.FC<{ props: any }> = ({ props }) => {
   );
 };
 
-const ServiceCards: React.FC<{ props: any }> = ({ props }) => (
-  <div className="bg-white p-6 rounded-lg border">
-    <h2 className="text-2xl font-bold text-center mb-6">{props.title || 'Nuestros Servicios'}</h2>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {(props.services || []).map((service: any, index: number) => (
-        <div key={index} className="text-center p-4 border rounded-lg hover:shadow-md transition-shadow">
-          <div className="text-4xl mb-3">{service.icon || '⚖️'}</div>
-          <h3 className="text-lg font-semibold mb-2">{service.title || 'Servicio'}</h3>
-          <p className="text-gray-600">{service.description || 'Descripción del servicio'}</p>
+const ServiceCards: React.FC<{ props: any }> = ({ props }) => {
+  const [services, setServices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`${(import.meta as any).env.VITE_API_URL}/api/parametros/services`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          setServices(data);
+        } else {
+          throw new Error('Error al cargar los servicios');
+        }
+      } catch (err) {
+        console.error('Error fetching services:', err);
+        setError('Error al cargar los servicios');
+        // Fallback a servicios estáticos si hay error
+        setServices(props.services || []);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServices();
+  }, [props.services]);
+
+  return (
+    <div className="bg-white p-6 rounded-lg border">
+      <h2 className="text-2xl font-bold text-center mb-6">{props.title || 'Nuestros Servicios'}</h2>
+      
+      {loading && (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando servicios...</p>
         </div>
-      ))}
+      )}
+
+      {error && (
+        <div className="text-center py-8">
+          <p className="text-red-600 mb-4">Error al cargar servicios</p>
+          <p className="text-gray-600 text-sm">{error}</p>
+        </div>
+      )}
+
+      {!loading && !error && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {services.map((service: any, index: number) => (
+            <div key={service.id || index} className="text-center p-4 border rounded-lg hover:shadow-md transition-shadow">
+              <div className="text-4xl mb-3">{service.icon || '⚖️'}</div>
+              <h3 className="text-lg font-semibold mb-2">{service.title || 'Servicio'}</h3>
+              <p className="text-gray-600">{service.description || 'Descripción del servicio'}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && !error && services.length === 0 && (
+        <div className="text-center py-8">
+          <p className="text-gray-600">No hay servicios configurados</p>
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 const ContactButton: React.FC<{ props: any }> = ({ props }) => {
   const [showModal, setShowModal] = useState(false);
