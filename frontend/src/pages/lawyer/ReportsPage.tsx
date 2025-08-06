@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 
 interface ReportsData {
@@ -39,9 +39,7 @@ const ReportsPage = () => {
         const token = localStorage.getItem('token');
         
         console.log('Fetching lawyer reports...');
-        const response = await axios.get('/api/lawyer/reports', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.get('/lawyer/reports');
         
         console.log('Reports data received:', response.data);
         setReportsData(response.data);

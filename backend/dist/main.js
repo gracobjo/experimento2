@@ -7706,6 +7706,7 @@ let ReportsService = class ReportsService {
         this.prisma = prisma;
     }
     async getLawyerReports(lawyerId) {
+        console.log('[REPORTS] Obteniendo reportes para abogado:', lawyerId);
         const tasksStats = await this.prisma.task.groupBy({
             by: ['status'],
             where: {
@@ -7718,6 +7719,7 @@ let ReportsService = class ReportsService {
                 status: true
             }
         });
+        console.log('[REPORTS] Estadísticas de tareas:', tasksStats);
         const casesStats = await this.prisma.expediente.groupBy({
             by: ['status'],
             where: {
@@ -7727,6 +7729,7 @@ let ReportsService = class ReportsService {
                 status: true
             }
         });
+        console.log('[REPORTS] Estadísticas de casos:', casesStats);
         const upcomingAppointments = await this.prisma.appointment.count({
             where: {
                 lawyerId: lawyerId,
@@ -7780,7 +7783,7 @@ let ReportsService = class ReportsService {
         casesStats.forEach(stat => {
             casesByStatus[stat.status] = stat._count.status;
         });
-        return {
+        const result = {
             tasks: {
                 total: totalTasks,
                 byStatus: tasksByStatus,
@@ -7794,6 +7797,8 @@ let ReportsService = class ReportsService {
                 upcoming: upcomingAppointments
             }
         };
+        console.log('[REPORTS] Resultado final:', result);
+        return result;
     }
 };
 exports.ReportsService = ReportsService;

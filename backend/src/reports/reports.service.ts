@@ -6,6 +6,8 @@ export class ReportsService {
   constructor(private prisma: PrismaService) {}
 
   async getLawyerReports(lawyerId: string) {
+    console.log('[REPORTS] Obteniendo reportes para abogado:', lawyerId);
+    
     // Estadísticas de tareas
     const tasksStats = await this.prisma.task.groupBy({
       by: ['status'],
@@ -20,6 +22,8 @@ export class ReportsService {
       }
     });
 
+    console.log('[REPORTS] Estadísticas de tareas:', tasksStats);
+
     // Estadísticas de casos
     const casesStats = await this.prisma.expediente.groupBy({
       by: ['status'],
@@ -30,6 +34,8 @@ export class ReportsService {
         status: true
       }
     });
+
+    console.log('[REPORTS] Estadísticas de casos:', casesStats);
 
     // Próximas citas (próximos 7 días)
     const upcomingAppointments = await this.prisma.appointment.count({
@@ -97,7 +103,7 @@ export class ReportsService {
       casesByStatus[stat.status] = stat._count.status;
     });
 
-    return {
+    const result = {
       tasks: {
         total: totalTasks,
         byStatus: tasksByStatus,
@@ -111,5 +117,8 @@ export class ReportsService {
         upcoming: upcomingAppointments
       }
     };
+
+    console.log('[REPORTS] Resultado final:', result);
+    return result;
   }
 } 
