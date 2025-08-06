@@ -49,6 +49,9 @@ COPY --from=builder /app/dist ./dist
 # (Opcional) Copia plantillas si las usas en tiempo de ejecución
 COPY --from=builder /app/src/invoices/templates ./dist/invoices/templates
 
+# Copia scripts necesarios
+COPY backend/scripts ./scripts
+
 # Variable de entorno para Puppeteer (importante para Alpine)
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
