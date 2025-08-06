@@ -313,6 +313,91 @@ async function main() {
       },
     });
 
+    // Crear configuraciones del sitio (SiteConfig) públicas
+    await prisma.siteConfig.upsert({
+      where: { key: 'SITE_TITLE' },
+      update: {},
+      create: {
+        key: 'SITE_TITLE',
+        value: 'Despacho Legal Pérez & García',
+        category: 'general',
+        isPublic: true,
+        description: 'Título principal del sitio web',
+      },
+    });
+
+    await prisma.siteConfig.upsert({
+      where: { key: 'SITE_DESCRIPTION' },
+      update: {},
+      create: {
+        key: 'SITE_DESCRIPTION',
+        value: 'Sistema integral de gestión legal para despachos de abogados',
+        category: 'general',
+        isPublic: true,
+        description: 'Descripción del sitio web',
+      },
+    });
+
+    await prisma.siteConfig.upsert({
+      where: { key: 'SITE_LOGO' },
+      update: {},
+      create: {
+        key: 'SITE_LOGO',
+        value: '/images/logo.png',
+        category: 'branding',
+        isPublic: true,
+        description: 'URL del logo del sitio',
+      },
+    });
+
+    await prisma.siteConfig.upsert({
+      where: { key: 'SITE_FAVICON' },
+      update: {},
+      create: {
+        key: 'SITE_FAVICON',
+        value: '/images/favicon.ico',
+        category: 'branding',
+        isPublic: true,
+        description: 'URL del favicon',
+      },
+    });
+
+    await prisma.siteConfig.upsert({
+      where: { key: 'SITE_THEME_COLOR' },
+      update: {},
+      create: {
+        key: 'SITE_THEME_COLOR',
+        value: '#2563eb',
+        category: 'branding',
+        isPublic: true,
+        description: 'Color principal del tema',
+      },
+    });
+
+    await prisma.siteConfig.upsert({
+      where: { key: 'SITE_FOOTER_TEXT' },
+      update: {},
+      create: {
+        key: 'SITE_FOOTER_TEXT',
+        value: '© 2024 Despacho Legal. Todos los derechos reservados.',
+        category: 'general',
+        isPublic: true,
+        description: 'Texto del pie de página',
+      },
+    });
+
+    await prisma.siteConfig.upsert({
+      where: { key: 'SITE_MAINTENANCE_MODE' },
+      update: {},
+      create: {
+        key: 'SITE_MAINTENANCE_MODE',
+        value: 'false',
+        category: 'system',
+        isPublic: true,
+        description: 'Modo mantenimiento activado',
+      },
+    });
+
     console.log('✅ Seed completado exitosamente!');
     console.log('📋 Datos creados:');
     console.log('- 1 Administrador');
@@ -323,6 +408,7 @@ async function main() {
     console.log('- 4 Parámetros de contacto');
     console.log('- 4 Parámetros legales');
     console.log('- 6 Parámetros de servicios');
+    console.log('- 7 Configuraciones del sitio');
     
     console.log('🔑 Credenciales de acceso:');
     console.log('Admin: admin@despacho.com / password123');
