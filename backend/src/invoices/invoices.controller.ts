@@ -250,6 +250,85 @@ export class InvoicesController {
     }
   }
 
+  @Get(':id/test-pdf')
+  @Roles(Role.ABOGADO, Role.ADMIN, Role.CLIENTE)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ 
+    summary: 'Test PDF simple',
+    description: 'Genera un PDF de prueba simple'
+  })
+  async testPdf(@Param('id') id: string, @Res() res: Response, @Request() req) {
+    try {
+      console.log('[TEST-PDF] Generando PDF de prueba...');
+      
+      // Crear un PDF simple de prueba
+      const { PDFDocument, rgb } = await import('pdf-lib');
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([595, 842]); // A4
+      const { width, height } = page.getSize();
+
+      // Configurar fuentes
+      const helveticaFont = await pdfDoc.embedFont('Helvetica');
+      const helveticaBoldFont = await pdfDoc.embedFont('Helvetica-Bold');
+
+      // Título
+      page.drawText('TEST PDF', {
+        x: 50,
+        y: height - 60,
+        size: 24,
+        font: helveticaBoldFont,
+        color: rgb(0, 0.2, 0.4)
+      });
+
+      // Información de prueba
+      page.drawText(`Factura ID: ${id}`, {
+        x: 50,
+        y: height - 100,
+        size: 14,
+        font: helveticaFont,
+        color: rgb(0.2, 0.2, 0.2)
+      });
+
+      page.drawText(`Usuario: ${req.user.name}`, {
+        x: 50,
+        y: height - 120,
+        size: 14,
+        font: helveticaFont,
+        color: rgb(0.2, 0.2, 0.2)
+      });
+
+      page.drawText(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, {
+        x: 50,
+        y: height - 140,
+        size: 14,
+        font: helveticaFont,
+        color: rgb(0.2, 0.2, 0.2)
+      });
+
+      // Generar el PDF
+      const pdfBytes = await pdfDoc.save();
+      const pdfBuffer = Buffer.from(pdfBytes);
+      
+      console.log(`[TEST-PDF] PDF generado. Tamaño: ${pdfBuffer.length} bytes`);
+      console.log(`[TEST-PDF] Header: ${pdfBuffer.slice(0, 4).toString('ascii')}`);
+
+      // Configurar headers y enviar respuesta
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Length': pdfBuffer.length.toString(),
+        'Content-Disposition': `attachment; filename="test_${id}.pdf"`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      });
+      
+      res.end(pdfBuffer);
+      console.log('[TEST-PDF] PDF enviado exitosamente');
+      
+    } catch (error) {
+      console.error('[TEST-PDF] Error:', error);
+      res.status(500).send({ error: (error as any).message || error.toString() });
+    }
+  }
+
   @Get(':id')
   @Roles(Role.CLIENTE, Role.ADMIN, Role.ABOGADO)
   @UseGuards(JwtAuthGuard, RolesGuard)

@@ -17265,7 +17265,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InvoicesController = void 0;
 const common_1 = __webpack_require__(2);
@@ -17399,6 +17399,61 @@ let InvoicesController = class InvoicesController {
         catch (error) {
             console.error('[PDF-QR] Error al generar PDF con QR:', error);
             console.error('[PDF-QR] Stack trace:', error.stack);
+            res.status(500).send({ error: error.message || error.toString() });
+        }
+    }
+    async testPdf(id, res, req) {
+        try {
+            console.log('[TEST-PDF] Generando PDF de prueba...');
+            const { PDFDocument, rgb } = await Promise.resolve().then(() => __importStar(__webpack_require__(102)));
+            const pdfDoc = await PDFDocument.create();
+            const page = pdfDoc.addPage([595, 842]);
+            const { width, height } = page.getSize();
+            const helveticaFont = await pdfDoc.embedFont('Helvetica');
+            const helveticaBoldFont = await pdfDoc.embedFont('Helvetica-Bold');
+            page.drawText('TEST PDF', {
+                x: 50,
+                y: height - 60,
+                size: 24,
+                font: helveticaBoldFont,
+                color: rgb(0, 0.2, 0.4)
+            });
+            page.drawText(`Factura ID: ${id}`, {
+                x: 50,
+                y: height - 100,
+                size: 14,
+                font: helveticaFont,
+                color: rgb(0.2, 0.2, 0.2)
+            });
+            page.drawText(`Usuario: ${req.user.name}`, {
+                x: 50,
+                y: height - 120,
+                size: 14,
+                font: helveticaFont,
+                color: rgb(0.2, 0.2, 0.2)
+            });
+            page.drawText(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, {
+                x: 50,
+                y: height - 140,
+                size: 14,
+                font: helveticaFont,
+                color: rgb(0.2, 0.2, 0.2)
+            });
+            const pdfBytes = await pdfDoc.save();
+            const pdfBuffer = Buffer.from(pdfBytes);
+            console.log(`[TEST-PDF] PDF generado. Tamaño: ${pdfBuffer.length} bytes`);
+            console.log(`[TEST-PDF] Header: ${pdfBuffer.slice(0, 4).toString('ascii')}`);
+            res.set({
+                'Content-Type': 'application/pdf',
+                'Content-Length': pdfBuffer.length.toString(),
+                'Content-Disposition': `attachment; filename="test_${id}.pdf"`,
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
+            });
+            res.end(pdfBuffer);
+            console.log('[TEST-PDF] PDF enviado exitosamente');
+        }
+        catch (error) {
+            console.error('[TEST-PDF] Error:', error);
             res.status(500).send({ error: error.message || error.toString() });
         }
     }
@@ -17719,6 +17774,21 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], InvoicesController.prototype, "getInvoicePdfWithQR", null);
 __decorate([
+    (0, common_1.Get)(':id/test-pdf'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ABOGADO, client_1.Role.ADMIN, client_1.Role.CLIENTE),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Test PDF simple',
+        description: 'Genera un PDF de prueba simple'
+    }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Res)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_f = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _f : Object, Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "testPdf", null);
+__decorate([
     (0, common_1.Get)(':id'),
     (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ADMIN, client_1.Role.ABOGADO),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
@@ -17798,7 +17868,7 @@ __decorate([
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, typeof (_f = typeof update_invoice_dto_1.UpdateInvoiceDto !== "undefined" && update_invoice_dto_1.UpdateInvoiceDto) === "function" ? _f : Object, Object]),
+    __metadata("design:paramtypes", [String, typeof (_g = typeof update_invoice_dto_1.UpdateInvoiceDto !== "undefined" && update_invoice_dto_1.UpdateInvoiceDto) === "function" ? _g : Object, Object]),
     __metadata("design:returntype", Promise)
 ], InvoicesController.prototype, "update", null);
 __decorate([
@@ -18020,7 +18090,7 @@ __decorate([
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, typeof (_g = typeof create_invoice_dto_1.CreateInvoiceDto !== "undefined" && create_invoice_dto_1.CreateInvoiceDto) === "function" ? _g : Object, Object]),
+    __metadata("design:paramtypes", [String, typeof (_h = typeof create_invoice_dto_1.CreateInvoiceDto !== "undefined" && create_invoice_dto_1.CreateInvoiceDto) === "function" ? _h : Object, Object]),
     __metadata("design:returntype", void 0)
 ], InvoicesController.prototype, "createInvoiceForClient", null);
 __decorate([
@@ -18038,7 +18108,7 @@ __decorate([
     __param(2, (0, common_1.Body)()),
     __param(3, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, typeof (_h = typeof update_invoice_dto_1.UpdateInvoiceDto !== "undefined" && update_invoice_dto_1.UpdateInvoiceDto) === "function" ? _h : Object, Object]),
+    __metadata("design:paramtypes", [String, String, typeof (_j = typeof update_invoice_dto_1.UpdateInvoiceDto !== "undefined" && update_invoice_dto_1.UpdateInvoiceDto) === "function" ? _j : Object, Object]),
     __metadata("design:returntype", void 0)
 ], InvoicesController.prototype, "updateInvoiceForClient", null);
 __decorate([
@@ -18056,7 +18126,7 @@ __decorate([
     __param(2, (0, common_1.Body)()),
     __param(3, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, typeof (_j = typeof update_invoice_dto_1.UpdateInvoiceDto !== "undefined" && update_invoice_dto_1.UpdateInvoiceDto) === "function" ? _j : Object, Object]),
+    __metadata("design:paramtypes", [String, String, typeof (_k = typeof update_invoice_dto_1.UpdateInvoiceDto !== "undefined" && update_invoice_dto_1.UpdateInvoiceDto) === "function" ? _k : Object, Object]),
     __metadata("design:returntype", void 0)
 ], InvoicesController.prototype, "patchInvoiceForClient", null);
 __decorate([
@@ -18226,7 +18296,7 @@ __decorate([
     __param(1, (0, common_1.Res)()),
     __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, typeof (_k = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _k : Object, Object]),
+    __metadata("design:paramtypes", [String, typeof (_l = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _l : Object, Object]),
     __metadata("design:returntype", Promise)
 ], InvoicesController.prototype, "downloadSignedPdf", null);
 __decorate([
@@ -18312,7 +18382,7 @@ __decorate([
     __param(1, (0, common_1.Res)()),
     __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, typeof (_l = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _l : Object, Object]),
+    __metadata("design:paramtypes", [String, typeof (_m = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _m : Object, Object]),
     __metadata("design:returntype", Promise)
 ], InvoicesController.prototype, "getInvoiceHtmlPreview", null);
 exports.InvoicesController = InvoicesController = __decorate([
