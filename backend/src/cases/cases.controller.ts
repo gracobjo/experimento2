@@ -140,6 +140,59 @@ export class CasesController {
     return this.casesService.getCasesStats(req.user.id, req.user.role);
   }
 
+  @Get('debug/all')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ 
+    summary: 'Debug todos los casos',
+    description: 'Endpoint de debug para verificar todos los casos en la base de datos'
+  })
+  @ApiResponse({ status: 200, description: 'Lista de todos los casos' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  async debugAllCases(@Request() req) {
+    console.log('[DEBUG_CASES] Usuario:', req.user.id, req.user.role);
+    
+    try {
+      // Obtener todos los casos sin filtros
+      const allCases = await this.prisma.expediente.findMany({
+        include: {
+          lawyer: {
+            select: { id: true, name: true, email: true }
+          },
+          client: {
+            select: { id: true, user: { select: { id: true, name: true, email: true } } }
+          }
+        }
+      });
+      
+      console.log('[DEBUG_CASES] Total de casos en BD:', allCases.length);
+      console.log('[DEBUG_CASES] Casos:', allCases.map(c => ({
+        id: c.id,
+        title: c.title,
+        status: c.status,
+        lawyerId: c.lawyerId,
+        lawyerName: c.lawyer?.name,
+        clientId: c.clientId,
+        clientName: c.client?.user?.name
+      })));
+      
+      return {
+        totalCases: allCases.length,
+        cases: allCases.map(c => ({
+          id: c.id,
+          title: c.title,
+          status: c.status,
+          lawyerId: c.lawyerId,
+          lawyerName: c.lawyer?.name,
+          clientId: c.clientId,
+          clientName: c.client?.user?.name
+        }))
+      };
+    } catch (error) {
+      console.error('[DEBUG_CASES] Error:', error);
+      return { error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
   @Get('recent')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ 

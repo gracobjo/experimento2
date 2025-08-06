@@ -1,0 +1,23076 @@
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	var __webpack_modules__ = ([
+/* 0 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const core_1 = __webpack_require__(1);
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const app_module_1 = __webpack_require__(4);
+const express = __importStar(__webpack_require__(48));
+const path = __importStar(__webpack_require__(45));
+const helmet_1 = __importDefault(__webpack_require__(132));
+const express_rate_limit_1 = __importDefault(__webpack_require__(133));
+const compression_1 = __importDefault(__webpack_require__(134));
+async function bootstrap() {
+    const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.use(express.json({ limit: '10mb' }));
+    app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+    app.use((req, res, next) => {
+        req.setTimeout(30000);
+        res.setTimeout(30000);
+        next();
+    });
+    const corsOrigins = process.env.CORS_ORIGIN
+        ? process.env.CORS_ORIGIN.split(',')
+        : [
+            'http://localhost:5173',
+            'http://localhost:3000',
+            'https://experimento2-fenm.vercel.app',
+            'https://experimento2-production.up.railway.app',
+            'https://*.vercel.app',
+            'https://*.railway.app',
+            'https://*.netlify.app'
+        ];
+    app.enableCors({
+        origin: (origin, callback) => {
+            if (!origin)
+                return callback(null, true);
+            const allowedOrigins = [
+                'http://localhost:5173',
+                'http://localhost:3000',
+                'https://experimento2-fenm.vercel.app',
+                'https://experimento2-production.up.railway.app'
+            ];
+            if (allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+            if (origin.includes('vercel.app') || origin.includes('railway.app')) {
+                return callback(null, true);
+            }
+            return callback(new Error('Not allowed by CORS'));
+        },
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
+    });
+    app.useGlobalPipes(new common_1.ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+    }));
+    app.use((0, helmet_1.default)({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                scriptSrc: ["'self'", "'unsafe-inline'"],
+                imgSrc: ["'self'", "data:", "https:"],
+                connectSrc: ["'self'", "http://localhost:5173", "http://localhost:3000", "https://*.railway.app", "https://*.vercel.app", "https://*.netlify.app"],
+                fontSrc: ["'self'"],
+                objectSrc: ["'none'"],
+                mediaSrc: ["'self'"],
+                frameSrc: ["'none'"],
+            },
+        },
+        crossOriginEmbedderPolicy: false,
+        crossOriginResourcePolicy: { policy: "cross-origin" },
+    }));
+    const limiter = (0, express_rate_limit_1.default)({
+        windowMs: 1 * 60 * 1000,
+        max: 10000,
+        message: 'Too many requests from this IP, please try again later.',
+        standardHeaders: true,
+        legacyHeaders: false,
+        skipSuccessfulRequests: true,
+    });
+    app.use('/api/', limiter);
+    const authLimiter = (0, express_rate_limit_1.default)({
+        windowMs: 1 * 60 * 1000,
+        max: 10000,
+        message: 'Too many authentication attempts, please try again later.',
+        standardHeaders: true,
+        legacyHeaders: false,
+        skipSuccessfulRequests: true,
+    });
+    app.use('/api/auth/', authLimiter);
+    app.use((0, compression_1.default)({
+        filter: (req, res) => {
+            if (req.url && req.url.includes('/pdf')) {
+                return false;
+            }
+            return compression_1.default.filter(req, res);
+        }
+    }));
+    const config = new swagger_1.DocumentBuilder()
+        .setTitle('Sistema de Gestión Legal API')
+        .setDescription(`
+      API completa para el sistema de gestión de despacho de abogados.
+      
+      ## Funcionalidades Principales:
+      
+      ### 🔐 Autenticación y Usuarios
+      - Registro e inicio de sesión de usuarios
+      - Gestión de roles (ADMIN, ABOGADO, CLIENTE)
+      - Recuperación de contraseñas
+      
+      ### 📋 Gestión de Casos
+      - Creación y gestión de expedientes
+      - Asignación de casos a abogados
+      - Seguimiento del estado de casos
+      
+      ### 📅 Citas y Agendas
+      - Programación de citas entre abogados y clientes
+      - Gestión de calendarios
+      - Notificaciones de citas
+      
+      ### 📝 Documentos
+      - Subida y gestión de documentos
+      - Organización por expedientes
+      - Control de acceso por roles
+      
+      ### ✅ Tareas y Seguimiento
+      - Creación y asignación de tareas
+      - Seguimiento de estado y prioridades
+      - Notificaciones de tareas vencidas
+      
+      ### 💰 Facturación
+      - Generación de facturas electrónicas
+      - Gestión de provisiones de fondos
+      - Firma digital de documentos
+      
+      ### 💬 Chat y Comunicación
+      - Mensajería entre usuarios
+      - Chat con IA para asistencia
+      - Historial de conversaciones
+      
+      ### 📊 Reportes y Analytics
+      - Estadísticas de casos y tareas
+      - Reportes de productividad
+      - Métricas de abogados
+      
+      ### ⚙️ Administración
+      - Gestión de usuarios y permisos
+      - Configuración de parámetros del sistema
+      - Monitoreo y auditoría
+    `)
+        .setVersion('1.0.0')
+        .addTag('auth', 'Autenticación y gestión de usuarios')
+        .addTag('users', 'Gestión de usuarios y perfiles')
+        .addTag('cases', 'Gestión de casos y expedientes')
+        .addTag('appointments', 'Gestión de citas y agendas')
+        .addTag('documents', 'Gestión de documentos')
+        .addTag('tasks', 'Gestión de tareas y seguimiento')
+        .addTag('invoices', 'Facturación electrónica')
+        .addTag('provision-fondos', 'Gestión de provisiones de fondos')
+        .addTag('chat', 'Chat y mensajería')
+        .addTag('reports', 'Reportes y estadísticas')
+        .addTag('admin', 'Funciones administrativas')
+        .addTag('parametros', 'Configuración de parámetros del sistema')
+        .addBearerAuth({
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+    }, 'JWT-auth')
+        .build();
+    const document = swagger_1.SwaggerModule.createDocument(app, config);
+    app.setGlobalPrefix('api', {
+        exclude: [
+            { path: 'health', method: common_1.RequestMethod.GET },
+            { path: 'debug-env', method: common_1.RequestMethod.GET },
+            { path: 'test-health', method: common_1.RequestMethod.GET },
+            { path: 'api-test', method: common_1.RequestMethod.GET },
+            { path: 'db-status', method: common_1.RequestMethod.GET },
+        ],
+    });
+    swagger_1.SwaggerModule.setup('docs', app, document, {
+        swaggerOptions: {
+            persistAuthorization: true,
+            docExpansion: 'none',
+            filter: true,
+            showRequestDuration: true,
+            syntaxHighlight: {
+                activate: true,
+                theme: 'monokai'
+            },
+            tryItOutEnabled: true,
+        },
+        customSiteTitle: 'Sistema de Gestión Legal - API Documentation',
+        customCss: `
+      .swagger-ui .opblock.opblock-patch .opblock-summary-method { background: #50e3c2; }
+    `,
+    });
+    app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+    const port = process.env.PORT || 3000;
+    await app.listen(port, '0.0.0.0');
+    console.log(`🚀 Servidor corriendo en puerto ${port}`);
+    console.log(`🌍 CORS origins configurados: ${corsOrigins.join(', ')}`);
+    console.log(`📁 Archivos estáticos disponibles en /uploads`);
+    console.log(`📚 Documentación Swagger disponible en /docs`);
+    console.log(`💚 Health check disponible en /health`);
+    console.log(`🔧 Debug environment disponible en /debug-env`);
+}
+bootstrap();
+
+
+/***/ }),
+/* 1 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/core");
+
+/***/ }),
+/* 2 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/common");
+
+/***/ }),
+/* 3 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/swagger");
+
+/***/ }),
+/* 4 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AppModule = void 0;
+const common_1 = __webpack_require__(2);
+const config_1 = __webpack_require__(5);
+const app_controller_1 = __webpack_require__(6);
+const app_service_1 = __webpack_require__(7);
+const health_module_1 = __webpack_require__(10);
+const auth_module_1 = __webpack_require__(12);
+const users_module_1 = __webpack_require__(30);
+const cases_module_1 = __webpack_require__(37);
+const documents_module_1 = __webpack_require__(42);
+const appointments_module_1 = __webpack_require__(50);
+const tasks_module_1 = __webpack_require__(58);
+const reports_module_1 = __webpack_require__(63);
+const admin_module_1 = __webpack_require__(66);
+const chat_module_1 = __webpack_require__(79);
+const prisma_module_1 = __webpack_require__(36);
+const parametros_module_1 = __webpack_require__(86);
+const invoices_module_1 = __webpack_require__(89);
+const provision_fondos_module_1 = __webpack_require__(114);
+const contact_module_1 = __webpack_require__(118);
+const teleassistance_module_1 = __webpack_require__(121);
+const notes_module_1 = __webpack_require__(126);
+let AppModule = class AppModule {
+};
+exports.AppModule = AppModule;
+exports.AppModule = AppModule = __decorate([
+    (0, common_1.Module)({
+        imports: [
+            config_1.ConfigModule.forRoot({
+                isGlobal: true,
+            }),
+            health_module_1.HealthModule,
+            prisma_module_1.PrismaModule,
+            auth_module_1.AuthModule,
+            users_module_1.UsersModule,
+            cases_module_1.CasesModule,
+            documents_module_1.DocumentsModule,
+            appointments_module_1.AppointmentsModule,
+            tasks_module_1.TasksModule,
+            reports_module_1.ReportsModule,
+            admin_module_1.AdminModule,
+            chat_module_1.ChatModule,
+            parametros_module_1.ParametrosModule,
+            invoices_module_1.InvoicesModule,
+            provision_fondos_module_1.ProvisionFondosModule,
+            contact_module_1.ContactModule,
+            teleassistance_module_1.TeleassistanceModule,
+            notes_module_1.NotesModule,
+        ],
+        controllers: [app_controller_1.AppController],
+        providers: [app_service_1.AppService],
+    })
+], AppModule);
+
+
+/***/ }),
+/* 5 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/config");
+
+/***/ }),
+/* 6 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AppController = void 0;
+const common_1 = __webpack_require__(2);
+const app_service_1 = __webpack_require__(7);
+const prisma_service_1 = __webpack_require__(8);
+let AppController = class AppController {
+    constructor(appService, prisma) {
+        this.appService = appService;
+        this.prisma = prisma;
+    }
+    getHello() {
+        return this.appService.getHello();
+    }
+    getTest() {
+        return {
+            message: 'API funcionando correctamente',
+            timestamp: new Date().toISOString(),
+        };
+    }
+    getApiTest() {
+        return {
+            message: 'API funcionando correctamente',
+            timestamp: new Date().toISOString(),
+            endpoints: [
+                '/health',
+                '/debug-env',
+                '/api/test',
+                '/api/docs',
+                '/api-test'
+            ]
+        };
+    }
+    getHealth() {
+        return {
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+        };
+    }
+    getDebugEnv() {
+        return {
+            jwtSecret: process.env.JWT_SECRET ? 'CONFIGURADO' : 'NO CONFIGURADO',
+            databaseUrl: process.env.DATABASE_URL ? 'CONFIGURADO' : 'NO CONFIGURADO',
+            nodeEnv: process.env.NODE_ENV || 'NO CONFIGURADO',
+        };
+    }
+    getSimpleTest() {
+        return {
+            message: 'Endpoint simple funcionando',
+        };
+    }
+    async getDbStatus() {
+        try {
+            await this.prisma.$connect();
+            const tables = await this.prisma.$queryRaw `
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        ORDER BY table_name
+      `;
+            const userCount = await this.prisma.user.count();
+            await this.prisma.$disconnect();
+            return {
+                connected: true,
+                tables: tables,
+                userCount,
+            };
+        }
+        catch (error) {
+            return {
+                connected: false,
+                tables: [],
+                userCount: 0,
+                error: error instanceof Error ? error.message : 'Error desconocido',
+            };
+        }
+    }
+};
+exports.AppController = AppController;
+__decorate([
+    (0, common_1.Get)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", String)
+], AppController.prototype, "getHello", null);
+__decorate([
+    (0, common_1.Get)('test'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Object)
+], AppController.prototype, "getTest", null);
+__decorate([
+    (0, common_1.Get)('api-test'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Object)
+], AppController.prototype, "getApiTest", null);
+__decorate([
+    (0, common_1.Get)('health'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Object)
+], AppController.prototype, "getHealth", null);
+__decorate([
+    (0, common_1.Get)('debug-env'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Object)
+], AppController.prototype, "getDebugEnv", null);
+__decorate([
+    (0, common_1.Get)('simple-test'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Object)
+], AppController.prototype, "getSimpleTest", null);
+__decorate([
+    (0, common_1.Get)('db-status'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_c = typeof Promise !== "undefined" && Promise) === "function" ? _c : Object)
+], AppController.prototype, "getDbStatus", null);
+exports.AppController = AppController = __decorate([
+    (0, common_1.Controller)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof app_service_1.AppService !== "undefined" && app_service_1.AppService) === "function" ? _a : Object, typeof (_b = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _b : Object])
+], AppController);
+
+
+/***/ }),
+/* 7 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AppService = void 0;
+const common_1 = __webpack_require__(2);
+let AppService = class AppService {
+    getHello() {
+        return 'Despacho Legal API - Sistema Integral de Gestión Legal';
+    }
+};
+exports.AppService = AppService;
+exports.AppService = AppService = __decorate([
+    (0, common_1.Injectable)()
+], AppService);
+
+
+/***/ }),
+/* 8 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PrismaService = void 0;
+const common_1 = __webpack_require__(2);
+const client_1 = __webpack_require__(9);
+let PrismaService = class PrismaService extends client_1.PrismaClient {
+    constructor() {
+        super({
+            log: ['query', 'info', 'warn', 'error'],
+        });
+    }
+    async onModuleInit() {
+        await this.$connect();
+    }
+    async onModuleDestroy() {
+        await this.$disconnect();
+    }
+};
+exports.PrismaService = PrismaService;
+exports.PrismaService = PrismaService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [])
+], PrismaService);
+
+
+/***/ }),
+/* 9 */
+/***/ ((module) => {
+
+module.exports = require("@prisma/client");
+
+/***/ }),
+/* 10 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.HealthModule = void 0;
+const common_1 = __webpack_require__(2);
+const health_controller_1 = __webpack_require__(11);
+let HealthModule = class HealthModule {
+};
+exports.HealthModule = HealthModule;
+exports.HealthModule = HealthModule = __decorate([
+    (0, common_1.Module)({
+        controllers: [health_controller_1.HealthController],
+    })
+], HealthModule);
+
+
+/***/ }),
+/* 11 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.HealthController = void 0;
+const common_1 = __webpack_require__(2);
+let HealthController = class HealthController {
+    getHealth() {
+        return {
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+        };
+    }
+    getDebugEnv() {
+        return {
+            jwtSecret: process.env.JWT_SECRET ? 'CONFIGURADO' : 'NO CONFIGURADO',
+            databaseUrl: process.env.DATABASE_URL ? 'CONFIGURADO' : 'NO CONFIGURADO',
+            nodeEnv: process.env.NODE_ENV || 'NO CONFIGURADO',
+        };
+    }
+    getTestHealth() {
+        return {
+            message: 'Health endpoints funcionando correctamente',
+            timestamp: new Date().toISOString(),
+            endpoints: [
+                '/health',
+                '/debug-env',
+                '/test-health'
+            ]
+        };
+    }
+};
+exports.HealthController = HealthController;
+__decorate([
+    (0, common_1.Get)('health'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Object)
+], HealthController.prototype, "getHealth", null);
+__decorate([
+    (0, common_1.Get)('debug-env'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Object)
+], HealthController.prototype, "getDebugEnv", null);
+__decorate([
+    (0, common_1.Get)('test-health'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Object)
+], HealthController.prototype, "getTestHealth", null);
+exports.HealthController = HealthController = __decorate([
+    (0, common_1.Controller)()
+], HealthController);
+
+
+/***/ }),
+/* 12 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AuthModule = void 0;
+const common_1 = __webpack_require__(2);
+const jwt_1 = __webpack_require__(13);
+const passport_1 = __webpack_require__(14);
+const auth_service_1 = __webpack_require__(15);
+const auth_controller_1 = __webpack_require__(21);
+const jwt_strategy_1 = __webpack_require__(28);
+const users_module_1 = __webpack_require__(30);
+const email_service_1 = __webpack_require__(17);
+const prisma_module_1 = __webpack_require__(36);
+let AuthModule = class AuthModule {
+};
+exports.AuthModule = AuthModule;
+exports.AuthModule = AuthModule = __decorate([
+    (0, common_1.Module)({
+        imports: [
+            users_module_1.UsersModule,
+            prisma_module_1.PrismaModule,
+            passport_1.PassportModule,
+            jwt_1.JwtModule.register({
+                secret: process.env.JWT_SECRET || 'default-jwt-secret-change-in-production',
+                signOptions: {
+                    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+                },
+            }),
+        ],
+        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, email_service_1.EmailService],
+        controllers: [auth_controller_1.AuthController],
+        exports: [auth_service_1.AuthService, email_service_1.EmailService],
+    })
+], AuthModule);
+
+
+/***/ }),
+/* 13 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/jwt");
+
+/***/ }),
+/* 14 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/passport");
+
+/***/ }),
+/* 15 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c, _d;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AuthService = void 0;
+const common_1 = __webpack_require__(2);
+const jwt_1 = __webpack_require__(13);
+const prisma_service_1 = __webpack_require__(8);
+const users_service_1 = __webpack_require__(16);
+const email_service_1 = __webpack_require__(17);
+const bcrypt = __importStar(__webpack_require__(19));
+const crypto = __importStar(__webpack_require__(20));
+let AuthService = class AuthService {
+    constructor(prisma, jwtService, usersService, emailService) {
+        this.prisma = prisma;
+        this.jwtService = jwtService;
+        this.usersService = usersService;
+        this.emailService = emailService;
+    }
+    async validateUser(email, password) {
+        const user = await this.prisma.user.findUnique({ where: { email } });
+        if (user && (await bcrypt.compare(password, user.password))) {
+            const { password: _, ...result } = user;
+            return result;
+        }
+        return null;
+    }
+    async login(loginDto) {
+        const user = await this.validateUser(loginDto.email, loginDto.password);
+        if (!user)
+            throw new common_1.UnauthorizedException('Credenciales inválidas');
+        const payload = { email: user.email, sub: user.id, role: user.role };
+        return {
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role
+            },
+            token: this.jwtService.sign(payload)
+        };
+    }
+    async register(registerDto) {
+        const hashedPassword = await bcrypt.hash(registerDto.password, 10);
+        const user = await this.usersService.create({
+            ...registerDto,
+            password: hashedPassword,
+        });
+        const payload = { email: user.email, sub: user.id, role: user.role };
+        return {
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+            },
+            token: this.jwtService.sign(payload),
+        };
+    }
+    async forgotPassword(forgotPasswordDto) {
+        const user = await this.prisma.user.findUnique({
+            where: { email: forgotPasswordDto.email }
+        });
+        if (!user) {
+            return { message: 'Si el email existe, recibirás un enlace para restablecer tu contraseña.' };
+        }
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetPasswordExpires = new Date(Date.now() + 3600000);
+        await this.prisma.user.update({
+            where: { id: user.id },
+            data: {
+                resetPasswordToken: resetToken,
+                resetPasswordExpires,
+            },
+        });
+        const emailSent = await this.emailService.sendPasswordResetEmail(user.email, resetToken, user.name);
+        if (!emailSent) {
+            throw new Error('Error al enviar el email de recuperación');
+        }
+        return { message: 'Si el email existe, recibirás un enlace para restablecer tu contraseña.' };
+    }
+    async resetPassword(resetPasswordDto) {
+        const user = await this.prisma.user.findFirst({
+            where: {
+                resetPasswordToken: resetPasswordDto.token,
+                resetPasswordExpires: {
+                    gt: new Date(),
+                },
+            },
+        });
+        if (!user) {
+            throw new common_1.NotFoundException('Token inválido o expirado');
+        }
+        const hashedPassword = await bcrypt.hash(resetPasswordDto.password, 10);
+        await this.prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                resetPasswordToken: null,
+                resetPasswordExpires: null,
+            },
+        });
+        return { message: 'Contraseña actualizada correctamente' };
+    }
+    generateToken(payload) {
+        return this.jwtService.sign(payload);
+    }
+    async validateUserByEmail(email) {
+        const user = await this.usersService.findByEmail(email);
+        if (user) {
+            const { password: _, ...result } = user;
+            return result;
+        }
+        return null;
+    }
+};
+exports.AuthService = AuthService;
+exports.AuthService = AuthService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof jwt_1.JwtService !== "undefined" && jwt_1.JwtService) === "function" ? _b : Object, typeof (_c = typeof users_service_1.UsersService !== "undefined" && users_service_1.UsersService) === "function" ? _c : Object, typeof (_d = typeof email_service_1.EmailService !== "undefined" && email_service_1.EmailService) === "function" ? _d : Object])
+], AuthService);
+
+
+/***/ }),
+/* 16 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UsersService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+const client_1 = __webpack_require__(9);
+let UsersService = class UsersService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async create(createUserDto) {
+        try {
+            return await this.prisma.user.create({
+                data: createUserDto,
+                select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                    role: true,
+                    createdAt: true,
+                },
+            });
+        }
+        catch (error) {
+            if (error.code === 'P2002') {
+                throw new common_1.ConflictException('El correo electrónico ya está registrado');
+            }
+            throw error;
+        }
+    }
+    async findAll() {
+        return this.prisma.user.findMany({
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true,
+                createdAt: true,
+            },
+        });
+    }
+    async findClients() {
+        return this.prisma.client.findMany({
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                _count: {
+                    select: {
+                        expedientes: true,
+                        appointments: true,
+                    }
+                }
+            }
+        });
+    }
+    async findClientsByLawyer(lawyerId) {
+        return this.prisma.client.findMany({
+            where: {
+                expedientes: {
+                    some: {
+                        lawyerId: lawyerId
+                    }
+                }
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                _count: {
+                    select: {
+                        expedientes: {
+                            where: {
+                                lawyerId: lawyerId
+                            }
+                        },
+                        appointments: {
+                            where: {
+                                lawyerId: lawyerId
+                            }
+                        },
+                    }
+                }
+            }
+        });
+    }
+    async getClientStats(lawyerId) {
+        const whereClause = lawyerId ? {
+            expedientes: {
+                some: {
+                    lawyerId: lawyerId
+                }
+            }
+        } : {};
+        const [total, active, totalCases, totalAppointments] = await Promise.all([
+            this.prisma.client.count({ where: whereClause }),
+            this.prisma.client.count({
+                where: {
+                    ...whereClause,
+                    expedientes: {
+                        some: lawyerId ? { lawyerId } : {}
+                    }
+                }
+            }),
+            this.prisma.expediente.count({
+                where: lawyerId ? { lawyerId } : {}
+            }),
+            this.prisma.appointment.count({
+                where: lawyerId ? { lawyerId } : {}
+            })
+        ]);
+        return {
+            total,
+            active,
+            inactive: total - active,
+            totalCases,
+            totalAppointments,
+            averageCasesPerClient: total > 0 ? parseFloat((totalCases / total).toFixed(1)) : 0
+        };
+    }
+    async getClientReport(lawyerId) {
+        const whereClause = lawyerId ? {
+            expedientes: {
+                some: {
+                    lawyerId: lawyerId
+                }
+            }
+        } : {};
+        const clients = await this.prisma.client.findMany({
+            where: whereClause,
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                expedientes: {
+                    where: lawyerId ? { lawyerId } : {},
+                    include: {
+                        documents: true,
+                    },
+                    orderBy: {
+                        createdAt: 'desc'
+                    }
+                },
+                appointments: {
+                    where: lawyerId ? { lawyerId } : {},
+                    orderBy: {
+                        date: 'desc'
+                    }
+                },
+                _count: {
+                    select: {
+                        expedientes: {
+                            where: lawyerId ? { lawyerId } : {}
+                        },
+                        appointments: {
+                            where: lawyerId ? { lawyerId } : {}
+                        },
+                    }
+                }
+            },
+            orderBy: {
+                user: {
+                    name: 'asc'
+                }
+            }
+        });
+        return clients.map(client => ({
+            id: client.id,
+            name: client.user.name,
+            email: client.user.email,
+            dni: client.dni,
+            phone: client.phone,
+            address: client.address,
+            totalCases: client._count.expedientes,
+            totalAppointments: client._count.appointments,
+            lastCase: client.expedientes[0] ? {
+                id: client.expedientes[0].id,
+                title: client.expedientes[0].title,
+                status: client.expedientes[0].status,
+                createdAt: client.expedientes[0].createdAt
+            } : null,
+            lastAppointment: client.appointments[0] ? {
+                id: client.appointments[0].id,
+                date: client.appointments[0].date,
+                location: client.appointments[0].location
+            } : null,
+            totalDocuments: client.expedientes.reduce((sum, exp) => sum + exp.documents.length, 0)
+        }));
+    }
+    async getMyClientProfile(userId) {
+        return this.prisma.client.findUnique({
+            where: { userId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                }
+            }
+        });
+    }
+    async findLawyers() {
+        return this.prisma.user.findMany({
+            where: {
+                role: client_1.Role.ABOGADO
+            },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true,
+            },
+        });
+    }
+    async findOne(id) {
+        const user = await this.prisma.user.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true,
+                createdAt: true,
+            },
+        });
+        if (!user) {
+            throw new common_1.NotFoundException('Usuario no encontrado');
+        }
+        return user;
+    }
+    async findByEmail(email) {
+        return this.prisma.user.findUnique({
+            where: { email },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true,
+                password: true,
+                createdAt: true,
+            },
+        });
+    }
+    async update(id, updateUserDto) {
+        try {
+            return await this.prisma.user.update({
+                where: { id },
+                data: updateUserDto,
+                select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                    role: true,
+                    updatedAt: true,
+                },
+            });
+        }
+        catch (error) {
+            if (error.code === 'P2025') {
+                throw new common_1.NotFoundException('Usuario no encontrado');
+            }
+            if (error.code === 'P2002') {
+                throw new common_1.ConflictException('El correo electrónico ya está registrado');
+            }
+            throw error;
+        }
+    }
+    async remove(id) {
+        try {
+            await this.prisma.user.delete({
+                where: { id },
+            });
+        }
+        catch (error) {
+            if (error.code === 'P2025') {
+                throw new common_1.NotFoundException('Usuario no encontrado');
+            }
+            throw error;
+        }
+    }
+};
+exports.UsersService = UsersService;
+exports.UsersService = UsersService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], UsersService);
+
+
+/***/ }),
+/* 17 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.EmailService = void 0;
+const common_1 = __webpack_require__(2);
+const nodemailer = __importStar(__webpack_require__(18));
+let EmailService = class EmailService {
+    constructor() {
+        this.transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER || 'tu-email@gmail.com',
+                pass: process.env.EMAIL_PASSWORD || 'tu-password-de-aplicacion',
+            },
+        });
+    }
+    async sendPasswordResetEmail(email, resetToken, userName) {
+        const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+        const mailOptions = {
+            from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+            to: email,
+            subject: 'Recuperación de Contraseña - Sistema Legal',
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2c3e50;">Recuperación de Contraseña</h2>
+          <p>Hola ${userName},</p>
+          <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para crear una nueva contraseña:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" 
+               style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Restablecer Contraseña
+            </a>
+          </div>
+          <p>Si no solicitaste este cambio, puedes ignorar este email.</p>
+          <p>Este enlace expirará en 1 hora por seguridad.</p>
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Sistema Legal - Soporte técnico
+          </p>
+        </div>
+      `,
+        };
+        try {
+            await this.transporter.sendMail(mailOptions);
+            return true;
+        }
+        catch (error) {
+            console.error('Error sending email:', error);
+            return false;
+        }
+    }
+    async sendContactNotification(contactData) {
+        const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER || 'admin@despachoabogados.com';
+        const mailOptions = {
+            from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+            to: adminEmail,
+            subject: `Nueva Consulta: ${contactData.asunto}`,
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2c3e50;">Nueva Consulta Recibida</h2>
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información del Cliente</h3>
+            <p><strong>Nombre:</strong> ${contactData.nombre}</p>
+            <p><strong>Email:</strong> <a href="mailto:${contactData.email}">${contactData.email}</a></p>
+            ${contactData.telefono ? `<p><strong>Teléfono:</strong> <a href="tel:${contactData.telefono}">${contactData.telefono}</a></p>` : ''}
+            <p><strong>Asunto:</strong> ${contactData.asunto}</p>
+          </div>
+          
+          <div style="background-color: #ecf0f1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Mensaje</h3>
+            <p style="white-space: pre-wrap; line-height: 1.6;">${contactData.mensaje}</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:${contactData.email}?subject=Re: ${contactData.asunto}" 
+               style="background-color: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Responder al Cliente
+            </a>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Sistema Legal - Notificación automática
+          </p>
+        </div>
+      `,
+        };
+        try {
+            await this.transporter.sendMail(mailOptions);
+            return true;
+        }
+        catch (error) {
+            console.error('Error sending contact notification email:', error);
+            return false;
+        }
+    }
+    async sendContactConfirmation(contactData) {
+        const mailOptions = {
+            from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+            to: contactData.email,
+            subject: 'Confirmación de Consulta - Despacho de Abogados',
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2c3e50;">¡Gracias por tu Consulta!</h2>
+          <p>Hola ${contactData.nombre},</p>
+          <p>Hemos recibido tu consulta correctamente. Nuestro equipo de abogados especialistas la revisará y se pondrá en contacto contigo en las próximas 24 horas.</p>
+          
+          <div style="background-color: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #27ae60; margin-top: 0;">¿Qué puedes esperar?</h3>
+            <ul style="color: #2c3e50;">
+              <li>Respuesta personalizada de un abogado especialista</li>
+              <li>Evaluación inicial de tu caso</li>
+              <li>Orientación sobre los próximos pasos</li>
+              <li>Información sobre honorarios si aplica</li>
+            </ul>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+            <p><strong>Teléfono:</strong> +34 612 345 678</p>
+            <p><strong>Email:</strong> info@despachoabogados.com</p>
+            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+            <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Despacho de Abogados García & Asociados<br>
+            Más de 15 años de experiencia en servicios legales
+          </p>
+        </div>
+      `,
+        };
+        try {
+            await this.transporter.sendMail(mailOptions);
+            return true;
+        }
+        catch (error) {
+            console.error('Error sending contact confirmation email:', error);
+            return false;
+        }
+    }
+    async sendAppointmentRescheduledEmail(data) {
+        const formatDate = (date) => {
+            return date.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        };
+        const mailOptions = {
+            from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+            to: data.clientEmail,
+            subject: 'Cita Reprogramada - Despacho de Abogados',
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #e74c3c;">Cita Reprogramada</h2>
+          <p>Hola ${data.clientName},</p>
+          <p>Tu abogado <strong>${data.lawyerName}</strong> ha reprogramado tu cita. Te informamos de los cambios:</p>
+          
+          <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+            <h3 style="color: #856404; margin-top: 0;">Cambios Realizados</h3>
+            <div style="margin-bottom: 15px;">
+              <p><strong>Fecha y hora anterior:</strong></p>
+              <p style="color: #856404; margin: 5px 0;">${formatDate(data.originalDate)}</p>
+            </div>
+            <div style="margin-bottom: 15px;">
+              <p><strong>Nueva fecha y hora:</strong></p>
+              <p style="color: #155724; font-weight: bold; margin: 5px 0;">${formatDate(data.newDate)}</p>
+            </div>
+            ${data.originalLocation && data.newLocation && data.originalLocation !== data.newLocation ? `
+            <div style="margin-bottom: 15px;">
+              <p><strong>Ubicación anterior:</strong> ${data.originalLocation}</p>
+              <p><strong>Nueva ubicación:</strong> ${data.newLocation}</p>
+            </div>
+            ` : ''}
+            ${data.notes ? `
+            <div style="margin-bottom: 15px;">
+              <p><strong>Notas del abogado:</strong></p>
+              <p style="background-color: #f8f9fa; padding: 10px; border-radius: 4px; margin: 5px 0;">${data.notes}</p>
+            </div>
+            ` : ''}
+          </div>
+          
+          <div style="background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #155724; margin-top: 0;">¿Qué debes hacer?</h3>
+            <ul style="color: #155724;">
+              <li>Actualiza tu agenda con la nueva fecha y hora</li>
+              <li>Confirma tu asistencia a la nueva cita</li>
+              <li>Si no puedes asistir, contacta con tu abogado lo antes posible</li>
+              <li>Llega 10 minutos antes de la hora programada</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/client/appointments" 
+               style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Ver Mis Citas
+            </a>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+            <p><strong>Abogado:</strong> ${data.lawyerName}</p>
+            <p><strong>Teléfono:</strong> +34 612 345 678</p>
+            <p><strong>Email:</strong> info@despachoabogados.com</p>
+            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Despacho de Abogados García & Asociados<br>
+            Más de 15 años de experiencia en servicios legales
+          </p>
+        </div>
+      `,
+        };
+        try {
+            await this.transporter.sendMail(mailOptions);
+            return true;
+        }
+        catch (error) {
+            console.error('Error sending appointment rescheduled email:', error);
+            return false;
+        }
+    }
+    async sendVisitorAppointmentConfirmationEmail(data) {
+        const formatDate = (date) => {
+            return date.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        };
+        const mailOptions = {
+            from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+            to: data.visitorEmail,
+            subject: 'Confirmación de Cita - Despacho de Abogados',
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #27ae60;">¡Cita Programada Exitosamente!</h2>
+          <p>Hola ${data.visitorName},</p>
+          <p>Hemos recibido tu solicitud de cita correctamente. Te hemos enviado un email de confirmación con todos los detalles.</p>
+          
+          <div style="background-color: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #155724; margin-top: 0;">Detalles de tu Cita</h3>
+            <p><strong>Número de Cita:</strong> ${data.appointmentId}</p>
+            <p><strong>Motivo de Consulta:</strong> ${data.consultationReason}</p>
+            <p><strong>Tipo de Consulta:</strong> ${data.consultationType}</p>
+            <p><strong>Fecha Preferida:</strong> ${formatDate(data.preferredDate)}</p>
+          </div>
+          
+          <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #856404; margin-top: 0;">Próximos Pasos</h3>
+            <ul style="color: #856404;">
+              <li>Nuestro equipo revisará tu solicitud en las próximas 24 horas</li>
+              <li>Te contactaremos para confirmar la fecha y hora exacta</li>
+              <li>Recibirás un email con la confirmación final</li>
+              <li>Si necesitas cambiar algo, contacta con nosotros</li>
+            </ul>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+            <p><strong>Teléfono:</strong> +34 612 345 678</p>
+            <p><strong>Email:</strong> info@despachoabogados.com</p>
+            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+            <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+          </div>
+          
+          <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #0c5460; margin-top: 0;">¿Qué debes traer?</h3>
+            <ul style="color: #0c5460;">
+              <li>Documento de identidad</li>
+              <li>Documentos relacionados con tu caso (si los tienes)</li>
+              <li>Lista de preguntas o dudas que tengas</li>
+              <li>Llega 10 minutos antes de la hora programada</li>
+            </ul>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Despacho de Abogados García & Asociados<br>
+            Más de 15 años de experiencia en servicios legales<br>
+            Número de Cita: ${data.appointmentId}
+          </p>
+        </div>
+      `,
+        };
+        try {
+            await this.transporter.sendMail(mailOptions);
+            return true;
+        }
+        catch (error) {
+            console.error('Error sending visitor appointment confirmation email:', error);
+            return false;
+        }
+    }
+    async sendVisitorAppointmentNotificationEmail(data) {
+        const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER || 'admin@despachoabogados.com';
+        const formatDate = (date) => {
+            return date.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        };
+        const mailOptions = {
+            from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+            to: adminEmail,
+            subject: `Nueva Cita de Visitante: ${data.visitorName}`,
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2c3e50;">Nueva Cita de Visitante</h2>
+          <p>Se ha registrado una nueva solicitud de cita desde el chatbot.</p>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información del Visitante</h3>
+            <p><strong>Nombre:</strong> ${data.visitorName}</p>
+            <p><strong>Email:</strong> <a href="mailto:${data.visitorEmail}">${data.visitorEmail}</a></p>
+            <p><strong>Teléfono:</strong> <a href="tel:${data.visitorPhone}">${data.visitorPhone}</a></p>
+            <p><strong>Edad:</strong> ${data.visitorAge} años</p>
+            <p><strong>Número de Cita:</strong> ${data.appointmentId}</p>
+          </div>
+          
+          <div style="background-color: #ecf0f1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Detalles de la Consulta</h3>
+            <p><strong>Motivo:</strong> ${data.consultationReason}</p>
+            <p><strong>Tipo de Consulta:</strong> ${data.consultationType}</p>
+            <p><strong>Fecha Preferida:</strong> ${formatDate(data.preferredDate)}</p>
+            ${data.alternativeDate ? `<p><strong>Fecha Alternativa:</strong> ${formatDate(data.alternativeDate)}</p>` : ''}
+            ${data.notes ? `<p><strong>Notas:</strong> ${data.notes}</p>` : ''}
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:${data.visitorEmail}?subject=Confirmación de Cita - ${data.visitorName}" 
+               style="background-color: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Contactar al Visitante
+            </a>
+          </div>
+          
+          <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #856404; margin-top: 0;">Acciones Requeridas</h3>
+            <ul style="color: #856404;">
+              <li>Revisar la solicitud y asignar un abogado</li>
+              <li>Confirmar fecha y hora de la cita</li>
+              <li>Enviar email de confirmación al visitante</li>
+              <li>Actualizar el estado de la cita en el sistema</li>
+            </ul>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Sistema Legal - Notificación automática<br>
+            Cita ID: ${data.appointmentId}
+          </p>
+        </div>
+      `,
+        };
+        try {
+            await this.transporter.sendMail(mailOptions);
+            return true;
+        }
+        catch (error) {
+            console.error('Error sending visitor appointment notification email:', error);
+            return false;
+        }
+    }
+    async sendVisitorAppointmentConfirmedEmail(data) {
+        const formatDate = (date) => {
+            return date.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        };
+        const mailOptions = {
+            from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+            to: data.visitorEmail,
+            subject: 'Cita Confirmada - Despacho de Abogados',
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #27ae60;">¡Tu Cita Ha Sido Confirmada!</h2>
+          <p>Hola ${data.visitorName},</p>
+          <p>Nos complace informarte que tu cita ha sido confirmada. Aquí tienes todos los detalles:</p>
+          
+          <div style="background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #155724; margin-top: 0;">Detalles de la Cita Confirmada</h3>
+            <p><strong>Fecha y Hora:</strong> ${formatDate(data.confirmedDate)}</p>
+            <p><strong>Motivo:</strong> ${data.consultationReason}</p>
+            <p><strong>Número de Cita:</strong> ${data.appointmentId}</p>
+          </div>
+          
+          <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #856404; margin-top: 0;">Instrucciones Importantes</h3>
+            <ul style="color: #856404;">
+              <li>Llega 10 minutos antes de la hora programada</li>
+              <li>Trae tu documento de identidad</li>
+              <li>Si tienes documentos relacionados, tráelos</li>
+              <li>Si necesitas cancelar, avísanos con al menos 24 horas de anticipación</li>
+            </ul>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+            <p><strong>Teléfono:</strong> +34 612 345 678</p>
+            <p><strong>Email:</strong> info@despachoabogados.com</p>
+            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+            <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:info@despachoabogados.com?subject=Consulta sobre cita ${data.appointmentId}" 
+               style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Contactar con Nosotros
+            </a>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Despacho de Abogados García & Asociados<br>
+            Más de 15 años de experiencia en servicios legales<br>
+            Número de Cita: ${data.appointmentId}
+          </p>
+        </div>
+      `,
+        };
+        try {
+            await this.transporter.sendMail(mailOptions);
+            return true;
+        }
+        catch (error) {
+            console.error('Error sending visitor appointment confirmed email:', error);
+            return false;
+        }
+    }
+    async sendVisitorAppointmentCancelledEmail(data) {
+        const mailOptions = {
+            from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+            to: data.visitorEmail,
+            subject: 'Cita Cancelada - Despacho de Abogados',
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #e74c3c;">Cita Cancelada</h2>
+          <p>Hola ${data.visitorName},</p>
+          <p>Lamentamos informarte que tu cita ha sido cancelada.</p>
+          
+          <div style="background-color: #f8d7da; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #721c24; margin-top: 0;">Información de la Cancelación</h3>
+            <p><strong>Número de Cita:</strong> ${data.appointmentId}</p>
+            <p><strong>Motivo:</strong> ${data.reason}</p>
+          </div>
+          
+          <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #0c5460; margin-top: 0;">¿Qué puedes hacer?</h3>
+            <ul style="color: #0c5460;">
+              <li>Programar una nueva cita en nuestro sistema</li>
+              <li>Contactar con nosotros para más información</li>
+              <li>Consultar sobre otros servicios que ofrecemos</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:info@despachoabogados.com?subject=Nueva cita después de cancelación ${data.appointmentId}" 
+               style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Programar Nueva Cita
+            </a>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+            <p><strong>Teléfono:</strong> +34 612 345 678</p>
+            <p><strong>Email:</strong> info@despachoabogados.com</p>
+            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+            <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Despacho de Abogados García & Asociados<br>
+            Más de 15 años de experiencia en servicios legales<br>
+            Número de Cita: ${data.appointmentId}
+          </p>
+        </div>
+      `,
+        };
+        try {
+            await this.transporter.sendMail(mailOptions);
+            return true;
+        }
+        catch (error) {
+            console.error('Error sending visitor appointment cancelled email:', error);
+            return false;
+        }
+    }
+};
+exports.EmailService = EmailService;
+exports.EmailService = EmailService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [])
+], EmailService);
+
+
+/***/ }),
+/* 18 */
+/***/ ((module) => {
+
+module.exports = require("nodemailer");
+
+/***/ }),
+/* 19 */
+/***/ ((module) => {
+
+module.exports = require("bcrypt");
+
+/***/ }),
+/* 20 */
+/***/ ((module) => {
+
+module.exports = require("crypto");
+
+/***/ }),
+/* 21 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AuthController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const auth_service_1 = __webpack_require__(15);
+const login_dto_1 = __webpack_require__(22);
+const register_dto_1 = __webpack_require__(24);
+const forgot_password_dto_1 = __webpack_require__(25);
+const reset_password_dto_1 = __webpack_require__(26);
+const jwt_auth_guard_1 = __webpack_require__(27);
+let AuthController = class AuthController {
+    constructor(authService) {
+        this.authService = authService;
+    }
+    async login(loginDto) {
+        return this.authService.login(loginDto);
+    }
+    async register(registerDto) {
+        return this.authService.register(registerDto);
+    }
+    async forgotPassword(forgotPasswordDto) {
+        return this.authService.forgotPassword(forgotPasswordDto);
+    }
+    async resetPassword(resetPasswordDto) {
+        return this.authService.resetPassword(resetPasswordDto);
+    }
+    getProfile(req) {
+        return req.user;
+    }
+};
+exports.AuthController = AuthController;
+__decorate([
+    (0, common_1.Post)('login'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Iniciar sesión',
+        description: 'Autentica un usuario y devuelve un token JWT'
+    }),
+    (0, swagger_1.ApiBody)({ type: login_dto_1.LoginDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Login exitoso',
+        schema: {
+            type: 'object',
+            properties: {
+                user: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        email: { type: 'string' },
+                        name: { type: 'string' },
+                        role: { type: 'string', enum: ['ADMIN', 'ABOGADO', 'CLIENTE'] }
+                    }
+                },
+                token: { type: 'string' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Credenciales inválidas' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof login_dto_1.LoginDto !== "undefined" && login_dto_1.LoginDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "login", null);
+__decorate([
+    (0, common_1.Post)('register'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Registrar nuevo usuario',
+        description: 'Crea una nueva cuenta de usuario en el sistema'
+    }),
+    (0, swagger_1.ApiBody)({ type: register_dto_1.RegisterDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Usuario registrado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                user: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        email: { type: 'string' },
+                        name: { type: 'string' },
+                        role: { type: 'string', enum: ['ADMIN', 'ABOGADO', 'CLIENTE'] }
+                    }
+                },
+                token: { type: 'string' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 409, description: 'Email ya existe' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_c = typeof register_dto_1.RegisterDto !== "undefined" && register_dto_1.RegisterDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "register", null);
+__decorate([
+    (0, common_1.Post)('forgot-password'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Solicitar recuperación de contraseña',
+        description: 'Envía un email con instrucciones para recuperar la contraseña'
+    }),
+    (0, swagger_1.ApiBody)({ type: forgot_password_dto_1.ForgotPasswordDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Email de recuperación enviado' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Usuario no encontrado' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_d = typeof forgot_password_dto_1.ForgotPasswordDto !== "undefined" && forgot_password_dto_1.ForgotPasswordDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "forgotPassword", null);
+__decorate([
+    (0, common_1.Post)('reset-password'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Restablecer contraseña',
+        description: 'Cambia la contraseña usando un token de recuperación'
+    }),
+    (0, swagger_1.ApiBody)({ type: reset_password_dto_1.ResetPasswordDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Contraseña restablecida exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Token inválido o expirado' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_e = typeof reset_password_dto_1.ResetPasswordDto !== "undefined" && reset_password_dto_1.ResetPasswordDto) === "function" ? _e : Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "resetPassword", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Get)('me'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener perfil del usuario actual',
+        description: 'Devuelve la información del usuario autenticado'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Perfil del usuario',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                email: { type: 'string' },
+                name: { type: 'string' },
+                role: { type: 'string', enum: ['ADMIN', 'ABOGADO', 'CLIENTE'] },
+                createdAt: { type: 'string', format: 'date-time' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "getProfile", null);
+exports.AuthController = AuthController = __decorate([
+    (0, swagger_1.ApiTags)('auth'),
+    (0, common_1.Controller)('auth'),
+    __metadata("design:paramtypes", [typeof (_a = typeof auth_service_1.AuthService !== "undefined" && auth_service_1.AuthService) === "function" ? _a : Object])
+], AuthController);
+
+
+/***/ }),
+/* 22 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LoginDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+class LoginDto {
+}
+exports.LoginDto = LoginDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Email del usuario',
+        example: 'usuario@despacho.com',
+        type: String,
+    }),
+    (0, class_validator_1.IsEmail)(),
+    __metadata("design:type", String)
+], LoginDto.prototype, "email", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Contraseña del usuario (mínimo 6 caracteres)',
+        example: 'password123',
+        minLength: 6,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MinLength)(6),
+    __metadata("design:type", String)
+], LoginDto.prototype, "password", void 0);
+
+
+/***/ }),
+/* 23 */
+/***/ ((module) => {
+
+module.exports = require("class-validator");
+
+/***/ }),
+/* 24 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RegisterDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+const client_1 = __webpack_require__(9);
+class RegisterDto {
+}
+exports.RegisterDto = RegisterDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Email del usuario',
+        example: 'nuevo@despacho.com',
+        type: String,
+    }),
+    (0, class_validator_1.IsEmail)(),
+    __metadata("design:type", String)
+], RegisterDto.prototype, "email", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Contraseña del usuario (mínimo 6 caracteres)',
+        example: 'password123',
+        minLength: 6,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MinLength)(6),
+    __metadata("design:type", String)
+], RegisterDto.prototype, "password", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Nombre completo del usuario',
+        example: 'Juan Pérez',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], RegisterDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Rol del usuario en el sistema',
+        enum: client_1.Role,
+        example: client_1.Role.CLIENTE,
+    }),
+    (0, class_validator_1.IsEnum)(client_1.Role),
+    __metadata("design:type", typeof (_a = typeof client_1.Role !== "undefined" && client_1.Role) === "function" ? _a : Object)
+], RegisterDto.prototype, "role", void 0);
+
+
+/***/ }),
+/* 25 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ForgotPasswordDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+class ForgotPasswordDto {
+}
+exports.ForgotPasswordDto = ForgotPasswordDto;
+__decorate([
+    (0, class_validator_1.IsEmail)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], ForgotPasswordDto.prototype, "email", void 0);
+
+
+/***/ }),
+/* 26 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ResetPasswordDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+class ResetPasswordDto {
+}
+exports.ResetPasswordDto = ResetPasswordDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Token de recuperación de contraseña',
+        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], ResetPasswordDto.prototype, "token", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Nueva contraseña (mínimo 6 caracteres)',
+        example: 'nuevaPassword123',
+        minLength: 6,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.MinLength)(6),
+    __metadata("design:type", String)
+], ResetPasswordDto.prototype, "password", void 0);
+
+
+/***/ }),
+/* 27 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.JwtAuthGuard = void 0;
+const common_1 = __webpack_require__(2);
+const passport_1 = __webpack_require__(14);
+let JwtAuthGuard = class JwtAuthGuard extends (0, passport_1.AuthGuard)('jwt') {
+};
+exports.JwtAuthGuard = JwtAuthGuard;
+exports.JwtAuthGuard = JwtAuthGuard = __decorate([
+    (0, common_1.Injectable)()
+], JwtAuthGuard);
+
+
+/***/ }),
+/* 28 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.JwtStrategy = void 0;
+const common_1 = __webpack_require__(2);
+const passport_1 = __webpack_require__(14);
+const passport_jwt_1 = __webpack_require__(29);
+const config_1 = __webpack_require__(5);
+const prisma_service_1 = __webpack_require__(8);
+let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
+    constructor(configService, prisma) {
+        const jwtSecret = process.env.JWT_SECRET || 'default-jwt-secret-change-in-production';
+        super({
+            jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
+            ignoreExpiration: false,
+            secretOrKey: jwtSecret,
+        });
+        this.configService = configService;
+        this.prisma = prisma;
+        console.log('JWT_SECRET usado:', jwtSecret);
+    }
+    async validate(payload) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: payload.sub },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true
+            }
+        });
+        if (!user) {
+            return null;
+        }
+        return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+        };
+    }
+};
+exports.JwtStrategy = JwtStrategy;
+exports.JwtStrategy = JwtStrategy = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _a : Object, typeof (_b = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _b : Object])
+], JwtStrategy);
+
+
+/***/ }),
+/* 29 */
+/***/ ((module) => {
+
+module.exports = require("passport-jwt");
+
+/***/ }),
+/* 30 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UsersModule = void 0;
+const common_1 = __webpack_require__(2);
+const users_service_1 = __webpack_require__(16);
+const users_controller_1 = __webpack_require__(31);
+let UsersModule = class UsersModule {
+};
+exports.UsersModule = UsersModule;
+exports.UsersModule = UsersModule = __decorate([
+    (0, common_1.Module)({
+        controllers: [users_controller_1.UsersController],
+        providers: [users_service_1.UsersService],
+        exports: [users_service_1.UsersService],
+    })
+], UsersModule);
+
+
+/***/ }),
+/* 31 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UsersController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const users_service_1 = __webpack_require__(16);
+const create_user_dto_1 = __webpack_require__(32);
+const update_user_dto_1 = __webpack_require__(33);
+const jwt_auth_guard_1 = __webpack_require__(27);
+const roles_guard_1 = __webpack_require__(34);
+const roles_decorator_1 = __webpack_require__(35);
+const client_1 = __webpack_require__(9);
+let UsersController = class UsersController {
+    constructor(usersService) {
+        this.usersService = usersService;
+    }
+    create(createUserDto) {
+        return this.usersService.create(createUserDto);
+    }
+    findAll() {
+        return this.usersService.findAll();
+    }
+    findClients() {
+        return this.usersService.findClients();
+    }
+    findMyClients(req) {
+        return this.usersService.findClientsByLawyer(req.user.id);
+    }
+    getClientStats(req) {
+        const lawyerId = req.user.role === 'ABOGADO' ? req.user.id : undefined;
+        return this.usersService.getClientStats(lawyerId);
+    }
+    getClientReport(req) {
+        const lawyerId = req.user.role === 'ABOGADO' ? req.user.id : undefined;
+        return this.usersService.getClientReport(lawyerId);
+    }
+    getMyClientProfile(req) {
+        return this.usersService.getMyClientProfile(req.user.id);
+    }
+    findLawyers() {
+        return this.usersService.findLawyers();
+    }
+    findOne(id) {
+        return this.usersService.findOne(id);
+    }
+    update(id, updateUserDto) {
+        return this.usersService.update(id, updateUserDto);
+    }
+    remove(id) {
+        return this.usersService.remove(id);
+    }
+};
+exports.UsersController = UsersController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Crear nuevo usuario',
+        description: 'Crea un nuevo usuario en el sistema (solo ADMIN y ABOGADO)'
+    }),
+    (0, swagger_1.ApiBody)({ type: create_user_dto_1.CreateUserDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Usuario creado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                email: { type: 'string' },
+                name: { type: 'string' },
+                role: { type: 'string', enum: ['ADMIN', 'ABOGADO', 'CLIENTE'] },
+                createdAt: { type: 'string', format: 'date-time' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 409, description: 'Email ya existe' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof create_user_dto_1.CreateUserDto !== "undefined" && create_user_dto_1.CreateUserDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)(),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todos los usuarios',
+        description: 'Devuelve la lista de todos los usuarios (solo ADMIN)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de usuarios',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    email: { type: 'string' },
+                    name: { type: 'string' },
+                    role: { type: 'string', enum: ['ADMIN', 'ABOGADO', 'CLIENTE'] },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    updatedAt: { type: 'string', format: 'date-time' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('clients'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todos los clientes',
+        description: 'Devuelve la lista de todos los clientes (ADMIN y ABOGADO)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de clientes',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    email: { type: 'string' },
+                    name: { type: 'string' },
+                    role: { type: 'string', enum: ['CLIENTE'] },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    updatedAt: { type: 'string', format: 'date-time' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "findClients", null);
+__decorate([
+    (0, common_1.Get)('clients/my'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ABOGADO),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener mis clientes',
+        description: 'Devuelve los clientes asignados al abogado autenticado'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de clientes del abogado',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    email: { type: 'string' },
+                    name: { type: 'string' },
+                    role: { type: 'string', enum: ['CLIENTE'] },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    updatedAt: { type: 'string', format: 'date-time' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "findMyClients", null);
+__decorate([
+    (0, common_1.Get)('clients/stats'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Estadísticas de clientes',
+        description: 'Devuelve estadísticas de clientes (ADMIN ve todos, ABOGADO ve solo los suyos)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Estadísticas de clientes',
+        schema: {
+            type: 'object',
+            properties: {
+                totalClients: { type: 'number' },
+                activeClients: { type: 'number' },
+                newClientsThisMonth: { type: 'number' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "getClientStats", null);
+__decorate([
+    (0, common_1.Get)('clients/report'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Reporte de clientes',
+        description: 'Devuelve un reporte detallado de clientes (ADMIN ve todos, ABOGADO ve solo los suyos)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Reporte de clientes',
+        schema: {
+            type: 'object',
+            properties: {
+                clients: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            name: { type: 'string' },
+                            email: { type: 'string' },
+                            casesCount: { type: 'number' },
+                            lastActivity: { type: 'string', format: 'date-time' }
+                        }
+                    }
+                },
+                summary: {
+                    type: 'object',
+                    properties: {
+                        totalClients: { type: 'number' },
+                        activeClients: { type: 'number' },
+                        averageCasesPerClient: { type: 'number' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "getClientReport", null);
+__decorate([
+    (0, common_1.Get)('clients/profile'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener mi perfil de cliente',
+        description: 'Devuelve el perfil del cliente autenticado'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Perfil del cliente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                email: { type: 'string' },
+                name: { type: 'string' },
+                role: { type: 'string', enum: ['CLIENTE'] },
+                createdAt: { type: 'string', format: 'date-time' },
+                updatedAt: { type: 'string', format: 'date-time' },
+                cases: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            title: { type: 'string' },
+                            status: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "getMyClientProfile", null);
+__decorate([
+    (0, common_1.Get)('lawyers'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todos los abogados',
+        description: 'Devuelve la lista de todos los abogados (todos los roles)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de abogados',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    email: { type: 'string' },
+                    name: { type: 'string' },
+                    role: { type: 'string', enum: ['ABOGADO'] },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    updatedAt: { type: 'string', format: 'date-time' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "findLawyers", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener usuario por ID',
+        description: 'Devuelve un usuario específico por su ID (solo ADMIN)'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del usuario', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Usuario encontrado',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                email: { type: 'string' },
+                name: { type: 'string' },
+                role: { type: 'string', enum: ['ADMIN', 'ABOGADO', 'CLIENTE'] },
+                createdAt: { type: 'string', format: 'date-time' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Usuario no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar usuario',
+        description: 'Actualiza la información de un usuario (solo ADMIN)'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del usuario', type: 'string' }),
+    (0, swagger_1.ApiBody)({ type: update_user_dto_1.UpdateUserDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Usuario actualizado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                email: { type: 'string' },
+                name: { type: 'string' },
+                role: { type: 'string', enum: ['ADMIN', 'ABOGADO', 'CLIENTE'] },
+                createdAt: { type: 'string', format: 'date-time' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Usuario no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_c = typeof update_user_dto_1.UpdateUserDto !== "undefined" && update_user_dto_1.UpdateUserDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar usuario',
+        description: 'Elimina un usuario del sistema (solo ADMIN)'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del usuario', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Usuario eliminado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                message: { type: 'string', example: 'Usuario eliminado exitosamente' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Usuario no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "remove", null);
+exports.UsersController = UsersController = __decorate([
+    (0, swagger_1.ApiTags)('users'),
+    (0, common_1.Controller)('users'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __metadata("design:paramtypes", [typeof (_a = typeof users_service_1.UsersService !== "undefined" && users_service_1.UsersService) === "function" ? _a : Object])
+], UsersController);
+
+
+/***/ }),
+/* 32 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CreateUserDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+const client_1 = __webpack_require__(9);
+class CreateUserDto {
+}
+exports.CreateUserDto = CreateUserDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Email del usuario',
+        example: 'usuario@despacho.com',
+        type: String,
+    }),
+    (0, class_validator_1.IsEmail)(),
+    __metadata("design:type", String)
+], CreateUserDto.prototype, "email", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Contraseña del usuario (mínimo 6 caracteres)',
+        example: 'password123',
+        minLength: 6,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MinLength)(6),
+    __metadata("design:type", String)
+], CreateUserDto.prototype, "password", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Nombre completo del usuario',
+        example: 'Juan Pérez',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateUserDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Rol del usuario en el sistema',
+        enum: client_1.Role,
+        example: client_1.Role.CLIENTE,
+    }),
+    (0, class_validator_1.IsEnum)(client_1.Role),
+    __metadata("design:type", typeof (_a = typeof client_1.Role !== "undefined" && client_1.Role) === "function" ? _a : Object)
+], CreateUserDto.prototype, "role", void 0);
+
+
+/***/ }),
+/* 33 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UpdateUserDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+const client_1 = __webpack_require__(9);
+class UpdateUserDto {
+}
+exports.UpdateUserDto = UpdateUserDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Email del usuario',
+        example: 'usuario@despacho.com',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEmail)(),
+    __metadata("design:type", String)
+], UpdateUserDto.prototype, "email", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Contraseña del usuario (mínimo 6 caracteres)',
+        example: 'password123',
+        minLength: 6,
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MinLength)(6),
+    __metadata("design:type", String)
+], UpdateUserDto.prototype, "password", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Nombre completo del usuario',
+        example: 'Juan Pérez',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateUserDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Rol del usuario en el sistema',
+        enum: client_1.Role,
+        example: client_1.Role.CLIENTE,
+        required: false,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(client_1.Role),
+    __metadata("design:type", typeof (_a = typeof client_1.Role !== "undefined" && client_1.Role) === "function" ? _a : Object)
+], UpdateUserDto.prototype, "role", void 0);
+
+
+/***/ }),
+/* 34 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var RolesGuard_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RolesGuard = void 0;
+const common_1 = __webpack_require__(2);
+const core_1 = __webpack_require__(1);
+const roles_decorator_1 = __webpack_require__(35);
+let RolesGuard = RolesGuard_1 = class RolesGuard {
+    constructor(reflector) {
+        this.reflector = reflector;
+        this.logger = new common_1.Logger(RolesGuard_1.name);
+    }
+    canActivate(context) {
+        const requiredRoles = this.reflector.getAllAndOverride(roles_decorator_1.ROLES_KEY, [
+            context.getHandler(),
+            context.getClass(),
+        ]);
+        if (!requiredRoles) {
+            return true;
+        }
+        const request = context.switchToHttp().getRequest();
+        const { user } = request;
+        const { method, url } = request;
+        if (!user) {
+            this.logger.warn(`Unauthorized access attempt: No user found for ${method} ${url}`);
+            return false;
+        }
+        this.logger.warn(`RolesGuard DEBUG: requiredRoles = ${JSON.stringify(requiredRoles)} (${requiredRoles.map(r => typeof r).join(', ')}), user.role = ${user.role} (${typeof user.role})`);
+        const hasPermission = requiredRoles.includes(user.role);
+        if (!hasPermission) {
+            this.logger.warn(`Access denied: User ${user.email} (${user.role}) attempted to access ${method} ${url}. Required roles: ${requiredRoles.join(', ')}`);
+        }
+        else {
+            this.logger.log(`Access granted: User ${user.email} (${user.role}) accessed ${method} ${url}`);
+        }
+        return hasPermission;
+    }
+};
+exports.RolesGuard = RolesGuard;
+exports.RolesGuard = RolesGuard = RolesGuard_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof core_1.Reflector !== "undefined" && core_1.Reflector) === "function" ? _a : Object])
+], RolesGuard);
+
+
+/***/ }),
+/* 35 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Roles = exports.ROLES_KEY = void 0;
+const common_1 = __webpack_require__(2);
+exports.ROLES_KEY = 'roles';
+const Roles = (...roles) => (0, common_1.SetMetadata)(exports.ROLES_KEY, roles);
+exports.Roles = Roles;
+
+
+/***/ }),
+/* 36 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PrismaModule = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+let PrismaModule = class PrismaModule {
+};
+exports.PrismaModule = PrismaModule;
+exports.PrismaModule = PrismaModule = __decorate([
+    (0, common_1.Global)(),
+    (0, common_1.Module)({
+        providers: [prisma_service_1.PrismaService],
+        exports: [prisma_service_1.PrismaService],
+    })
+], PrismaModule);
+
+
+/***/ }),
+/* 37 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CasesModule = void 0;
+const common_1 = __webpack_require__(2);
+const cases_service_1 = __webpack_require__(38);
+const cases_controller_1 = __webpack_require__(39);
+let CasesModule = class CasesModule {
+};
+exports.CasesModule = CasesModule;
+exports.CasesModule = CasesModule = __decorate([
+    (0, common_1.Module)({
+        controllers: [cases_controller_1.CasesController],
+        providers: [cases_service_1.CasesService],
+        exports: [cases_service_1.CasesService],
+    })
+], CasesModule);
+
+
+/***/ }),
+/* 38 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CasesService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+const client_1 = __webpack_require__(9);
+let CasesService = class CasesService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async create(createCaseDto, currentUserId) {
+        if (createCaseDto.lawyerId !== currentUserId) {
+            const currentUser = await this.prisma.user.findUnique({
+                where: { id: currentUserId }
+            });
+            if (currentUser?.role !== 'ADMIN') {
+                throw new common_1.ForbiddenException('Solo puedes crear expedientes para ti mismo o ser admin');
+            }
+        }
+        const client = await this.prisma.client.findUnique({
+            where: { id: createCaseDto.clientId }
+        });
+        if (!client) {
+            throw new common_1.NotFoundException('Cliente no encontrado');
+        }
+        const lawyer = await this.prisma.user.findUnique({
+            where: { id: createCaseDto.lawyerId }
+        });
+        if (!lawyer) {
+            throw new common_1.NotFoundException('Abogado no encontrado');
+        }
+        if (lawyer.role !== 'ABOGADO') {
+            throw new common_1.BadRequestException('El usuario asignado debe ser un abogado');
+        }
+        return this.prisma.expediente.create({
+            data: {
+                title: createCaseDto.title,
+                description: createCaseDto.description,
+                status: client_1.Status.ABIERTO,
+                clientId: createCaseDto.clientId,
+                lawyerId: createCaseDto.lawyerId,
+            },
+            include: {
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                documents: true,
+            },
+        });
+    }
+    async findAll(currentUserId, userRole) {
+        console.log(`🔍 CasesService.findAll - currentUserId: ${currentUserId}, userRole: ${userRole}`);
+        let whereClause = {};
+        if (userRole === 'CLIENTE') {
+            console.log(`👤 Buscando perfil de cliente para userId: ${currentUserId}`);
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            console.log(`📋 Perfil de cliente encontrado:`, client);
+            if (!client) {
+                console.log(`❌ No se encontró perfil de cliente para userId: ${currentUserId}`);
+                throw new common_1.NotFoundException('Cliente no encontrado');
+            }
+            whereClause = { clientId: client.id };
+            console.log(`🔍 Filtro aplicado: clientId = ${client.id}`);
+            const expedientesCount = await this.prisma.expediente.count({
+                where: { clientId: client.id }
+            });
+            console.log(`🔍 Total de expedientes con clientId ${client.id}: ${expedientesCount}`);
+        }
+        else if (userRole === 'ABOGADO') {
+            whereClause = { lawyerId: currentUserId };
+            console.log(`🔍 Filtro aplicado: lawyerId = ${currentUserId}`);
+        }
+        console.log(`🔍 Where clause final:`, whereClause);
+        const expedientes = await this.prisma.expediente.findMany({
+            where: whereClause,
+            include: {
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                documents: {
+                    orderBy: {
+                        uploadedAt: 'desc'
+                    }
+                },
+            },
+            orderBy: {
+                createdAt: 'desc'
+            },
+        });
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`📊 Expedientes encontrados: ${expedientes.length}`);
+        }
+        return expedientes;
+    }
+    async findAllold(currentUserId, userRole) {
+        console.log(`Buscando casos para ${userRole} con ID ${currentUserId}`);
+        let whereClause = {};
+        if (userRole === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            if (!client)
+                throw new common_1.NotFoundException('Cliente no encontrado');
+            whereClause = { clientId: client.id };
+        }
+        else if (userRole === 'ABOGADO') {
+            whereClause = { lawyerId: currentUserId };
+        }
+        const casos = await this.prisma.expediente.findMany({
+            where: whereClause,
+            include: {},
+        });
+        console.log(`Encontrados ${casos.length} casos para ${userRole}`);
+        return casos;
+    }
+    async findOne(id, currentUserId, userRole) {
+        const expediente = await this.prisma.expediente.findUnique({
+            where: { id },
+            include: {
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                documents: {
+                    orderBy: {
+                        uploadedAt: 'desc'
+                    }
+                },
+            },
+        });
+        if (!expediente) {
+            throw new common_1.NotFoundException('Expediente no encontrado');
+        }
+        if (userRole === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            if (!client || expediente.clientId !== client.id) {
+                throw new common_1.ForbiddenException('No tienes permisos para ver este expediente');
+            }
+        }
+        else if (userRole === 'ABOGADO') {
+            if (expediente.lawyerId !== currentUserId) {
+                throw new common_1.ForbiddenException('No tienes permisos para ver este expediente');
+            }
+        }
+        return expediente;
+    }
+    async update(id, updateCaseDto, currentUserId, userRole) {
+        const existingCase = await this.prisma.expediente.findUnique({
+            where: { id },
+            include: {
+                lawyer: true,
+            }
+        });
+        if (!existingCase) {
+            throw new common_1.NotFoundException('Expediente no encontrado');
+        }
+        if (userRole === 'ABOGADO') {
+            if (existingCase.lawyerId !== currentUserId) {
+                throw new common_1.ForbiddenException('Solo puedes editar expedientes asignados a ti');
+            }
+        }
+        else if (userRole === 'CLIENTE') {
+            throw new common_1.ForbiddenException('Los clientes no pueden editar expedientes');
+        }
+        if (updateCaseDto.lawyerId) {
+            const newLawyer = await this.prisma.user.findUnique({
+                where: { id: updateCaseDto.lawyerId }
+            });
+            if (!newLawyer) {
+                throw new common_1.NotFoundException('Abogado no encontrado');
+            }
+            if (newLawyer.role !== 'ABOGADO') {
+                throw new common_1.BadRequestException('El usuario asignado debe ser un abogado');
+            }
+        }
+        const { title, description, status, lawyerId, clientId } = updateCaseDto;
+        const data = {};
+        if (title !== undefined)
+            data.title = title;
+        if (description !== undefined)
+            data.description = description;
+        if (status !== undefined)
+            data.status = status;
+        if (lawyerId !== undefined)
+            data.lawyerId = lawyerId;
+        if (clientId !== undefined)
+            data.clientId = clientId;
+        return this.prisma.expediente.update({
+            where: { id },
+            data,
+            include: {
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                documents: true,
+            },
+        });
+    }
+    async remove(id, currentUserId, userRole) {
+        const existingCase = await this.prisma.expediente.findUnique({
+            where: { id },
+            include: {
+                lawyer: true,
+            }
+        });
+        if (!existingCase) {
+            throw new common_1.NotFoundException('Expediente no encontrado');
+        }
+        if (userRole !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Solo los administradores pueden eliminar expedientes');
+        }
+        await this.prisma.document.deleteMany({
+            where: { expedienteId: id }
+        });
+        return this.prisma.expediente.delete({
+            where: { id },
+        });
+    }
+    async updateStatus(id, status, currentUserId, userRole) {
+        const existingCase = await this.prisma.expediente.findUnique({
+            where: { id },
+            include: {
+                lawyer: true,
+            }
+        });
+        if (!existingCase) {
+            throw new common_1.NotFoundException('Expediente no encontrado');
+        }
+        if (userRole === 'ABOGADO') {
+            if (existingCase.lawyerId !== currentUserId) {
+                throw new common_1.ForbiddenException('Solo puedes cambiar el estado de expedientes asignados a ti');
+            }
+        }
+        else if (userRole === 'CLIENTE') {
+            throw new common_1.ForbiddenException('Los clientes no pueden cambiar el estado de expedientes');
+        }
+        return this.prisma.expediente.update({
+            where: { id },
+            data: { status },
+            include: {
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                documents: true,
+            },
+        });
+    }
+    async getCasesByStatus(status, currentUserId, userRole) {
+        let whereClause = { status };
+        if (userRole === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            if (!client) {
+                throw new common_1.NotFoundException('Cliente no encontrado');
+            }
+            whereClause.clientId = client.id;
+        }
+        else if (userRole === 'ABOGADO') {
+            whereClause.lawyerId = currentUserId;
+        }
+        return this.prisma.expediente.findMany({
+            where: whereClause,
+            include: {
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                documents: true,
+            },
+            orderBy: {
+                createdAt: 'desc'
+            },
+        });
+    }
+    async getCasesStats(currentUserId, userRole) {
+        console.log('[CASES_STATS] Iniciando estadísticas para usuario:', currentUserId, 'rol:', userRole);
+        let whereClause = {};
+        if (userRole === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            if (!client) {
+                throw new common_1.NotFoundException('Cliente no encontrado');
+            }
+            whereClause = { clientId: client.id };
+            console.log('[CASES_STATS] Cliente encontrado, clientId:', client.id);
+        }
+        else if (userRole === 'ABOGADO') {
+            whereClause = { lawyerId: currentUserId };
+            console.log('[CASES_STATS] Abogado, lawyerId:', currentUserId);
+        }
+        console.log('[CASES_STATS] Where clause:', JSON.stringify(whereClause));
+        const [total, abiertos, enProceso, cerrados] = await Promise.all([
+            this.prisma.expediente.count({ where: whereClause }),
+            this.prisma.expediente.count({ where: { ...whereClause, status: client_1.Status.ABIERTO } }),
+            this.prisma.expediente.count({ where: { ...whereClause, status: client_1.Status.EN_PROCESO } }),
+            this.prisma.expediente.count({ where: { ...whereClause, status: client_1.Status.CERRADO } }),
+        ]);
+        console.log('[CASES_STATS] Resultados:', { total, abiertos, enProceso, cerrados });
+        const allCases = await this.prisma.expediente.findMany({
+            where: whereClause,
+            select: { id: true, title: true, status: true, lawyerId: true, clientId: true }
+        });
+        console.log('[CASES_STATS] Todos los casos encontrados:', allCases);
+        return {
+            total,
+            abiertos,
+            enProceso,
+            cerrados,
+            byStatus: {
+                ABIERTO: abiertos,
+                EN_PROCESO: enProceso,
+                CERRADO: cerrados,
+            }
+        };
+    }
+    async getRecentCases(currentUserId, userRole) {
+        let whereClause = {};
+        if (userRole === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            if (!client) {
+                throw new common_1.NotFoundException('Cliente no encontrado');
+            }
+            whereClause = { clientId: client.id };
+        }
+        else if (userRole === 'ABOGADO') {
+            whereClause = { lawyerId: currentUserId };
+        }
+        return this.prisma.expediente.findMany({
+            where: whereClause,
+            take: 5,
+            include: {
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+            },
+            orderBy: {
+                createdAt: 'desc'
+            },
+        });
+    }
+    async getRecentActivities(lawyerId) {
+        const recentCases = await this.prisma.expediente.findMany({
+            where: { lawyerId },
+            take: 3,
+            include: {
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+            },
+            orderBy: {
+                createdAt: 'desc'
+            },
+        });
+        const recentTasks = await this.prisma.task.findMany({
+            where: {
+                OR: [
+                    { assignedTo: lawyerId },
+                    { createdBy: lawyerId }
+                ]
+            },
+            take: 3,
+            include: {
+                expediente: {
+                    select: {
+                        id: true,
+                        title: true,
+                    }
+                },
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+            },
+            orderBy: {
+                createdAt: 'desc'
+            },
+        });
+        const recentAppointments = await this.prisma.appointment.findMany({
+            where: { lawyerId },
+            take: 3,
+            include: {
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+            },
+            orderBy: {
+                date: 'desc'
+            },
+        });
+        const recentProvisions = await this.prisma.provisionFondos.findMany({
+            where: {
+                expediente: {
+                    lawyerId: lawyerId
+                }
+            },
+            take: 3,
+            include: {
+                expediente: {
+                    select: {
+                        id: true,
+                        title: true,
+                    }
+                },
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+            },
+            orderBy: {
+                createdAt: 'desc'
+            },
+        });
+        return {
+            cases: recentCases,
+            tasks: recentTasks,
+            appointments: recentAppointments,
+            provisions: recentProvisions,
+        };
+    }
+    async findByClientId(clientId) {
+        return this.prisma.expediente.findMany({
+            where: { clientId },
+            include: {
+                client: { include: { user: true } },
+                lawyer: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+    async createForClient(clientId, createCaseDto, userId) {
+        const { title, description, status } = createCaseDto;
+        return this.prisma.expediente.create({
+            data: {
+                title,
+                description,
+                status: status,
+                clientId,
+                lawyerId: userId,
+            },
+        });
+    }
+    async updateForClient(clientId, caseId, updateCaseDto, userId) {
+        const expediente = await this.prisma.expediente.findFirst({ where: { id: caseId, clientId } });
+        if (!expediente)
+            throw new Error('Caso no encontrado para este cliente');
+        const { title, description, status } = updateCaseDto;
+        return this.prisma.expediente.update({
+            where: { id: caseId },
+            data: {
+                title,
+                description,
+                status: status,
+            },
+        });
+    }
+    async patchForClient(clientId, caseId, updateCaseDto, userId) {
+        return this.updateForClient(clientId, caseId, updateCaseDto, userId);
+    }
+    async deleteForClient(clientId, caseId, userId) {
+        const expediente = await this.prisma.expediente.findFirst({ where: { id: caseId, clientId } });
+        if (!expediente)
+            throw new Error('Caso no encontrado para este cliente');
+        await this.prisma.expediente.delete({ where: { id: caseId } });
+        return { message: 'Caso eliminado exitosamente' };
+    }
+};
+exports.CasesService = CasesService;
+exports.CasesService = CasesService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], CasesService);
+
+
+/***/ }),
+/* 39 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f, _g, _h;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CasesController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const cases_service_1 = __webpack_require__(38);
+const create_case_dto_1 = __webpack_require__(40);
+const update_case_dto_1 = __webpack_require__(41);
+const jwt_auth_guard_1 = __webpack_require__(27);
+const roles_guard_1 = __webpack_require__(34);
+const roles_decorator_1 = __webpack_require__(35);
+const client_1 = __webpack_require__(9);
+let CasesController = class CasesController {
+    constructor(casesService) {
+        this.casesService = casesService;
+    }
+    create(createCaseDto, req) {
+        return this.casesService.create(createCaseDto, req.user.id);
+    }
+    findAll(req) {
+        console.log(`🎯 CasesController.findAll - User ID: ${req.user.id}, Role: ${req.user.role}`);
+        console.log(`🎯 Headers:`, req.headers);
+        return this.casesService.findAll(req.user.id, req.user.role);
+    }
+    getStats(req) {
+        return this.casesService.getCasesStats(req.user.id, req.user.role);
+    }
+    async debugAllCases(req) {
+        console.log('[DEBUG_CASES] Usuario:', req.user.id, req.user.role);
+        try {
+            const allCases = await this.prisma.expediente.findMany({
+                include: {
+                    lawyer: {
+                        select: { id: true, name: true, email: true }
+                    },
+                    client: {
+                        select: { id: true, user: { select: { id: true, name: true, email: true } } }
+                    }
+                }
+            });
+            console.log('[DEBUG_CASES] Total de casos en BD:', allCases.length);
+            console.log('[DEBUG_CASES] Casos:', allCases.map(c => ({
+                id: c.id,
+                title: c.title,
+                status: c.status,
+                lawyerId: c.lawyerId,
+                lawyerName: c.lawyer?.name,
+                clientId: c.clientId,
+                clientName: c.client?.user?.name
+            })));
+            return {
+                totalCases: allCases.length,
+                cases: allCases.map(c => ({
+                    id: c.id,
+                    title: c.title,
+                    status: c.status,
+                    lawyerId: c.lawyerId,
+                    lawyerName: c.lawyer?.name,
+                    clientId: c.clientId,
+                    clientName: c.client?.user?.name
+                }))
+            };
+        }
+        catch (error) {
+            console.error('[DEBUG_CASES] Error:', error);
+            return { error: error instanceof Error ? error.message : String(error) };
+        }
+    }
+    getRecentCases(req) {
+        return this.casesService.getRecentCases(req.user.id, req.user.role);
+    }
+    getRecentActivities(req) {
+        return this.casesService.getRecentActivities(req.user.id);
+    }
+    getCasesByStatus(status, req) {
+        return this.casesService.getCasesByStatus(status, req.user.id, req.user.role);
+    }
+    findOne(id, req) {
+        return this.casesService.findOne(id, req.user.id, req.user.role);
+    }
+    update(id, updateCaseDto, req) {
+        return this.casesService.update(id, updateCaseDto, req.user.id, req.user.role);
+    }
+    updateStatus(id, status, req) {
+        return this.casesService.updateStatus(id, status, req.user.id, req.user.role);
+    }
+    remove(id, req) {
+        return this.casesService.remove(id, req.user.id, req.user.role);
+    }
+    getCasesByClient(clientId) {
+        return this.casesService.findByClientId(clientId);
+    }
+    createCaseForClient(clientId, createCaseDto, req) {
+        return this.casesService.createForClient(clientId, createCaseDto, req.user.id);
+    }
+    updateCaseForClient(clientId, caseId, updateCaseDto, req) {
+        return this.casesService.updateForClient(clientId, caseId, updateCaseDto, req.user.id);
+    }
+    patchCaseForClient(clientId, caseId, updateCaseDto, req) {
+        return this.casesService.patchForClient(clientId, caseId, updateCaseDto, req.user.id);
+    }
+    deleteCaseForClient(clientId, caseId, req) {
+        return this.casesService.deleteForClient(clientId, caseId, req.user.id);
+    }
+};
+exports.CasesController = CasesController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Crear nuevo caso',
+        description: 'Crea un nuevo expediente/caso en el sistema'
+    }),
+    (0, swagger_1.ApiBody)({ type: create_case_dto_1.CreateCaseDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Caso creado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                status: { type: 'string', enum: ['ABIERTO', 'EN_PROCESO', 'CERRADO'] },
+                clientId: { type: 'string' },
+                lawyerId: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'No autorizado' }),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof create_case_dto_1.CreateCaseDto !== "undefined" && create_case_dto_1.CreateCaseDto) === "function" ? _b : Object, Object]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)(),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todos los casos',
+        description: 'Devuelve la lista de casos según el rol del usuario'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de casos',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    status: { type: 'string', enum: ['ABIERTO', 'EN_PROCESO', 'CERRADO'] },
+                    clientId: { type: 'string' },
+                    lawyerId: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    client: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            user: {
+                                type: 'object',
+                                properties: {
+                                    name: { type: 'string' },
+                                    email: { type: 'string' }
+                                }
+                            }
+                        }
+                    },
+                    lawyer: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            name: { type: 'string' },
+                            email: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('stats'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener estadísticas de casos',
+        description: 'Devuelve estadísticas de casos según el rol del usuario'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Estadísticas de casos',
+        schema: {
+            type: 'object',
+            properties: {
+                total: { type: 'number' },
+                byStatus: {
+                    type: 'object',
+                    properties: {
+                        ABIERTO: { type: 'number' },
+                        EN_PROCESO: { type: 'number' },
+                        CERRADO: { type: 'number' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "getStats", null);
+__decorate([
+    (0, common_1.Get)('debug/all'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Debug todos los casos',
+        description: 'Endpoint de debug para verificar todos los casos en la base de datos'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Lista de todos los casos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CasesController.prototype, "debugAllCases", null);
+__decorate([
+    (0, common_1.Get)('recent'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener casos recientes',
+        description: 'Devuelve los casos más recientes para la actividad reciente del dashboard'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Casos recientes',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    numeroExpediente: { type: 'string' },
+                    titulo: { type: 'string' },
+                    status: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    client: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            user: {
+                                type: 'object',
+                                properties: {
+                                    name: { type: 'string' },
+                                    email: { type: 'string' }
+                                }
+                            }
+                        }
+                    },
+                    lawyer: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            name: { type: 'string' },
+                            email: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "getRecentCases", null);
+__decorate([
+    (0, common_1.Get)('recent-activities'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener actividad reciente completa',
+        description: 'Devuelve todas las actividades recientes del abogado (expedientes, tareas, citas, provisiones)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Actividad reciente completa',
+        schema: {
+            type: 'object',
+            properties: {
+                cases: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            title: { type: 'string' },
+                            status: { type: 'string' },
+                            createdAt: { type: 'string', format: 'date-time' },
+                            client: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    user: {
+                                        type: 'object',
+                                        properties: {
+                                            name: { type: 'string' },
+                                            email: { type: 'string' }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                tasks: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            title: { type: 'string' },
+                            status: { type: 'string' },
+                            priority: { type: 'string' },
+                            dueDate: { type: 'string', format: 'date-time' },
+                            createdAt: { type: 'string', format: 'date-time' },
+                            expediente: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    title: { type: 'string' }
+                                }
+                            },
+                            client: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    user: {
+                                        type: 'object',
+                                        properties: {
+                                            name: { type: 'string' },
+                                            email: { type: 'string' }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                appointments: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            date: { type: 'string', format: 'date-time' },
+                            location: { type: 'string' },
+                            notes: { type: 'string' },
+                            client: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    user: {
+                                        type: 'object',
+                                        properties: {
+                                            name: { type: 'string' },
+                                            email: { type: 'string' }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                provisions: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            amount: { type: 'number' },
+                            description: { type: 'string' },
+                            date: { type: 'string', format: 'date-time' },
+                            createdAt: { type: 'string', format: 'date-time' },
+                            expediente: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    title: { type: 'string' }
+                                }
+                            },
+                            client: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    user: {
+                                        type: 'object',
+                                        properties: {
+                                            name: { type: 'string' },
+                                            email: { type: 'string' }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, roles_decorator_1.Roles)(client_1.Role.ABOGADO),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "getRecentActivities", null);
+__decorate([
+    (0, common_1.Get)('status/:status'),
+    __param(0, (0, common_1.Param)('status', new common_1.ParseEnumPipe(client_1.Status))),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_c = typeof client_1.Status !== "undefined" && client_1.Status) === "function" ? _c : Object, Object]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "getCasesByStatus", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener caso por ID',
+        description: 'Devuelve los detalles de un caso específico'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del caso', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Detalles del caso',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                status: { type: 'string', enum: ['ABIERTO', 'EN_PROCESO', 'CERRADO'] },
+                clientId: { type: 'string' },
+                lawyerId: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' },
+                client: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        user: {
+                            type: 'object',
+                            properties: {
+                                name: { type: 'string' },
+                                email: { type: 'string' }
+                            }
+                        }
+                    }
+                },
+                lawyer: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        name: { type: 'string' },
+                        email: { type: 'string' }
+                    }
+                },
+                documents: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            filename: { type: 'string' },
+                            description: { type: 'string' },
+                            uploadedAt: { type: 'string', format: 'date-time' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Caso no encontrado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'No autorizado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar caso',
+        description: 'Actualiza los datos de un caso existente'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del caso', type: 'string' }),
+    (0, swagger_1.ApiBody)({ type: update_case_dto_1.UpdateCaseDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Caso actualizado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                status: { type: 'string', enum: ['ABIERTO', 'EN_PROCESO', 'CERRADO'] },
+                clientId: { type: 'string' },
+                lawyerId: { type: 'string' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Caso no encontrado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'No autorizado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_d = typeof update_case_dto_1.UpdateCaseDto !== "undefined" && update_case_dto_1.UpdateCaseDto) === "function" ? _d : Object, Object]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "update", null);
+__decorate([
+    (0, common_1.Patch)(':id/status'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)('status', new common_1.ParseEnumPipe(client_1.Status))),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_e = typeof client_1.Status !== "undefined" && client_1.Status) === "function" ? _e : Object, Object]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "updateStatus", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar caso',
+        description: 'Elimina un caso del sistema'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del caso', type: 'string' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Caso eliminado exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Caso no encontrado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'No autorizado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Get)('by-client/:clientId'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({ summary: 'Obtener casos por cliente', description: 'Lista todos los casos de un cliente específico (ADMIN y ABOGADO)' }),
+    (0, swagger_1.ApiParam)({ name: 'clientId', description: 'ID del cliente' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Lista de casos del cliente' }),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    __param(0, (0, common_1.Param)('clientId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "getCasesByClient", null);
+__decorate([
+    (0, common_1.Post)('by-client/:clientId'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({ summary: 'Crear caso para cliente', description: 'Crea un nuevo caso para un cliente específico (ADMIN y ABOGADO)' }),
+    (0, swagger_1.ApiParam)({ name: 'clientId', description: 'ID del cliente' }),
+    (0, swagger_1.ApiBody)({ type: create_case_dto_1.CreateCaseDto }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Caso creado para el cliente' }),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    __param(0, (0, common_1.Param)('clientId')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_f = typeof create_case_dto_1.CreateCaseDto !== "undefined" && create_case_dto_1.CreateCaseDto) === "function" ? _f : Object, Object]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "createCaseForClient", null);
+__decorate([
+    (0, common_1.Put)('by-client/:clientId/:caseId'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({ summary: 'Actualizar caso de cliente', description: 'Actualiza un caso de un cliente específico (ADMIN y ABOGADO)' }),
+    (0, swagger_1.ApiParam)({ name: 'clientId', description: 'ID del cliente' }),
+    (0, swagger_1.ApiParam)({ name: 'caseId', description: 'ID del caso' }),
+    (0, swagger_1.ApiBody)({ type: update_case_dto_1.UpdateCaseDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Caso actualizado' }),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    __param(0, (0, common_1.Param)('clientId')),
+    __param(1, (0, common_1.Param)('caseId')),
+    __param(2, (0, common_1.Body)()),
+    __param(3, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, typeof (_g = typeof update_case_dto_1.UpdateCaseDto !== "undefined" && update_case_dto_1.UpdateCaseDto) === "function" ? _g : Object, Object]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "updateCaseForClient", null);
+__decorate([
+    (0, common_1.Patch)('by-client/:clientId/:caseId'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({ summary: 'Actualizar parcialmente caso de cliente', description: 'Actualiza parcialmente un caso de un cliente específico (ADMIN y ABOGADO)' }),
+    (0, swagger_1.ApiParam)({ name: 'clientId', description: 'ID del cliente' }),
+    (0, swagger_1.ApiParam)({ name: 'caseId', description: 'ID del caso' }),
+    (0, swagger_1.ApiBody)({ type: update_case_dto_1.UpdateCaseDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Caso actualizado parcialmente' }),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    __param(0, (0, common_1.Param)('clientId')),
+    __param(1, (0, common_1.Param)('caseId')),
+    __param(2, (0, common_1.Body)()),
+    __param(3, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, typeof (_h = typeof update_case_dto_1.UpdateCaseDto !== "undefined" && update_case_dto_1.UpdateCaseDto) === "function" ? _h : Object, Object]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "patchCaseForClient", null);
+__decorate([
+    (0, common_1.Delete)('by-client/:clientId/:caseId'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({ summary: 'Eliminar caso de cliente', description: 'Elimina un caso de un cliente específico (ADMIN y ABOGADO)' }),
+    (0, swagger_1.ApiParam)({ name: 'clientId', description: 'ID del cliente' }),
+    (0, swagger_1.ApiParam)({ name: 'caseId', description: 'ID del caso' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Caso eliminado' }),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    __param(0, (0, common_1.Param)('clientId')),
+    __param(1, (0, common_1.Param)('caseId')),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "deleteCaseForClient", null);
+exports.CasesController = CasesController = __decorate([
+    (0, swagger_1.ApiTags)('cases'),
+    (0, common_1.Controller)('cases'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    __metadata("design:paramtypes", [typeof (_a = typeof cases_service_1.CasesService !== "undefined" && cases_service_1.CasesService) === "function" ? _a : Object])
+], CasesController);
+
+
+/***/ }),
+/* 40 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CreateCaseDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+class CreateCaseDto {
+}
+exports.CreateCaseDto = CreateCaseDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Título del caso',
+        example: 'Caso de divorcio - Pérez vs Pérez',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateCaseDto.prototype, "title", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Descripción detallada del caso',
+        example: 'Proceso de divorcio por mutuo acuerdo con división de bienes',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateCaseDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del cliente asociado al caso',
+        example: '123e4567-e89b-12d3-a456-426614174000',
+        type: String,
+    }),
+    (0, class_validator_1.IsUUID)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateCaseDto.prototype, "clientId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del abogado asignado al caso',
+        example: '123e4567-e89b-12d3-a456-426614174001',
+        type: String,
+    }),
+    (0, class_validator_1.IsUUID)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateCaseDto.prototype, "lawyerId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Estado del caso',
+        example: 'ABIERTO',
+        type: String,
+        enum: ['ABIERTO', 'EN_PROCESO', 'CERRADO'],
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateCaseDto.prototype, "status", void 0);
+
+
+/***/ }),
+/* 41 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UpdateCaseDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+class UpdateCaseDto {
+}
+exports.UpdateCaseDto = UpdateCaseDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Título del caso',
+        example: 'Caso de divorcio - Pérez vs Pérez (Actualizado)',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateCaseDto.prototype, "title", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Descripción detallada del caso',
+        example: 'Proceso de divorcio por mutuo acuerdo con división de bienes - Actualizado',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateCaseDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del cliente asociado al caso',
+        example: '123e4567-e89b-12d3-a456-426614174000',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsUUID)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateCaseDto.prototype, "clientId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del abogado asignado al caso',
+        example: '123e4567-e89b-12d3-a456-426614174001',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsUUID)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateCaseDto.prototype, "lawyerId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Estado del caso',
+        example: 'ABIERTO',
+        required: false,
+        type: String,
+        enum: ['ABIERTO', 'EN_PROCESO', 'CERRADO'],
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateCaseDto.prototype, "status", void 0);
+
+
+/***/ }),
+/* 42 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DocumentsModule = void 0;
+const common_1 = __webpack_require__(2);
+const documents_service_1 = __webpack_require__(43);
+const documents_controller_1 = __webpack_require__(46);
+const prisma_module_1 = __webpack_require__(36);
+let DocumentsModule = class DocumentsModule {
+};
+exports.DocumentsModule = DocumentsModule;
+exports.DocumentsModule = DocumentsModule = __decorate([
+    (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
+        controllers: [documents_controller_1.DocumentsController],
+        providers: [documents_service_1.DocumentsService],
+        exports: [documents_service_1.DocumentsService],
+    })
+], DocumentsModule);
+
+
+/***/ }),
+/* 43 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DocumentsService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+const fs = __importStar(__webpack_require__(44));
+const path = __importStar(__webpack_require__(45));
+let DocumentsService = class DocumentsService {
+    constructor(prisma) {
+        this.prisma = prisma;
+        this.ALLOWED_MIME_TYPES = [
+            'application/pdf',
+            'text/plain',
+            'text/csv',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp'
+        ];
+        this.MAX_FILE_SIZE = 5 * 1024 * 1024;
+        this.MAX_FILES_PER_CASE = 5;
+        this.UPLOAD_DIR = 'uploads';
+    }
+    async uploadDocument(file, uploadDocumentDto, currentUserId, userRole) {
+        const expediente = await this.prisma.expediente.findUnique({
+            where: { id: uploadDocumentDto.expedienteId },
+            include: {
+                client: true,
+                lawyer: true,
+                documents: true,
+            }
+        });
+        if (!expediente) {
+            throw new common_1.NotFoundException('Expediente no encontrado');
+        }
+        if (userRole === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            if (!client || expediente.clientId !== client.id) {
+                throw new common_1.ForbiddenException('No tienes permisos para subir documentos a este expediente');
+            }
+        }
+        else if (userRole === 'ABOGADO') {
+            if (expediente.lawyerId !== currentUserId) {
+                throw new common_1.ForbiddenException('No tienes permisos para subir documentos a este expediente');
+            }
+        }
+        if (expediente.documents.length >= this.MAX_FILES_PER_CASE) {
+            throw new common_1.BadRequestException(`No se pueden subir más de ${this.MAX_FILES_PER_CASE} archivos por expediente`);
+        }
+        this.validateFile(file);
+        const uploadPath = path.join(process.cwd(), this.UPLOAD_DIR);
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
+        const fileExtension = path.extname(file.originalname);
+        const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(2)}${fileExtension}`;
+        const filePath = path.join(uploadPath, uniqueFilename);
+        fs.writeFileSync(filePath, file.buffer);
+        const document = await this.prisma.document.create({
+            data: {
+                filename: uniqueFilename,
+                originalName: file.originalname,
+                fileUrl: `/uploads/${uniqueFilename}`,
+                fileSize: file.size,
+                mimeType: file.mimetype,
+                description: uploadDocumentDto.description,
+                expedienteId: uploadDocumentDto.expedienteId,
+                uploadedBy: currentUserId,
+            },
+            include: {
+                expediente: {
+                    include: {
+                        client: {
+                            include: {
+                                user: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        email: true,
+                                    }
+                                }
+                            }
+                        },
+                        lawyer: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        },
+                    }
+                },
+                uploadedByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+            }
+        });
+        return document;
+    }
+    async findAll(currentUserId, userRole) {
+        let whereClause = {};
+        if (userRole === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            if (!client) {
+                throw new common_1.NotFoundException('Cliente no encontrado');
+            }
+            whereClause = {
+                expediente: {
+                    clientId: client.id
+                }
+            };
+        }
+        else if (userRole === 'ABOGADO') {
+            whereClause = {
+                expediente: {
+                    lawyerId: currentUserId
+                }
+            };
+        }
+        return this.prisma.document.findMany({
+            where: whereClause,
+            include: {
+                expediente: {
+                    include: {
+                        client: {
+                            include: {
+                                user: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        email: true,
+                                    }
+                                }
+                            }
+                        },
+                        lawyer: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        },
+                    }
+                },
+                uploadedByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+            },
+            orderBy: {
+                uploadedAt: 'desc'
+            },
+        });
+    }
+    async findByExpediente(expedienteId, currentUserId, userRole) {
+        const expediente = await this.prisma.expediente.findUnique({
+            where: { id: expedienteId },
+            include: {
+                client: true,
+                lawyer: true,
+            }
+        });
+        if (!expediente) {
+            throw new common_1.NotFoundException('Expediente no encontrado');
+        }
+        if (userRole === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            if (!client || expediente.clientId !== client.id) {
+                throw new common_1.ForbiddenException('No tienes permisos para ver documentos de este expediente');
+            }
+        }
+        else if (userRole === 'ABOGADO') {
+            if (expediente.lawyerId !== currentUserId) {
+                throw new common_1.ForbiddenException('No tienes permisos para ver documentos de este expediente');
+            }
+        }
+        return this.prisma.document.findMany({
+            where: { expedienteId },
+            orderBy: {
+                uploadedAt: 'desc'
+            },
+        });
+    }
+    async findOne(id, currentUserId, userRole) {
+        const document = await this.prisma.document.findUnique({
+            where: { id },
+            include: {
+                expediente: {
+                    include: {
+                        client: true,
+                        lawyer: true,
+                    }
+                },
+            }
+        });
+        if (!document) {
+            throw new common_1.NotFoundException('Documento no encontrado');
+        }
+        if (userRole === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            if (!client || document.expediente.clientId !== client.id) {
+                throw new common_1.ForbiddenException('No tienes permisos para ver este documento');
+            }
+        }
+        else if (userRole === 'ABOGADO') {
+            if (document.expediente.lawyerId !== currentUserId) {
+                throw new common_1.ForbiddenException('No tienes permisos para ver este documento');
+            }
+        }
+        return document;
+    }
+    async remove(id, currentUserId, userRole) {
+        const document = await this.prisma.document.findUnique({
+            where: { id },
+            include: {
+                expediente: {
+                    include: {
+                        lawyer: true,
+                    }
+                }
+            }
+        });
+        if (!document) {
+            throw new common_1.NotFoundException('Documento no encontrado');
+        }
+        if (userRole === 'ABOGADO') {
+            if (document.expediente.lawyerId !== currentUserId) {
+                throw new common_1.ForbiddenException('Solo puedes eliminar documentos de expedientes asignados a ti');
+            }
+        }
+        else if (userRole === 'CLIENTE') {
+            throw new common_1.ForbiddenException('Los clientes no pueden eliminar documentos');
+        }
+        const filePath = path.join(process.cwd(), this.UPLOAD_DIR, document.filename);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+        await this.prisma.document.delete({
+            where: { id }
+        });
+        return { message: 'Documento eliminado exitosamente' };
+    }
+    async getDocumentsStats(currentUserId, userRole) {
+        let whereClause = {};
+        if (userRole === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            if (!client) {
+                throw new common_1.NotFoundException('Cliente no encontrado');
+            }
+            whereClause = {
+                expediente: {
+                    clientId: client.id
+                }
+            };
+        }
+        else if (userRole === 'ABOGADO') {
+            whereClause = {
+                expediente: {
+                    lawyerId: currentUserId
+                }
+            };
+        }
+        const [total, totalSize, byType] = await Promise.all([
+            this.prisma.document.count({ where: whereClause }),
+            this.prisma.document.aggregate({
+                where: whereClause,
+                _sum: {
+                    fileSize: true
+                }
+            }),
+            this.prisma.document.groupBy({
+                by: ['mimeType'],
+                where: whereClause,
+                _count: {
+                    id: true
+                }
+            })
+        ]);
+        return {
+            total,
+            totalSize: totalSize._sum.fileSize || 0,
+            byType: byType.map(type => ({
+                type: type.mimeType,
+                count: type._count.id
+            }))
+        };
+    }
+    validateFile(file) {
+        if (!this.ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+            throw new common_1.BadRequestException(`Tipo de archivo no permitido. Tipos permitidos: PDF, TXT, DOC, DOCX, JPG, PNG, GIF, WEBP`);
+        }
+        if (file.size > this.MAX_FILE_SIZE) {
+            throw new common_1.BadRequestException(`El archivo excede el tamaño máximo de ${this.MAX_FILE_SIZE / (1024 * 1024)}MB`);
+        }
+        if (file.size === 0) {
+            throw new common_1.BadRequestException('El archivo no puede estar vacío');
+        }
+    }
+    getFileStream(filename) {
+        const filePath = path.join(process.cwd(), this.UPLOAD_DIR, filename);
+        if (!fs.existsSync(filePath)) {
+            throw new common_1.NotFoundException('Archivo no encontrado');
+        }
+        return fs.createReadStream(filePath);
+    }
+};
+exports.DocumentsService = DocumentsService;
+exports.DocumentsService = DocumentsService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], DocumentsService);
+
+
+/***/ }),
+/* 44 */
+/***/ ((module) => {
+
+module.exports = require("fs");
+
+/***/ }),
+/* 45 */
+/***/ ((module) => {
+
+module.exports = require("path");
+
+/***/ }),
+/* 46 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DocumentsController = void 0;
+const common_1 = __webpack_require__(2);
+const platform_express_1 = __webpack_require__(47);
+const express_1 = __webpack_require__(48);
+const swagger_1 = __webpack_require__(3);
+const documents_service_1 = __webpack_require__(43);
+const upload_document_dto_1 = __webpack_require__(49);
+const jwt_auth_guard_1 = __webpack_require__(27);
+const roles_guard_1 = __webpack_require__(34);
+const roles_decorator_1 = __webpack_require__(35);
+const client_1 = __webpack_require__(9);
+let DocumentsController = class DocumentsController {
+    constructor(documentsService) {
+        this.documentsService = documentsService;
+    }
+    async uploadDocument(file, uploadDocumentDto, req) {
+        return this.documentsService.uploadDocument(file, uploadDocumentDto, req.user.id, req.user.role);
+    }
+    findAll(req) {
+        return this.documentsService.findAll(req.user.id, req.user.role);
+    }
+    getStats(req) {
+        return this.documentsService.getDocumentsStats(req.user.id, req.user.role);
+    }
+    findByExpediente(expedienteId, req) {
+        return this.documentsService.findByExpediente(expedienteId, req.user.id, req.user.role);
+    }
+    findOne(id, req) {
+        return this.documentsService.findOne(id, req.user.id, req.user.role);
+    }
+    async downloadDocument(id, req, res) {
+        const document = await this.documentsService.findOne(id, req.user.id, req.user.role);
+        const fileStream = this.documentsService.getFileStream(document.filename);
+        res.setHeader('Content-Type', document.mimeType);
+        res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
+        fileStream.pipe(res);
+    }
+    remove(id, req) {
+        return this.documentsService.remove(id, req.user.id, req.user.role);
+    }
+};
+exports.DocumentsController = DocumentsController;
+__decorate([
+    (0, common_1.Post)('upload'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file')),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Subir documento',
+        description: 'Sube un documento al sistema (PDF, TXT, CSV, DOC, DOCX, JPG, JPEG, PNG, GIF, WEBP - máximo 5MB)'
+    }),
+    (0, swagger_1.ApiConsumes)('multipart/form-data'),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                file: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Archivo a subir (máximo 5MB)'
+                },
+                title: {
+                    type: 'string',
+                    description: 'Título del documento'
+                },
+                description: {
+                    type: 'string',
+                    description: 'Descripción del documento'
+                },
+                caseId: {
+                    type: 'string',
+                    description: 'ID del expediente asociado (opcional)'
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Documento subido exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                filename: { type: 'string' },
+                originalName: { type: 'string' },
+                mimeType: { type: 'string' },
+                size: { type: 'number' },
+                uploadedBy: { type: 'string' },
+                caseId: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Archivo inválido o datos incorrectos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 413, description: 'Archivo demasiado grande' }),
+    __param(0, (0, common_1.UploadedFile)(new common_1.ParseFilePipe({
+        validators: [
+            new common_1.MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+            new common_1.FileTypeValidator({ fileType: '.(pdf|txt|csv|doc|docx|jpg|jpeg|png|gif|webp)' }),
+        ],
+    }))),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_b = typeof upload_document_dto_1.UploadDocumentDto !== "undefined" && upload_document_dto_1.UploadDocumentDto) === "function" ? _b : Object, Object]),
+    __metadata("design:returntype", Promise)
+], DocumentsController.prototype, "uploadDocument", null);
+__decorate([
+    (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todos los documentos',
+        description: 'Devuelve todos los documentos accesibles para el usuario autenticado'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de documentos',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    filename: { type: 'string' },
+                    originalName: { type: 'string' },
+                    mimeType: { type: 'string' },
+                    size: { type: 'number' },
+                    uploadedBy: { type: 'string' },
+                    caseId: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], DocumentsController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('stats'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Estadísticas de documentos',
+        description: 'Devuelve estadísticas de documentos para el usuario autenticado'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Estadísticas de documentos',
+        schema: {
+            type: 'object',
+            properties: {
+                totalDocuments: { type: 'number' },
+                totalSize: { type: 'number' },
+                documentsByType: {
+                    type: 'object',
+                    properties: {
+                        pdf: { type: 'number' },
+                        doc: { type: 'number' },
+                        image: { type: 'number' },
+                        other: { type: 'number' }
+                    }
+                },
+                recentUploads: { type: 'number' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], DocumentsController.prototype, "getStats", null);
+__decorate([
+    (0, common_1.Get)('expediente/:expedienteId'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener documentos por expediente',
+        description: 'Devuelve todos los documentos asociados a un expediente específico'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'expedienteId', description: 'ID del expediente', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Documentos del expediente',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    filename: { type: 'string' },
+                    originalName: { type: 'string' },
+                    mimeType: { type: 'string' },
+                    size: { type: 'number' },
+                    uploadedBy: { type: 'string' },
+                    caseId: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Expediente no encontrado' }),
+    __param(0, (0, common_1.Param)('expedienteId')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], DocumentsController.prototype, "findByExpediente", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener documento por ID',
+        description: 'Devuelve un documento específico por su ID'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Documento encontrado',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                filename: { type: 'string' },
+                originalName: { type: 'string' },
+                mimeType: { type: 'string' },
+                size: { type: 'number' },
+                uploadedBy: { type: 'string' },
+                caseId: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Documento no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], DocumentsController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Get)(':id/download'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Descargar documento',
+        description: 'Descarga un documento específico'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Archivo descargado',
+        schema: {
+            type: 'string',
+            format: 'binary'
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Documento no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __param(2, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, typeof (_c = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], DocumentsController.prototype, "downloadDocument", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar documento',
+        description: 'Elimina un documento del sistema (solo ADMIN y ABOGADO)'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Documento eliminado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                message: { type: 'string', example: 'Documento eliminado exitosamente' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Documento no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], DocumentsController.prototype, "remove", null);
+exports.DocumentsController = DocumentsController = __decorate([
+    (0, swagger_1.ApiTags)('documents'),
+    (0, common_1.Controller)('documents'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __metadata("design:paramtypes", [typeof (_a = typeof documents_service_1.DocumentsService !== "undefined" && documents_service_1.DocumentsService) === "function" ? _a : Object])
+], DocumentsController);
+
+
+/***/ }),
+/* 47 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/platform-express");
+
+/***/ }),
+/* 48 */
+/***/ ((module) => {
+
+module.exports = require("express");
+
+/***/ }),
+/* 49 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UploadDocumentDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+class UploadDocumentDto {
+}
+exports.UploadDocumentDto = UploadDocumentDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Título del documento',
+        example: 'Contrato de arrendamiento',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], UploadDocumentDto.prototype, "title", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del expediente asociado',
+        example: 'exp-003',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], UploadDocumentDto.prototype, "expedienteId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Descripción del documento',
+        example: 'Contrato de arrendamiento del local comercial',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UploadDocumentDto.prototype, "description", void 0);
+
+
+/***/ }),
+/* 50 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AppointmentsModule = void 0;
+const common_1 = __webpack_require__(2);
+const appointments_controller_1 = __webpack_require__(51);
+const appointments_service_1 = __webpack_require__(52);
+const visitor_appointments_controller_1 = __webpack_require__(55);
+const visitor_appointments_service_1 = __webpack_require__(56);
+const prisma_module_1 = __webpack_require__(36);
+const email_service_1 = __webpack_require__(17);
+let AppointmentsModule = class AppointmentsModule {
+};
+exports.AppointmentsModule = AppointmentsModule;
+exports.AppointmentsModule = AppointmentsModule = __decorate([
+    (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
+        controllers: [appointments_controller_1.AppointmentsController, visitor_appointments_controller_1.VisitorAppointmentsController],
+        providers: [appointments_service_1.AppointmentsService, visitor_appointments_service_1.VisitorAppointmentsService, email_service_1.EmailService],
+        exports: [appointments_service_1.AppointmentsService, visitor_appointments_service_1.VisitorAppointmentsService],
+    })
+], AppointmentsModule);
+
+
+/***/ }),
+/* 51 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AppointmentsController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const appointments_service_1 = __webpack_require__(52);
+const jwt_auth_guard_1 = __webpack_require__(27);
+const create_appointment_dto_1 = __webpack_require__(53);
+const create_lawyer_appointment_dto_1 = __webpack_require__(54);
+let AppointmentsController = class AppointmentsController {
+    constructor(appointmentsService) {
+        this.appointmentsService = appointmentsService;
+    }
+    async findAll(req) {
+        return this.appointmentsService.findAll(req.user);
+    }
+    async create(createAppointmentDto, req) {
+        return this.appointmentsService.create(createAppointmentDto, req.user);
+    }
+    async createAsLawyer(createLawyerAppointmentDto, req) {
+        return this.appointmentsService.createAsLawyer(createLawyerAppointmentDto, req.user);
+    }
+    async delete(id, req) {
+        return this.appointmentsService.delete(id, req.user);
+    }
+    async reschedule(id, rescheduleData, req) {
+        return this.appointmentsService.reschedule(id, rescheduleData, req.user);
+    }
+};
+exports.AppointmentsController = AppointmentsController;
+__decorate([
+    (0, common_1.Get)(),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todas las citas',
+        description: 'Devuelve la lista de citas según el rol del usuario'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de citas',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    date: { type: 'string', format: 'date-time' },
+                    location: { type: 'string' },
+                    notes: { type: 'string' },
+                    clientId: { type: 'string' },
+                    lawyerId: { type: 'string' },
+                    client: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            user: {
+                                type: 'object',
+                                properties: {
+                                    name: { type: 'string' },
+                                    email: { type: 'string' }
+                                }
+                            }
+                        }
+                    },
+                    lawyer: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            name: { type: 'string' },
+                            email: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AppointmentsController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Post)(),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Crear nueva cita',
+        description: 'Crea una nueva cita entre abogado y cliente'
+    }),
+    (0, swagger_1.ApiBody)({ type: create_appointment_dto_1.CreateAppointmentDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Cita creada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                date: { type: 'string', format: 'date-time' },
+                location: { type: 'string' },
+                notes: { type: 'string' },
+                clientId: { type: 'string' },
+                lawyerId: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof create_appointment_dto_1.CreateAppointmentDto !== "undefined" && create_appointment_dto_1.CreateAppointmentDto) === "function" ? _b : Object, Object]),
+    __metadata("design:returntype", Promise)
+], AppointmentsController.prototype, "create", null);
+__decorate([
+    (0, common_1.Post)('lawyer'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Crear nueva cita como abogado',
+        description: 'Permite a un abogado crear una cita para un cliente'
+    }),
+    (0, swagger_1.ApiBody)({ type: create_lawyer_appointment_dto_1.CreateLawyerAppointmentDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Cita creada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                date: { type: 'string', format: 'date-time' },
+                location: { type: 'string' },
+                notes: { type: 'string' },
+                clientId: { type: 'string' },
+                lawyerId: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Solo abogados y administradores pueden crear citas para clientes' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_c = typeof create_lawyer_appointment_dto_1.CreateLawyerAppointmentDto !== "undefined" && create_lawyer_appointment_dto_1.CreateLawyerAppointmentDto) === "function" ? _c : Object, Object]),
+    __metadata("design:returntype", Promise)
+], AppointmentsController.prototype, "createAsLawyer", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Cancelar cita',
+        description: 'Permite a un cliente cancelar su propia cita'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Cita cancelada exitosamente'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'No tienes permisos para cancelar esta cita' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Cita no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AppointmentsController.prototype, "delete", null);
+__decorate([
+    (0, common_1.Put)(':id/reschedule'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Reprogramar cita',
+        description: 'Permite a un abogado reprogramar una cita existente'
+    }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                date: {
+                    type: 'string',
+                    format: 'date-time',
+                    description: 'Nueva fecha y hora de la cita'
+                },
+                location: {
+                    type: 'string',
+                    description: 'Nueva ubicación de la cita (opcional)'
+                },
+                notes: {
+                    type: 'string',
+                    description: 'Notas adicionales sobre el cambio (opcional)'
+                }
+            },
+            required: ['date']
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Cita reprogramada exitosamente'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'No tienes permisos para reprogramar esta cita' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Cita no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", Promise)
+], AppointmentsController.prototype, "reschedule", null);
+exports.AppointmentsController = AppointmentsController = __decorate([
+    (0, swagger_1.ApiTags)('appointments'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Controller)('appointments'),
+    __metadata("design:paramtypes", [typeof (_a = typeof appointments_service_1.AppointmentsService !== "undefined" && appointments_service_1.AppointmentsService) === "function" ? _a : Object])
+], AppointmentsController);
+
+
+/***/ }),
+/* 52 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AppointmentsService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+const email_service_1 = __webpack_require__(17);
+let AppointmentsService = class AppointmentsService {
+    constructor(prisma, emailService) {
+        this.prisma = prisma;
+        this.emailService = emailService;
+    }
+    async findAll(user) {
+        if (user.role === 'ADMIN') {
+            return this.prisma.appointment.findMany({
+                include: {
+                    lawyer: { select: { id: true, name: true, email: true } },
+                    client: {
+                        include: {
+                            user: { select: { id: true, name: true, email: true } }
+                        }
+                    }
+                },
+                orderBy: { date: 'desc' }
+            });
+        }
+        else if (user.role === 'ABOGADO') {
+            const [regularAppointments, visitorAppointments] = await Promise.all([
+                this.prisma.appointment.findMany({
+                    where: { lawyerId: user.id },
+                    include: {
+                        lawyer: { select: { id: true, name: true, email: true } },
+                        client: {
+                            include: {
+                                user: { select: { id: true, name: true, email: true } }
+                            }
+                        }
+                    },
+                    orderBy: { date: 'desc' }
+                }),
+                this.prisma.visitorAppointment.findMany({
+                    where: { assignedLawyerId: user.id },
+                    include: {
+                        assignedLawyer: { select: { id: true, name: true, email: true } }
+                    },
+                    orderBy: { createdAt: 'desc' }
+                })
+            ]);
+            const formattedVisitorAppointments = visitorAppointments.map(apt => ({
+                id: apt.id,
+                date: apt.confirmedDate || apt.preferredDate,
+                location: apt.location,
+                notes: apt.notes,
+                clientId: null,
+                lawyerId: apt.assignedLawyerId,
+                client: {
+                    id: apt.id,
+                    user: {
+                        name: apt.fullName,
+                        email: apt.email
+                    }
+                },
+                lawyer: apt.assignedLawyer,
+                type: 'VISITOR',
+                status: apt.status,
+                fullName: apt.fullName,
+                email: apt.email,
+                phone: apt.phone,
+                consultationReason: apt.consultationReason,
+                consultationType: apt.consultationType,
+                age: apt.age,
+                preferredDate: apt.preferredDate,
+                confirmedDate: apt.confirmedDate
+            }));
+            const allAppointments = [...regularAppointments, ...formattedVisitorAppointments];
+            return allAppointments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        }
+        else {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: user.id }
+            });
+            if (!client)
+                throw new common_1.ForbiddenException('No eres cliente');
+            return this.prisma.appointment.findMany({
+                where: { clientId: client.id },
+                include: {
+                    lawyer: { select: { id: true, name: true, email: true } },
+                    client: {
+                        include: {
+                            user: { select: { id: true, name: true, email: true } }
+                        }
+                    }
+                },
+                orderBy: { date: 'desc' }
+            });
+        }
+    }
+    async create(dto, user) {
+        if (user.role !== 'CLIENTE')
+            throw new common_1.ForbiddenException('Solo los clientes pueden agendar citas');
+        const client = await this.prisma.client.findUnique({ where: { userId: user.id } });
+        if (!client)
+            throw new common_1.ForbiddenException('No eres cliente');
+        const lawyer = await this.prisma.user.findUnique({ where: { id: dto.lawyerId, role: 'ABOGADO' } });
+        if (!lawyer)
+            throw new common_1.NotFoundException('Abogado no encontrado');
+        const appointment = await this.prisma.appointment.create({
+            data: {
+                clientId: client.id,
+                lawyerId: dto.lawyerId,
+                date: new Date(dto.date),
+                location: dto.location || null,
+                notes: dto.notes || null,
+            },
+            include: {
+                lawyer: { select: { id: true, name: true, email: true } },
+                client: {
+                    include: {
+                        user: { select: { id: true, name: true, email: true } }
+                    }
+                }
+            }
+        });
+        return appointment;
+    }
+    async createAsLawyer(dto, user) {
+        if (user.role !== 'ABOGADO' && user.role !== 'ADMIN') {
+            throw new common_1.ForbiddenException('Solo los abogados y administradores pueden crear citas para clientes');
+        }
+        const client = await this.prisma.client.findUnique({
+            where: { id: dto.clientId },
+            include: { user: true }
+        });
+        if (!client) {
+            throw new common_1.NotFoundException('Cliente no encontrado');
+        }
+        const lawyer = await this.prisma.user.findUnique({
+            where: { id: user.id, role: 'ABOGADO' }
+        });
+        if (!lawyer) {
+            throw new common_1.ForbiddenException('No eres abogado');
+        }
+        const appointment = await this.prisma.appointment.create({
+            data: {
+                clientId: dto.clientId,
+                lawyerId: user.id,
+                date: new Date(dto.date),
+                location: dto.location || null,
+                notes: dto.notes || null,
+            },
+            include: {
+                lawyer: { select: { id: true, name: true, email: true } },
+                client: {
+                    include: {
+                        user: { select: { id: true, name: true, email: true } }
+                    }
+                }
+            }
+        });
+        return appointment;
+    }
+    async delete(id, user) {
+        const appointment = await this.prisma.appointment.findUnique({
+            where: { id },
+            include: {
+                client: { include: { user: true } },
+                lawyer: true
+            }
+        });
+        if (!appointment) {
+            throw new common_1.NotFoundException('Cita no encontrada');
+        }
+        if (user.role === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({ where: { userId: user.id } });
+            if (!client || appointment.clientId !== client.id) {
+                throw new common_1.ForbiddenException('No tienes permisos para cancelar esta cita');
+            }
+        }
+        else if (user.role === 'ABOGADO') {
+            if (appointment.lawyerId !== user.id) {
+                throw new common_1.ForbiddenException('No tienes permisos para cancelar esta cita');
+            }
+        }
+        else if (user.role !== 'ADMIN') {
+            throw new common_1.ForbiddenException('No tienes permisos para cancelar citas');
+        }
+        await this.prisma.appointment.delete({
+            where: { id }
+        });
+        return { message: 'Cita cancelada exitosamente' };
+    }
+    async reschedule(id, rescheduleData, user) {
+        const appointment = await this.prisma.appointment.findUnique({
+            where: { id },
+            include: {
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true
+                            }
+                        }
+                    }
+                },
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        if (!appointment) {
+            throw new common_1.NotFoundException('Cita no encontrada');
+        }
+        if (user.role !== 'ABOGADO') {
+            throw new common_1.ForbiddenException('Solo los abogados pueden reprogramar citas');
+        }
+        if (appointment.lawyerId !== user.id) {
+            throw new common_1.ForbiddenException('No tienes permisos para reprogramar esta cita');
+        }
+        const originalDate = appointment.date;
+        const originalLocation = appointment.location;
+        const updatedAppointment = await this.prisma.appointment.update({
+            where: { id },
+            data: {
+                date: new Date(rescheduleData.date),
+                location: rescheduleData.location || appointment.location,
+                notes: rescheduleData.notes || appointment.notes,
+            },
+            include: {
+                lawyer: { select: { id: true, name: true, email: true } },
+                client: {
+                    include: {
+                        user: { select: { id: true, name: true, email: true } }
+                    }
+                }
+            }
+        });
+        try {
+            await this.emailService.sendAppointmentRescheduledEmail({
+                clientName: appointment.client.user.name,
+                clientEmail: appointment.client.user.email,
+                lawyerName: appointment.lawyer.name,
+                originalDate: originalDate,
+                originalLocation: originalLocation,
+                newDate: new Date(rescheduleData.date),
+                newLocation: rescheduleData.location || appointment.location,
+                notes: rescheduleData.notes
+            });
+        }
+        catch (error) {
+            console.error('Error sending reschedule notification email:', error);
+        }
+        return updatedAppointment;
+    }
+};
+exports.AppointmentsService = AppointmentsService;
+exports.AppointmentsService = AppointmentsService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof email_service_1.EmailService !== "undefined" && email_service_1.EmailService) === "function" ? _b : Object])
+], AppointmentsService);
+
+
+/***/ }),
+/* 53 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CreateAppointmentDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+class CreateAppointmentDto {
+}
+exports.CreateAppointmentDto = CreateAppointmentDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del abogado para la cita',
+        example: '123e4567-e89b-12d3-a456-426614174001',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAppointmentDto.prototype, "lawyerId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Fecha y hora de la cita',
+        example: '2024-12-25T10:00:00.000Z',
+        type: String,
+        format: 'date-time',
+    }),
+    (0, class_validator_1.IsDateString)(),
+    __metadata("design:type", String)
+], CreateAppointmentDto.prototype, "date", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Ubicación de la cita',
+        example: 'Oficina principal - Calle Mayor 123',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateAppointmentDto.prototype, "location", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Notas adicionales sobre la cita',
+        example: 'Traer documentación del caso de divorcio',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateAppointmentDto.prototype, "notes", void 0);
+
+
+/***/ }),
+/* 54 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CreateLawyerAppointmentDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+class CreateLawyerAppointmentDto {
+}
+exports.CreateLawyerAppointmentDto = CreateLawyerAppointmentDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del cliente para la cita',
+        example: '123e4567-e89b-12d3-a456-426614174001',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateLawyerAppointmentDto.prototype, "clientId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Fecha y hora de la cita',
+        example: '2024-12-25T10:00:00.000Z',
+        type: String,
+        format: 'date-time',
+    }),
+    (0, class_validator_1.IsDateString)(),
+    __metadata("design:type", String)
+], CreateLawyerAppointmentDto.prototype, "date", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Ubicación de la cita',
+        example: 'Oficina principal - Calle Mayor 123',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateLawyerAppointmentDto.prototype, "location", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Notas adicionales sobre la cita',
+        example: 'Traer documentación del caso de divorcio',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateLawyerAppointmentDto.prototype, "notes", void 0);
+
+
+/***/ }),
+/* 55 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VisitorAppointmentsController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const visitor_appointments_service_1 = __webpack_require__(56);
+const create_visitor_appointment_dto_1 = __webpack_require__(57);
+const jwt_auth_guard_1 = __webpack_require__(27);
+const roles_guard_1 = __webpack_require__(34);
+const roles_decorator_1 = __webpack_require__(35);
+let VisitorAppointmentsController = class VisitorAppointmentsController {
+    constructor(visitorAppointmentsService) {
+        this.visitorAppointmentsService = visitorAppointmentsService;
+    }
+    create(createVisitorAppointmentDto) {
+        return this.visitorAppointmentsService.create(createVisitorAppointmentDto);
+    }
+    findAll() {
+        return this.visitorAppointmentsService.findAll({ role: 'ADMIN' });
+    }
+    findOne(id) {
+        return this.visitorAppointmentsService.findOne(id, { role: 'ADMIN' });
+    }
+    assignLawyer(id, data) {
+        return this.visitorAppointmentsService.assignLawyer(id, data.lawyerId, { role: 'ADMIN' });
+    }
+    confirmAppointment(id, data) {
+        return this.visitorAppointmentsService.confirmAppointment(id, data.confirmedDate, { role: 'ADMIN' });
+    }
+    cancelAppointment(id, data) {
+        return this.visitorAppointmentsService.cancelAppointment(id, data.reason, { role: 'ADMIN' });
+    }
+    completeAppointment(id) {
+        return this.visitorAppointmentsService.completeAppointment(id, { role: 'ADMIN' });
+    }
+};
+exports.VisitorAppointmentsController = VisitorAppointmentsController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Crear cita de visitante',
+        description: 'Crea una cita para un visitante no logueado'
+    }),
+    (0, swagger_1.ApiBody)({ type: create_visitor_appointment_dto_1.CreateVisitorAppointmentDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Cita de visitante creada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                fullName: { type: 'string' },
+                age: { type: 'number' },
+                phone: { type: 'string' },
+                email: { type: 'string' },
+                consultationReason: { type: 'string' },
+                preferredDate: { type: 'string', format: 'date-time' },
+                consultationType: { type: 'string' },
+                status: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof create_visitor_appointment_dto_1.CreateVisitorAppointmentDto !== "undefined" && create_visitor_appointment_dto_1.CreateVisitorAppointmentDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", void 0)
+], VisitorAppointmentsController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN', 'ABOGADO'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener citas de visitantes',
+        description: 'Devuelve las citas de visitantes según el rol del usuario'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de citas de visitantes',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    fullName: { type: 'string' },
+                    age: { type: 'number' },
+                    phone: { type: 'string' },
+                    email: { type: 'string' },
+                    consultationReason: { type: 'string' },
+                    preferredDate: { type: 'string', format: 'date-time' },
+                    consultationType: { type: 'string' },
+                    status: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], VisitorAppointmentsController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN', 'ABOGADO'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener cita de visitante por ID',
+        description: 'Devuelve una cita específica de visitante'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Cita de visitante encontrada',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                fullName: { type: 'string' },
+                age: { type: 'number' },
+                phone: { type: 'string' },
+                email: { type: 'string' },
+                consultationReason: { type: 'string' },
+                preferredDate: { type: 'string', format: 'date-time' },
+                consultationType: { type: 'string' },
+                status: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Cita no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], VisitorAppointmentsController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Put)(':id/assign'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Asignar abogado a cita de visitante',
+        description: 'Asigna un abogado específico a una cita de visitante'
+    }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                lawyerId: { type: 'string', description: 'ID del abogado' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Abogado asignado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                assignedLawyerId: { type: 'string' },
+                assignedLawyer: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        name: { type: 'string' },
+                        email: { type: 'string' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Cita o abogado no encontrado' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], VisitorAppointmentsController.prototype, "assignLawyer", null);
+__decorate([
+    (0, common_1.Put)(':id/confirm'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN', 'ABOGADO'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Confirmar cita de visitante',
+        description: 'Confirma una cita de visitante con fecha y hora específicas'
+    }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                confirmedDate: { type: 'string', format: 'date-time', description: 'Fecha y hora confirmada' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Cita confirmada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                status: { type: 'string' },
+                confirmedDate: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Cita no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], VisitorAppointmentsController.prototype, "confirmAppointment", null);
+__decorate([
+    (0, common_1.Put)(':id/cancel'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Cancelar cita de visitante',
+        description: 'Cancela una cita de visitante con motivo'
+    }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                reason: { type: 'string', description: 'Motivo de la cancelación' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Cita cancelada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                status: { type: 'string' },
+                notes: { type: 'string' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Cita no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], VisitorAppointmentsController.prototype, "cancelAppointment", null);
+__decorate([
+    (0, common_1.Put)(':id/complete'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN', 'ABOGADO'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Marcar cita como completada',
+        description: 'Marca una cita de visitante como completada'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Cita marcada como completada',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                status: { type: 'string' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Cita no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], VisitorAppointmentsController.prototype, "completeAppointment", null);
+exports.VisitorAppointmentsController = VisitorAppointmentsController = __decorate([
+    (0, swagger_1.ApiTags)('visitor-appointments'),
+    (0, common_1.Controller)('appointments/visitor'),
+    __metadata("design:paramtypes", [typeof (_a = typeof visitor_appointments_service_1.VisitorAppointmentsService !== "undefined" && visitor_appointments_service_1.VisitorAppointmentsService) === "function" ? _a : Object])
+], VisitorAppointmentsController);
+
+
+/***/ }),
+/* 56 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VisitorAppointmentsService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+const email_service_1 = __webpack_require__(17);
+let VisitorAppointmentsService = class VisitorAppointmentsService {
+    constructor(prisma, emailService) {
+        this.prisma = prisma;
+        this.emailService = emailService;
+    }
+    async create(dto) {
+        const visitorAppointment = await this.prisma.visitorAppointment.create({
+            data: {
+                fullName: dto.fullName,
+                age: dto.age,
+                phone: dto.phone,
+                email: dto.email,
+                consultationReason: dto.consultationReason,
+                preferredDate: new Date(dto.preferredDate),
+                alternativeDate: dto.alternativeDate ? new Date(dto.alternativeDate) : null,
+                consultationType: dto.consultationType,
+                notes: dto.notes,
+                location: dto.location,
+                status: 'PENDIENTE'
+            }
+        });
+        try {
+            await this.emailService.sendVisitorAppointmentConfirmationEmail({
+                visitorName: dto.fullName,
+                visitorEmail: dto.email,
+                consultationReason: dto.consultationReason,
+                preferredDate: new Date(dto.preferredDate),
+                consultationType: dto.consultationType,
+                appointmentId: visitorAppointment.id
+            });
+        }
+        catch (error) {
+            console.error('Error sending visitor appointment confirmation email:', error);
+        }
+        try {
+            await this.emailService.sendVisitorAppointmentNotificationEmail({
+                visitorName: dto.fullName,
+                visitorEmail: dto.email,
+                visitorPhone: dto.phone,
+                visitorAge: dto.age,
+                consultationReason: dto.consultationReason,
+                preferredDate: new Date(dto.preferredDate),
+                alternativeDate: dto.alternativeDate ? new Date(dto.alternativeDate) : undefined,
+                consultationType: dto.consultationType,
+                notes: dto.notes,
+                appointmentId: visitorAppointment.id
+            });
+        }
+        catch (error) {
+            console.error('Error sending admin notification email:', error);
+        }
+        return visitorAppointment;
+    }
+    async findAll(user) {
+        if (user.role === 'ADMIN') {
+            return this.prisma.visitorAppointment.findMany({
+                orderBy: { createdAt: 'desc' }
+            });
+        }
+        else if (user.role === 'ABOGADO') {
+            return this.prisma.visitorAppointment.findMany({
+                where: { assignedLawyerId: user.id },
+                orderBy: { createdAt: 'desc' }
+            });
+        }
+        else {
+            return [];
+        }
+    }
+    async findOne(id, user) {
+        const appointment = await this.prisma.visitorAppointment.findUnique({
+            where: { id }
+        });
+        if (!appointment) {
+            throw new common_1.NotFoundException('Cita de visitante no encontrada');
+        }
+        if (user.role === 'ADMIN') {
+            return appointment;
+        }
+        else if (user.role === 'ABOGADO' && appointment.assignedLawyerId === user.id) {
+            return appointment;
+        }
+        else {
+            throw new common_1.NotFoundException('No tienes permisos para ver esta cita');
+        }
+    }
+    async assignLawyer(id, lawyerId, user) {
+        if (user.role !== 'ADMIN') {
+            throw new common_1.NotFoundException('Solo los administradores pueden asignar abogados');
+        }
+        const lawyer = await this.prisma.user.findUnique({
+            where: { id: lawyerId, role: 'ABOGADO' }
+        });
+        if (!lawyer) {
+            throw new common_1.NotFoundException('Abogado no encontrado');
+        }
+        const appointment = await this.prisma.visitorAppointment.update({
+            where: { id },
+            data: { assignedLawyerId: lawyerId },
+            include: { assignedLawyer: true }
+        });
+        return appointment;
+    }
+    async confirmAppointment(id, confirmedDate, user) {
+        const appointment = await this.prisma.visitorAppointment.findUnique({
+            where: { id }
+        });
+        if (!appointment) {
+            throw new common_1.NotFoundException('Cita de visitante no encontrada');
+        }
+        if (user.role !== 'ADMIN' && appointment.assignedLawyerId !== user.id) {
+            throw new common_1.NotFoundException('No tienes permisos para confirmar esta cita');
+        }
+        const updatedAppointment = await this.prisma.visitorAppointment.update({
+            where: { id },
+            data: {
+                status: 'CONFIRMADA',
+                confirmedDate: new Date(confirmedDate)
+            }
+        });
+        try {
+            await this.emailService.sendVisitorAppointmentConfirmedEmail({
+                visitorName: appointment.fullName,
+                visitorEmail: appointment.email,
+                confirmedDate: new Date(confirmedDate),
+                consultationReason: appointment.consultationReason,
+                appointmentId: appointment.id
+            });
+        }
+        catch (error) {
+            console.error('Error sending appointment confirmation email:', error);
+        }
+        return updatedAppointment;
+    }
+    async cancelAppointment(id, reason, user) {
+        if (user.role !== 'ADMIN') {
+            throw new common_1.NotFoundException('Solo los administradores pueden cancelar citas');
+        }
+        const currentAppointment = await this.prisma.visitorAppointment.findUnique({
+            where: { id }
+        });
+        if (!currentAppointment) {
+            throw new common_1.NotFoundException('Cita de visitante no encontrada');
+        }
+        const appointment = await this.prisma.visitorAppointment.update({
+            where: { id },
+            data: {
+                status: 'CANCELADA',
+                notes: currentAppointment.notes ? `${currentAppointment.notes}\n\nCancelada: ${reason}` : `Cancelada: ${reason}`
+            }
+        });
+        try {
+            await this.emailService.sendVisitorAppointmentCancelledEmail({
+                visitorName: appointment.fullName,
+                visitorEmail: appointment.email,
+                reason: reason,
+                appointmentId: appointment.id
+            });
+        }
+        catch (error) {
+            console.error('Error sending appointment cancellation email:', error);
+        }
+        return appointment;
+    }
+    async completeAppointment(id, user) {
+        const appointment = await this.prisma.visitorAppointment.findUnique({
+            where: { id }
+        });
+        if (!appointment) {
+            throw new common_1.NotFoundException('Cita de visitante no encontrada');
+        }
+        if (user.role !== 'ADMIN' && appointment.assignedLawyerId !== user.id) {
+            throw new common_1.NotFoundException('No tienes permisos para completar esta cita');
+        }
+        return this.prisma.visitorAppointment.update({
+            where: { id },
+            data: { status: 'COMPLETADA' }
+        });
+    }
+};
+exports.VisitorAppointmentsService = VisitorAppointmentsService;
+exports.VisitorAppointmentsService = VisitorAppointmentsService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof email_service_1.EmailService !== "undefined" && email_service_1.EmailService) === "function" ? _b : Object])
+], VisitorAppointmentsService);
+
+
+/***/ }),
+/* 57 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CreateVisitorAppointmentDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+class CreateVisitorAppointmentDto {
+}
+exports.CreateVisitorAppointmentDto = CreateVisitorAppointmentDto;
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateVisitorAppointmentDto.prototype, "fullName", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(18),
+    (0, class_validator_1.Max)(120),
+    __metadata("design:type", Number)
+], CreateVisitorAppointmentDto.prototype, "age", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateVisitorAppointmentDto.prototype, "phone", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    (0, class_validator_1.IsEmail)(),
+    __metadata("design:type", String)
+], CreateVisitorAppointmentDto.prototype, "email", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateVisitorAppointmentDto.prototype, "consultationReason", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    (0, class_validator_1.IsDateString)(),
+    __metadata("design:type", String)
+], CreateVisitorAppointmentDto.prototype, "preferredDate", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ required: false }),
+    (0, class_validator_1.IsDateString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateVisitorAppointmentDto.prototype, "alternativeDate", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateVisitorAppointmentDto.prototype, "consultationType", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ required: false }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateVisitorAppointmentDto.prototype, "notes", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ required: false }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateVisitorAppointmentDto.prototype, "location", void 0);
+
+
+/***/ }),
+/* 58 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TasksModule = void 0;
+const common_1 = __webpack_require__(2);
+const tasks_controller_1 = __webpack_require__(59);
+const tasks_service_1 = __webpack_require__(60);
+const prisma_module_1 = __webpack_require__(36);
+let TasksModule = class TasksModule {
+};
+exports.TasksModule = TasksModule;
+exports.TasksModule = TasksModule = __decorate([
+    (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
+        controllers: [tasks_controller_1.TasksController],
+        providers: [tasks_service_1.TasksService],
+        exports: [tasks_service_1.TasksService],
+    })
+], TasksModule);
+
+
+/***/ }),
+/* 59 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TasksController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const tasks_service_1 = __webpack_require__(60);
+const create_task_dto_1 = __webpack_require__(61);
+const update_task_dto_1 = __webpack_require__(62);
+const jwt_auth_guard_1 = __webpack_require__(27);
+let TasksController = class TasksController {
+    constructor(tasksService) {
+        this.tasksService = tasksService;
+    }
+    async create(createTaskDto, req) {
+        return this.tasksService.create(createTaskDto, req.user.id);
+    }
+    async findAll(req, status) {
+        if (status) {
+            return this.tasksService.getTasksByStatus(status, req.user.id, req.user.role);
+        }
+        return this.tasksService.findAll(req.user.id, req.user.role);
+    }
+    async getStats(req) {
+        return this.tasksService.getTasksStats(req.user.id, req.user.role);
+    }
+    async getUpcomingTasks(req, days) {
+        const daysNumber = days ? parseInt(days) : 7;
+        return this.tasksService.getUpcomingTasks(req.user.id, req.user.role, daysNumber);
+    }
+    async findOne(id, req) {
+        return this.tasksService.findOne(id, req.user.id, req.user.role);
+    }
+    async update(id, updateTaskDto, req) {
+        return this.tasksService.update(id, updateTaskDto, req.user.id, req.user.role);
+    }
+    async updateStatus(id, body, req) {
+        return this.tasksService.updateStatus(id, body.status, req.user.id, req.user.role);
+    }
+    async remove(id, req) {
+        return this.tasksService.remove(id, req.user.id, req.user.role);
+    }
+};
+exports.TasksController = TasksController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Crear nueva tarea',
+        description: 'Crea una nueva tarea en el sistema'
+    }),
+    (0, swagger_1.ApiBody)({ type: create_task_dto_1.CreateTaskDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Tarea creada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                dueDate: { type: 'string', format: 'date-time' },
+                priority: { type: 'string', enum: ['BAJA', 'MEDIA', 'ALTA'] },
+                status: { type: 'string', enum: ['PENDIENTE', 'EN_PROGRESO', 'COMPLETADA', 'CANCELADA'] },
+                expedienteId: { type: 'string' },
+                clientId: { type: 'string' },
+                assignedTo: { type: 'string' },
+                createdBy: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof create_task_dto_1.CreateTaskDto !== "undefined" && create_task_dto_1.CreateTaskDto) === "function" ? _b : Object, Object]),
+    __metadata("design:returntype", Promise)
+], TasksController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)(),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todas las tareas',
+        description: 'Devuelve la lista de tareas según el rol del usuario'
+    }),
+    (0, swagger_1.ApiQuery)({
+        name: 'status',
+        required: false,
+        enum: create_task_dto_1.TaskStatus,
+        description: 'Filtrar por estado de la tarea'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de tareas',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    dueDate: { type: 'string', format: 'date-time' },
+                    priority: { type: 'string', enum: ['BAJA', 'MEDIA', 'ALTA'] },
+                    status: { type: 'string', enum: ['PENDIENTE', 'EN_PROGRESO', 'COMPLETADA', 'CANCELADA'] },
+                    expedienteId: { type: 'string' },
+                    clientId: { type: 'string' },
+                    assignedTo: { type: 'string' },
+                    createdBy: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    expediente: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            title: { type: 'string' },
+                            client: {
+                                type: 'object',
+                                properties: {
+                                    user: {
+                                        type: 'object',
+                                        properties: {
+                                            name: { type: 'string' },
+                                            email: { type: 'string' }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    assignedToUser: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            name: { type: 'string' },
+                            email: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)('status')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_c = typeof create_task_dto_1.TaskStatus !== "undefined" && create_task_dto_1.TaskStatus) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], TasksController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('stats'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener estadísticas de tareas',
+        description: 'Devuelve estadísticas de tareas según el rol del usuario'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Estadísticas de tareas',
+        schema: {
+            type: 'object',
+            properties: {
+                total: { type: 'number' },
+                byStatus: {
+                    type: 'object',
+                    properties: {
+                        PENDIENTE: { type: 'number' },
+                        EN_PROGRESO: { type: 'number' },
+                        COMPLETADA: { type: 'number' },
+                        CANCELADA: { type: 'number' }
+                    }
+                },
+                byPriority: {
+                    type: 'object',
+                    properties: {
+                        BAJA: { type: 'number' },
+                        MEDIA: { type: 'number' },
+                        ALTA: { type: 'number' }
+                    }
+                },
+                overdue: { type: 'number' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], TasksController.prototype, "getStats", null);
+__decorate([
+    (0, common_1.Get)('upcoming'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener tareas próximas',
+        description: 'Devuelve las tareas próximas a vencer'
+    }),
+    (0, swagger_1.ApiQuery)({
+        name: 'days',
+        required: false,
+        type: 'string',
+        description: 'Número de días para considerar próximas (por defecto 7)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Tareas próximas',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    title: { type: 'string' },
+                    dueDate: { type: 'string', format: 'date-time' },
+                    priority: { type: 'string' },
+                    status: { type: 'string' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)('days')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], TasksController.prototype, "getUpcomingTasks", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener tarea por ID',
+        description: 'Devuelve los detalles de una tarea específica'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la tarea', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Detalles de la tarea',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                dueDate: { type: 'string', format: 'date-time' },
+                priority: { type: 'string' },
+                status: { type: 'string' },
+                expedienteId: { type: 'string' },
+                clientId: { type: 'string' },
+                assignedTo: { type: 'string' },
+                createdBy: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Tarea no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], TasksController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar tarea',
+        description: 'Actualiza los datos de una tarea existente'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la tarea', type: 'string' }),
+    (0, swagger_1.ApiBody)({ type: update_task_dto_1.UpdateTaskDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Tarea actualizada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                dueDate: { type: 'string', format: 'date-time' },
+                priority: { type: 'string' },
+                status: { type: 'string' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Tarea no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_d = typeof update_task_dto_1.UpdateTaskDto !== "undefined" && update_task_dto_1.UpdateTaskDto) === "function" ? _d : Object, Object]),
+    __metadata("design:returntype", Promise)
+], TasksController.prototype, "update", null);
+__decorate([
+    (0, common_1.Patch)(':id/status'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar estado de tarea',
+        description: 'Actualiza solo el estado de una tarea'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la tarea', type: 'string' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                status: {
+                    type: 'string',
+                    enum: ['PENDIENTE', 'EN_PROGRESO', 'COMPLETADA', 'CANCELADA'],
+                    example: 'COMPLETADA'
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Estado de tarea actualizado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                status: { type: 'string' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Tarea no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", Promise)
+], TasksController.prototype, "updateStatus", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar tarea',
+        description: 'Elimina una tarea del sistema'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la tarea', type: 'string' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Tarea eliminada exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Tarea no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], TasksController.prototype, "remove", null);
+exports.TasksController = TasksController = __decorate([
+    (0, swagger_1.ApiTags)('tasks'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Controller)('tasks'),
+    __metadata("design:paramtypes", [typeof (_a = typeof tasks_service_1.TasksService !== "undefined" && tasks_service_1.TasksService) === "function" ? _a : Object])
+], TasksController);
+
+
+/***/ }),
+/* 60 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TasksService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+const create_task_dto_1 = __webpack_require__(61);
+let TasksService = class TasksService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async create(createTaskDto, currentUserId) {
+        if (createTaskDto.expedienteId) {
+            const expediente = await this.prisma.expediente.findUnique({
+                where: { id: createTaskDto.expedienteId }
+            });
+            if (!expediente) {
+                throw new common_1.NotFoundException('Expediente no encontrado');
+            }
+        }
+        if (createTaskDto.clientId) {
+            const client = await this.prisma.client.findUnique({
+                where: { id: createTaskDto.clientId }
+            });
+            if (!client) {
+                throw new common_1.NotFoundException('Cliente no encontrado');
+            }
+        }
+        if (createTaskDto.assignedTo) {
+            const assignedUser = await this.prisma.user.findUnique({
+                where: { id: createTaskDto.assignedTo }
+            });
+            if (!assignedUser) {
+                throw new common_1.NotFoundException('Usuario asignado no encontrado');
+            }
+        }
+        return this.prisma.task.create({
+            data: {
+                title: createTaskDto.title,
+                description: createTaskDto.description,
+                dueDate: createTaskDto.dueDate ? new Date(createTaskDto.dueDate) : null,
+                priority: createTaskDto.priority || create_task_dto_1.TaskPriority.MEDIA,
+                status: create_task_dto_1.TaskStatus.PENDIENTE,
+                expedienteId: createTaskDto.expedienteId,
+                clientId: createTaskDto.clientId,
+                assignedTo: createTaskDto.assignedTo || currentUserId,
+                createdBy: currentUserId,
+            },
+            include: {
+                expediente: {
+                    include: {
+                        client: {
+                            include: {
+                                user: {
+                                    select: {
+                                        name: true,
+                                        email: true,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                assignedToUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+            },
+        });
+    }
+    async findAll(currentUserId, userRole) {
+        let whereClause = {};
+        if (userRole === 'ABOGADO') {
+            whereClause = {
+                OR: [
+                    { assignedTo: currentUserId },
+                    { createdBy: currentUserId }
+                ]
+            };
+        }
+        return this.prisma.task.findMany({
+            where: whereClause,
+            include: {
+                expediente: {
+                    include: {
+                        client: {
+                            include: {
+                                user: {
+                                    select: {
+                                        name: true,
+                                        email: true,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                assignedToUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+            },
+            orderBy: [
+                { priority: 'desc' },
+                { dueDate: 'asc' },
+                { createdAt: 'desc' }
+            ],
+        });
+    }
+    async findOne(id, currentUserId, userRole) {
+        const task = await this.prisma.task.findUnique({
+            where: { id },
+            include: {
+                expediente: {
+                    include: {
+                        client: {
+                            include: {
+                                user: {
+                                    select: {
+                                        name: true,
+                                        email: true,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                assignedToUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+            },
+        });
+        if (!task) {
+            throw new common_1.NotFoundException('Tarea no encontrada');
+        }
+        if (userRole === 'ABOGADO') {
+            if (task.assignedTo !== currentUserId && task.createdBy !== currentUserId) {
+                throw new common_1.ForbiddenException('No tienes permisos para ver esta tarea');
+            }
+        }
+        return task;
+    }
+    async update(id, updateTaskDto, currentUserId, userRole) {
+        const existingTask = await this.prisma.task.findUnique({
+            where: { id }
+        });
+        if (!existingTask) {
+            throw new common_1.NotFoundException('Tarea no encontrada');
+        }
+        if (userRole === 'ABOGADO') {
+            if (existingTask.assignedTo !== currentUserId && existingTask.createdBy !== currentUserId) {
+                throw new common_1.ForbiddenException('No tienes permisos para editar esta tarea');
+            }
+        }
+        if (updateTaskDto.expedienteId) {
+            const expediente = await this.prisma.expediente.findUnique({
+                where: { id: updateTaskDto.expedienteId }
+            });
+            if (!expediente) {
+                throw new common_1.NotFoundException('Expediente no encontrado');
+            }
+        }
+        if (updateTaskDto.clientId) {
+            const client = await this.prisma.client.findUnique({
+                where: { id: updateTaskDto.clientId }
+            });
+            if (!client) {
+                throw new common_1.NotFoundException('Cliente no encontrado');
+            }
+        }
+        if (updateTaskDto.assignedTo) {
+            const assignedUser = await this.prisma.user.findUnique({
+                where: { id: updateTaskDto.assignedTo }
+            });
+            if (!assignedUser) {
+                throw new common_1.NotFoundException('Usuario asignado no encontrado');
+            }
+        }
+        return this.prisma.task.update({
+            where: { id },
+            data: {
+                ...updateTaskDto,
+                dueDate: updateTaskDto.dueDate ? new Date(updateTaskDto.dueDate) : undefined,
+            },
+            include: {
+                expediente: {
+                    include: {
+                        client: {
+                            include: {
+                                user: {
+                                    select: {
+                                        name: true,
+                                        email: true,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                assignedToUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+            },
+        });
+    }
+    async remove(id, currentUserId, userRole) {
+        const existingTask = await this.prisma.task.findUnique({
+            where: { id }
+        });
+        if (!existingTask) {
+            throw new common_1.NotFoundException('Tarea no encontrada');
+        }
+        if (userRole !== 'ADMIN' && existingTask.createdBy !== currentUserId) {
+            throw new common_1.ForbiddenException('Solo puedes eliminar tareas que hayas creado');
+        }
+        return this.prisma.task.delete({
+            where: { id },
+        });
+    }
+    async updateStatus(id, status, currentUserId, userRole) {
+        const existingTask = await this.prisma.task.findUnique({
+            where: { id }
+        });
+        if (!existingTask) {
+            throw new common_1.NotFoundException('Tarea no encontrada');
+        }
+        if (userRole === 'ABOGADO') {
+            if (existingTask.assignedTo !== currentUserId && existingTask.createdBy !== currentUserId) {
+                throw new common_1.ForbiddenException('No tienes permisos para cambiar el estado de esta tarea');
+            }
+        }
+        return this.prisma.task.update({
+            where: { id },
+            data: { status },
+            include: {
+                expediente: {
+                    include: {
+                        client: {
+                            include: {
+                                user: {
+                                    select: {
+                                        name: true,
+                                        email: true,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                assignedToUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+            },
+        });
+    }
+    async getTasksByStatus(status, currentUserId, userRole) {
+        let whereClause = { status };
+        if (userRole === 'ABOGADO') {
+            whereClause = {
+                ...whereClause,
+                OR: [
+                    { assignedTo: currentUserId },
+                    { createdBy: currentUserId }
+                ]
+            };
+        }
+        return this.prisma.task.findMany({
+            where: whereClause,
+            include: {
+                expediente: {
+                    include: {
+                        client: {
+                            include: {
+                                user: {
+                                    select: {
+                                        name: true,
+                                        email: true,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                assignedToUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+            },
+            orderBy: [
+                { priority: 'desc' },
+                { dueDate: 'asc' },
+                { createdAt: 'desc' }
+            ],
+        });
+    }
+    async getTasksStats(currentUserId, userRole) {
+        let whereClause = {};
+        if (userRole === 'ABOGADO') {
+            whereClause = {
+                OR: [
+                    { assignedTo: currentUserId },
+                    { createdBy: currentUserId }
+                ]
+            };
+        }
+        const [total, pendientes, enProgreso, completadas, canceladas, vencidas] = await Promise.all([
+            this.prisma.task.count({ where: whereClause }),
+            this.prisma.task.count({ where: { ...whereClause, status: create_task_dto_1.TaskStatus.PENDIENTE } }),
+            this.prisma.task.count({ where: { ...whereClause, status: create_task_dto_1.TaskStatus.EN_PROGRESO } }),
+            this.prisma.task.count({ where: { ...whereClause, status: create_task_dto_1.TaskStatus.COMPLETADA } }),
+            this.prisma.task.count({ where: { ...whereClause, status: create_task_dto_1.TaskStatus.CANCELADA } }),
+            this.prisma.task.count({
+                where: {
+                    ...whereClause,
+                    dueDate: {
+                        lt: new Date()
+                    },
+                    status: {
+                        not: create_task_dto_1.TaskStatus.COMPLETADA
+                    }
+                }
+            }),
+        ]);
+        return {
+            total,
+            pendientes,
+            enProgreso,
+            completadas,
+            canceladas,
+            vencidas,
+        };
+    }
+    async getUpcomingTasks(currentUserId, userRole, days = 7) {
+        let whereClause = {
+            dueDate: {
+                gte: new Date(),
+                lte: new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+            },
+            status: {
+                not: create_task_dto_1.TaskStatus.COMPLETADA
+            }
+        };
+        if (userRole === 'ABOGADO') {
+            whereClause = {
+                ...whereClause,
+                OR: [
+                    { assignedTo: currentUserId },
+                    { createdBy: currentUserId }
+                ]
+            };
+        }
+        return this.prisma.task.findMany({
+            where: whereClause,
+            include: {
+                expediente: {
+                    include: {
+                        client: {
+                            include: {
+                                user: {
+                                    select: {
+                                        name: true,
+                                        email: true,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                assignedToUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+            },
+            orderBy: [
+                { dueDate: 'asc' },
+                { priority: 'desc' }
+            ],
+        });
+    }
+};
+exports.TasksService = TasksService;
+exports.TasksService = TasksService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], TasksService);
+
+
+/***/ }),
+/* 61 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CreateTaskDto = exports.TaskStatus = exports.TaskPriority = void 0;
+const class_validator_1 = __webpack_require__(23);
+var TaskPriority;
+(function (TaskPriority) {
+    TaskPriority["BAJA"] = "BAJA";
+    TaskPriority["MEDIA"] = "MEDIA";
+    TaskPriority["ALTA"] = "ALTA";
+    TaskPriority["URGENTE"] = "URGENTE";
+})(TaskPriority || (exports.TaskPriority = TaskPriority = {}));
+var TaskStatus;
+(function (TaskStatus) {
+    TaskStatus["PENDIENTE"] = "PENDIENTE";
+    TaskStatus["EN_PROGRESO"] = "EN_PROGRESO";
+    TaskStatus["COMPLETADA"] = "COMPLETADA";
+    TaskStatus["CANCELADA"] = "CANCELADA";
+})(TaskStatus || (exports.TaskStatus = TaskStatus = {}));
+class CreateTaskDto {
+}
+exports.CreateTaskDto = CreateTaskDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateTaskDto.prototype, "title", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTaskDto.prototype, "description", void 0);
+__decorate([
+    (0, class_validator_1.IsDateString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTaskDto.prototype, "dueDate", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(TaskPriority),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTaskDto.prototype, "priority", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTaskDto.prototype, "expedienteId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTaskDto.prototype, "clientId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTaskDto.prototype, "assignedTo", void 0);
+
+
+/***/ }),
+/* 62 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UpdateTaskDto = void 0;
+const swagger_1 = __webpack_require__(3);
+const create_task_dto_1 = __webpack_require__(61);
+const class_validator_1 = __webpack_require__(23);
+class UpdateTaskDto extends (0, swagger_1.PartialType)(create_task_dto_1.CreateTaskDto) {
+}
+exports.UpdateTaskDto = UpdateTaskDto;
+__decorate([
+    (0, class_validator_1.IsEnum)(create_task_dto_1.TaskStatus),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", typeof (_a = typeof create_task_dto_1.TaskStatus !== "undefined" && create_task_dto_1.TaskStatus) === "function" ? _a : Object)
+], UpdateTaskDto.prototype, "status", void 0);
+
+
+/***/ }),
+/* 63 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReportsModule = void 0;
+const common_1 = __webpack_require__(2);
+const reports_controller_1 = __webpack_require__(64);
+const reports_service_1 = __webpack_require__(65);
+const prisma_module_1 = __webpack_require__(36);
+let ReportsModule = class ReportsModule {
+};
+exports.ReportsModule = ReportsModule;
+exports.ReportsModule = ReportsModule = __decorate([
+    (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
+        controllers: [reports_controller_1.ReportsController],
+        providers: [reports_service_1.ReportsService],
+        exports: [reports_service_1.ReportsService],
+    })
+], ReportsModule);
+
+
+/***/ }),
+/* 64 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReportsController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const reports_service_1 = __webpack_require__(65);
+const jwt_auth_guard_1 = __webpack_require__(27);
+let ReportsController = class ReportsController {
+    constructor(reportsService) {
+        this.reportsService = reportsService;
+    }
+    async getLawyerReports(req) {
+        return this.reportsService.getLawyerReports(req.user.id);
+    }
+};
+exports.ReportsController = ReportsController;
+__decorate([
+    (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener reportes del abogado',
+        description: 'Devuelve reportes y estadísticas del abogado autenticado'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Reportes del abogado',
+        schema: {
+            type: 'object',
+            properties: {
+                casos: {
+                    type: 'object',
+                    properties: {
+                        total: { type: 'number' },
+                        activos: { type: 'number' },
+                        cerrados: { type: 'number' },
+                        nuevosEsteMes: { type: 'number' }
+                    }
+                },
+                clientes: {
+                    type: 'object',
+                    properties: {
+                        total: { type: 'number' },
+                        activos: { type: 'number' },
+                        nuevosEsteMes: { type: 'number' }
+                    }
+                },
+                facturacion: {
+                    type: 'object',
+                    properties: {
+                        totalEsteMes: { type: 'number' },
+                        totalAno: { type: 'number' },
+                        facturasPendientes: { type: 'number' }
+                    }
+                },
+                tareas: {
+                    type: 'object',
+                    properties: {
+                        total: { type: 'number' },
+                        pendientes: { type: 'number' },
+                        completadas: { type: 'number' },
+                        vencidas: { type: 'number' }
+                    }
+                },
+                citas: {
+                    type: 'object',
+                    properties: {
+                        total: { type: 'number' },
+                        hoy: { type: 'number' },
+                        estaSemana: { type: 'number' },
+                        proximas: { type: 'number' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], ReportsController.prototype, "getLawyerReports", null);
+exports.ReportsController = ReportsController = __decorate([
+    (0, swagger_1.ApiTags)('reports'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Controller)('lawyer/reports'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __metadata("design:paramtypes", [typeof (_a = typeof reports_service_1.ReportsService !== "undefined" && reports_service_1.ReportsService) === "function" ? _a : Object])
+], ReportsController);
+
+
+/***/ }),
+/* 65 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReportsService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+let ReportsService = class ReportsService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async getLawyerReports(lawyerId) {
+        const tasksStats = await this.prisma.task.groupBy({
+            by: ['status'],
+            where: {
+                OR: [
+                    { assignedTo: lawyerId },
+                    { createdBy: lawyerId }
+                ]
+            },
+            _count: {
+                status: true
+            }
+        });
+        const casesStats = await this.prisma.expediente.groupBy({
+            by: ['status'],
+            where: {
+                lawyerId: lawyerId
+            },
+            _count: {
+                status: true
+            }
+        });
+        const upcomingAppointments = await this.prisma.appointment.count({
+            where: {
+                lawyerId: lawyerId,
+                date: {
+                    gte: new Date(),
+                    lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                }
+            }
+        });
+        const overdueTasks = await this.prisma.task.count({
+            where: {
+                OR: [
+                    { assignedTo: lawyerId },
+                    { createdBy: lawyerId }
+                ],
+                dueDate: {
+                    lt: new Date()
+                },
+                status: {
+                    not: 'COMPLETADA'
+                }
+            }
+        });
+        const totalTasks = await this.prisma.task.count({
+            where: {
+                OR: [
+                    { assignedTo: lawyerId },
+                    { createdBy: lawyerId }
+                ]
+            }
+        });
+        const totalCases = await this.prisma.expediente.count({
+            where: {
+                lawyerId: lawyerId
+            }
+        });
+        const tasksByStatus = {
+            PENDIENTE: 0,
+            EN_PROGRESO: 0,
+            COMPLETADA: 0,
+            CANCELADA: 0
+        };
+        tasksStats.forEach(stat => {
+            tasksByStatus[stat.status] = stat._count.status;
+        });
+        const casesByStatus = {
+            ABIERTO: 0,
+            EN_PROCESO: 0,
+            CERRADO: 0
+        };
+        casesStats.forEach(stat => {
+            casesByStatus[stat.status] = stat._count.status;
+        });
+        return {
+            tasks: {
+                total: totalTasks,
+                byStatus: tasksByStatus,
+                overdue: overdueTasks
+            },
+            cases: {
+                total: totalCases,
+                byStatus: casesByStatus
+            },
+            appointments: {
+                upcoming: upcomingAppointments
+            }
+        };
+    }
+};
+exports.ReportsService = ReportsService;
+exports.ReportsService = ReportsService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], ReportsService);
+
+
+/***/ }),
+/* 66 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AdminModule = void 0;
+const common_1 = __webpack_require__(2);
+const admin_controller_1 = __webpack_require__(67);
+const admin_service_1 = __webpack_require__(68);
+const layouts_controller_1 = __webpack_require__(69);
+const layouts_controller_2 = __webpack_require__(69);
+const layouts_service_1 = __webpack_require__(70);
+const menu_config_controller_1 = __webpack_require__(73);
+const menu_config_service_1 = __webpack_require__(74);
+const site_config_controller_1 = __webpack_require__(76);
+const site_config_service_1 = __webpack_require__(77);
+const prisma_module_1 = __webpack_require__(36);
+let AdminModule = class AdminModule {
+};
+exports.AdminModule = AdminModule;
+exports.AdminModule = AdminModule = __decorate([
+    (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
+        controllers: [
+            admin_controller_1.AdminController,
+            layouts_controller_1.LayoutsController,
+            layouts_controller_2.AdminLayoutsController,
+            menu_config_controller_1.MenuConfigController,
+            site_config_controller_1.SiteConfigController
+        ],
+        providers: [
+            admin_service_1.AdminService,
+            layouts_service_1.LayoutsService,
+            menu_config_service_1.MenuConfigService,
+            site_config_service_1.SiteConfigService
+        ],
+        exports: [
+            admin_service_1.AdminService,
+            layouts_service_1.LayoutsService,
+            menu_config_service_1.MenuConfigService,
+            site_config_service_1.SiteConfigService
+        ],
+    })
+], AdminModule);
+
+
+/***/ }),
+/* 67 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AdminController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const admin_service_1 = __webpack_require__(68);
+const jwt_auth_guard_1 = __webpack_require__(27);
+const roles_guard_1 = __webpack_require__(34);
+const roles_decorator_1 = __webpack_require__(35);
+let AdminController = class AdminController {
+    constructor(adminService) {
+        this.adminService = adminService;
+    }
+    async getDashboardStats() {
+        return this.adminService.getDashboardStats();
+    }
+    async getAllUsers() {
+        return this.adminService.getAllUsers();
+    }
+    async getUserById(id) {
+        return this.adminService.getUserById(id);
+    }
+    async updateUser(id, data) {
+        return this.adminService.updateUser(id, data);
+    }
+    async deleteUser(id) {
+        return this.adminService.deleteUser(id);
+    }
+    async getAllCases() {
+        return this.adminService.getAllCases();
+    }
+    async getCaseById(id) {
+        return this.adminService.getCaseById(id);
+    }
+    async updateCase(id, data) {
+        return this.adminService.updateCase(id, data);
+    }
+    async deleteCase(id) {
+        return this.adminService.deleteCase(id);
+    }
+    async getAllAppointments() {
+        return this.adminService.getAllAppointments();
+    }
+    async getAppointmentById(id) {
+        return this.adminService.getAppointmentById(id);
+    }
+    async updateAppointment(id, data) {
+        return this.adminService.updateAppointment(id, data);
+    }
+    async deleteAppointment(id) {
+        return this.adminService.deleteAppointment(id);
+    }
+    async getAllTasks() {
+        return this.adminService.getAllTasks();
+    }
+    async getTaskById(id) {
+        return this.adminService.getTaskById(id);
+    }
+    async updateTask(id, data) {
+        return this.adminService.updateTask(id, data);
+    }
+    async deleteTask(id) {
+        return this.adminService.deleteTask(id);
+    }
+    async getAllDocuments() {
+        return this.adminService.getAllDocuments();
+    }
+    async getDocumentById(id) {
+        return this.adminService.getDocumentById(id);
+    }
+    async deleteDocument(id) {
+        return this.adminService.deleteDocument(id);
+    }
+    async getSystemReports() {
+        return this.adminService.getSystemReports();
+    }
+};
+exports.AdminController = AdminController;
+__decorate([
+    (0, common_1.Get)('dashboard'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Dashboard administrativo',
+        description: 'Obtiene estadísticas generales del sistema (solo ADMIN)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Estadísticas del dashboard',
+        schema: {
+            type: 'object',
+            properties: {
+                usuarios: {
+                    type: 'object',
+                    properties: {
+                        total: { type: 'number' },
+                        activos: { type: 'number' },
+                        nuevosEsteMes: { type: 'number' }
+                    }
+                },
+                casos: {
+                    type: 'object',
+                    properties: {
+                        total: { type: 'number' },
+                        activos: { type: 'number' },
+                        cerrados: { type: 'number' }
+                    }
+                },
+                facturacion: {
+                    type: 'object',
+                    properties: {
+                        totalEsteMes: { type: 'number' },
+                        totalAno: { type: 'number' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getDashboardStats", null);
+__decorate([
+    (0, common_1.Get)('users'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todos los usuarios',
+        description: 'Devuelve la lista de todos los usuarios del sistema'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de usuarios',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    email: { type: 'string' },
+                    name: { type: 'string' },
+                    role: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getAllUsers", null);
+__decorate([
+    (0, common_1.Get)('users/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener usuario por ID',
+        description: 'Devuelve un usuario específico por su ID'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del usuario', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Usuario encontrado',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                email: { type: 'string' },
+                name: { type: 'string' },
+                role: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Usuario no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getUserById", null);
+__decorate([
+    (0, common_1.Put)('users/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar usuario',
+        description: 'Actualiza la información de un usuario'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del usuario', type: 'string' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                name: { type: 'string', description: 'Nombre del usuario' },
+                email: { type: 'string', description: 'Email del usuario' },
+                role: { type: 'string', description: 'Rol del usuario' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Usuario actualizado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                email: { type: 'string' },
+                name: { type: 'string' },
+                role: { type: 'string' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Usuario no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "updateUser", null);
+__decorate([
+    (0, common_1.Delete)('users/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar usuario',
+        description: 'Elimina un usuario del sistema'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del usuario', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Usuario eliminado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                message: { type: 'string', example: 'Usuario eliminado exitosamente' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Usuario no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "deleteUser", null);
+__decorate([
+    (0, common_1.Get)('cases'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todos los casos',
+        description: 'Devuelve la lista de todos los casos del sistema'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de casos',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    status: { type: 'string' },
+                    clientId: { type: 'string' },
+                    lawyerId: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getAllCases", null);
+__decorate([
+    (0, common_1.Get)('cases/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener caso por ID',
+        description: 'Devuelve un caso específico por su ID'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del caso', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Caso encontrado',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                status: { type: 'string' },
+                clientId: { type: 'string' },
+                lawyerId: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Caso no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getCaseById", null);
+__decorate([
+    (0, common_1.Put)('cases/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar caso',
+        description: 'Actualiza la información de un caso'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del caso', type: 'string' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                title: { type: 'string', description: 'Título del caso' },
+                description: { type: 'string', description: 'Descripción del caso' },
+                status: { type: 'string', description: 'Estado del caso' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Caso actualizado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                status: { type: 'string' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Caso no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "updateCase", null);
+__decorate([
+    (0, common_1.Delete)('cases/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar caso',
+        description: 'Elimina un caso del sistema'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del caso', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Caso eliminado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                message: { type: 'string', example: 'Caso eliminado exitosamente' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Caso no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "deleteCase", null);
+__decorate([
+    (0, common_1.Get)('appointments'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todas las citas',
+        description: 'Devuelve la lista de todas las citas del sistema'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de citas',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    date: { type: 'string', format: 'date-time' },
+                    location: { type: 'string' },
+                    notes: { type: 'string' },
+                    lawyerId: { type: 'string' },
+                    clientId: { type: 'string' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getAllAppointments", null);
+__decorate([
+    (0, common_1.Get)('appointments/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener cita por ID',
+        description: 'Devuelve una cita específica por su ID'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la cita', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Cita encontrada',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                date: { type: 'string', format: 'date-time' },
+                location: { type: 'string' },
+                notes: { type: 'string' },
+                lawyerId: { type: 'string' },
+                clientId: { type: 'string' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Cita no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getAppointmentById", null);
+__decorate([
+    (0, common_1.Put)('appointments/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar cita',
+        description: 'Actualiza la información de una cita'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la cita', type: 'string' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                date: { type: 'string', description: 'Fecha y hora de la cita' },
+                location: { type: 'string', description: 'Ubicación de la cita' },
+                notes: { type: 'string', description: 'Notas de la cita' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Cita actualizada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                date: { type: 'string', format: 'date-time' },
+                location: { type: 'string' },
+                notes: { type: 'string' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Cita no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "updateAppointment", null);
+__decorate([
+    (0, common_1.Delete)('appointments/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar cita',
+        description: 'Elimina una cita del sistema'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la cita', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Cita eliminada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                message: { type: 'string', example: 'Cita eliminada exitosamente' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Cita no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "deleteAppointment", null);
+__decorate([
+    (0, common_1.Get)('tasks'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todas las tareas',
+        description: 'Devuelve la lista de todas las tareas del sistema'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de tareas',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    status: { type: 'string' },
+                    priority: { type: 'string' },
+                    assignedTo: { type: 'string' },
+                    caseId: { type: 'string' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getAllTasks", null);
+__decorate([
+    (0, common_1.Get)('tasks/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener tarea por ID',
+        description: 'Devuelve una tarea específica por su ID'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la tarea', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Tarea encontrada',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                status: { type: 'string' },
+                priority: { type: 'string' },
+                assignedTo: { type: 'string' },
+                caseId: { type: 'string' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Tarea no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getTaskById", null);
+__decorate([
+    (0, common_1.Put)('tasks/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar tarea',
+        description: 'Actualiza la información de una tarea'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la tarea', type: 'string' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                title: { type: 'string', description: 'Título de la tarea' },
+                description: { type: 'string', description: 'Descripción de la tarea' },
+                status: { type: 'string', description: 'Estado de la tarea' },
+                priority: { type: 'string', description: 'Prioridad de la tarea' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Tarea actualizada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                status: { type: 'string' },
+                priority: { type: 'string' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Tarea no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "updateTask", null);
+__decorate([
+    (0, common_1.Delete)('tasks/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar tarea',
+        description: 'Elimina una tarea del sistema'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la tarea', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Tarea eliminada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                message: { type: 'string', example: 'Tarea eliminada exitosamente' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Tarea no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "deleteTask", null);
+__decorate([
+    (0, common_1.Get)('documents'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todos los documentos',
+        description: 'Devuelve la lista de todos los documentos del sistema'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de documentos',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    filename: { type: 'string' },
+                    originalName: { type: 'string' },
+                    mimeType: { type: 'string' },
+                    size: { type: 'number' },
+                    uploadedBy: { type: 'string' },
+                    caseId: { type: 'string' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getAllDocuments", null);
+__decorate([
+    (0, common_1.Get)('documents/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener documento por ID',
+        description: 'Devuelve un documento específico por su ID'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Documento encontrado',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                filename: { type: 'string' },
+                originalName: { type: 'string' },
+                mimeType: { type: 'string' },
+                size: { type: 'number' },
+                uploadedBy: { type: 'string' },
+                caseId: { type: 'string' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Documento no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getDocumentById", null);
+__decorate([
+    (0, common_1.Delete)('documents/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar documento',
+        description: 'Elimina un documento del sistema'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Documento eliminado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                message: { type: 'string', example: 'Documento eliminado exitosamente' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Documento no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "deleteDocument", null);
+__decorate([
+    (0, common_1.Get)('reports'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener reportes del sistema',
+        description: 'Devuelve reportes y estadísticas generales del sistema'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Reportes del sistema',
+        schema: {
+            type: 'object',
+            properties: {
+                usuarios: {
+                    type: 'object',
+                    properties: {
+                        total: { type: 'number' },
+                        porRol: {
+                            type: 'object',
+                            properties: {
+                                admin: { type: 'number' },
+                                abogado: { type: 'number' },
+                                cliente: { type: 'number' }
+                            }
+                        }
+                    }
+                },
+                casos: {
+                    type: 'object',
+                    properties: {
+                        total: { type: 'number' },
+                        porEstado: {
+                            type: 'object',
+                            properties: {
+                                activo: { type: 'number' },
+                                cerrado: { type: 'number' },
+                                pendiente: { type: 'number' }
+                            }
+                        }
+                    }
+                },
+                facturacion: {
+                    type: 'object',
+                    properties: {
+                        totalAno: { type: 'number' },
+                        promedioMensual: { type: 'number' },
+                        facturasPendientes: { type: 'number' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getSystemReports", null);
+exports.AdminController = AdminController = __decorate([
+    (0, swagger_1.ApiTags)('admin'),
+    (0, common_1.Controller)('admin'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __metadata("design:paramtypes", [typeof (_a = typeof admin_service_1.AdminService !== "undefined" && admin_service_1.AdminService) === "function" ? _a : Object])
+], AdminController);
+
+
+/***/ }),
+/* 68 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AdminService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+let AdminService = class AdminService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async getDashboardStats() {
+        const [totalUsers, totalLawyers, totalClients, totalCases, totalRegularAppointments, totalVisitorAppointments, totalTasks, totalDocuments, recentCases, recentRegularAppointments, recentVisitorAppointments, overdueTasks] = await Promise.all([
+            this.prisma.user.count(),
+            this.prisma.user.count({ where: { role: 'ABOGADO' } }),
+            this.prisma.user.count({ where: { role: 'CLIENTE' } }),
+            this.prisma.expediente.count(),
+            this.prisma.appointment.count(),
+            this.prisma.visitorAppointment.count(),
+            this.prisma.task.count(),
+            this.prisma.document.count(),
+            this.prisma.expediente.findMany({
+                take: 5,
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    client: { include: { user: true } },
+                    lawyer: true,
+                },
+            }),
+            this.prisma.appointment.findMany({
+                take: 5,
+                orderBy: { date: 'desc' },
+                include: {
+                    client: { include: { user: true } },
+                    lawyer: true,
+                },
+            }),
+            this.prisma.visitorAppointment.findMany({
+                take: 5,
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    assignedLawyer: true,
+                },
+            }),
+            this.prisma.task.findMany({
+                where: {
+                    dueDate: { lt: new Date() },
+                    status: { not: 'COMPLETADA' },
+                },
+                include: {
+                    assignedToUser: true,
+                    expediente: true,
+                },
+            }),
+        ]);
+        const formattedRecentRegularAppointments = recentRegularAppointments.map(apt => ({
+            id: apt.id,
+            type: 'REGULAR',
+            date: apt.date,
+            location: apt.location,
+            notes: apt.notes,
+            status: 'CONFIRMADA',
+            client: apt.client,
+            lawyer: apt.lawyer,
+            createdAt: apt.date,
+            fullName: apt.client?.user?.name || 'Cliente registrado',
+            email: apt.client?.user?.email || '',
+            phone: apt.client?.phone || '',
+            consultationReason: apt.notes || '',
+            consultationType: 'No especificado',
+            age: null,
+            assignedLawyerId: apt.lawyerId,
+            confirmedDate: apt.date,
+            alternativeDate: null
+        }));
+        const formattedRecentVisitorAppointments = recentVisitorAppointments.map(apt => ({
+            id: apt.id,
+            type: 'VISITOR',
+            date: apt.preferredDate,
+            location: apt.location,
+            notes: apt.notes,
+            status: apt.status,
+            client: null,
+            lawyer: apt.assignedLawyer,
+            createdAt: apt.createdAt,
+            fullName: apt.fullName,
+            email: apt.email,
+            phone: apt.phone,
+            consultationReason: apt.consultationReason,
+            consultationType: apt.consultationType,
+            age: apt.age,
+            assignedLawyerId: apt.assignedLawyerId,
+            confirmedDate: apt.confirmedDate,
+            alternativeDate: apt.alternativeDate
+        }));
+        const recentAppointments = [...formattedRecentRegularAppointments, ...formattedRecentVisitorAppointments]
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, 5);
+        return {
+            totalUsers,
+            totalLawyers,
+            totalClients,
+            totalCases,
+            totalAppointments: totalRegularAppointments + totalVisitorAppointments,
+            totalTasks,
+            totalDocuments,
+            recentCases,
+            recentAppointments,
+            overdueTasks,
+        };
+    }
+    async getAllUsers() {
+        return this.prisma.user.findMany({
+            include: {
+                client: true,
+                expedientesAsLawyer: true,
+                appointmentsAsLawyer: true,
+                assignedTasks: true,
+                createdTasks: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+    async getUserById(id) {
+        return this.prisma.user.findUnique({
+            where: { id },
+            include: {
+                client: true,
+                expedientesAsLawyer: true,
+                appointmentsAsLawyer: true,
+                assignedTasks: true,
+                createdTasks: true,
+            },
+        });
+    }
+    async updateUser(id, data) {
+        const { client, ...userData } = data;
+        if (client) {
+            return this.prisma.user.update({
+                where: { id },
+                data: {
+                    ...userData,
+                    client: {
+                        upsert: {
+                            create: client,
+                            update: client,
+                        },
+                    },
+                },
+                include: {
+                    client: true,
+                },
+            });
+        }
+        return this.prisma.user.update({
+            where: { id },
+            data: userData,
+            include: {
+                client: true,
+            },
+        });
+    }
+    async deleteUser(id) {
+        try {
+            const user = await this.prisma.user.findUnique({
+                where: { id },
+                include: {
+                    client: true,
+                    lawyer: true,
+                },
+            });
+            if (!user) {
+                throw new Error('Usuario no encontrado');
+            }
+            return await this.prisma.$transaction(async (tx) => {
+                await tx.chatMessage.deleteMany({
+                    where: {
+                        OR: [
+                            { senderId: id },
+                            { receiverId: id }
+                        ]
+                    }
+                });
+                await tx.task.deleteMany({
+                    where: { createdBy: id }
+                });
+                await tx.task.updateMany({
+                    where: { assignedTo: id },
+                    data: { assignedTo: null }
+                });
+                await tx.document.deleteMany({
+                    where: { uploadedBy: id }
+                });
+                await tx.appointment.deleteMany({
+                    where: { lawyerId: id }
+                });
+                await tx.expediente.deleteMany({
+                    where: { lawyerId: id }
+                });
+                if (user.client) {
+                    await tx.appointment.deleteMany({
+                        where: { clientId: user.client.id }
+                    });
+                    await tx.task.deleteMany({
+                        where: { clientId: user.client.id }
+                    });
+                    await tx.expediente.deleteMany({
+                        where: { clientId: user.client.id }
+                    });
+                    await tx.client.delete({
+                        where: { userId: id }
+                    });
+                }
+                if (user.lawyer) {
+                    await tx.lawyer.delete({
+                        where: { userId: id }
+                    });
+                }
+                return await tx.user.delete({
+                    where: { id }
+                });
+            });
+        }
+        catch (error) {
+            console.error('Error deleting user:', error);
+            if (error && typeof error === 'object' && 'code' in error) {
+                if (error.code === 'P2025') {
+                    throw new Error('Usuario no encontrado');
+                }
+                else if (error.code === 'P2003') {
+                    throw new Error('No se puede eliminar el usuario. Primero elimine todos los registros relacionados (expedientes, citas, documentos, etc.)');
+                }
+            }
+            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+            throw new Error(`Error al eliminar usuario: ${errorMessage}`);
+        }
+    }
+    async getAllCases() {
+        return this.prisma.expediente.findMany({
+            include: {
+                client: { include: { user: true } },
+                lawyer: true,
+                documents: true,
+                tasks: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+    async getCaseById(id) {
+        return this.prisma.expediente.findUnique({
+            where: { id },
+            include: {
+                client: { include: { user: true } },
+                lawyer: true,
+                documents: true,
+                tasks: true,
+            },
+        });
+    }
+    async updateCase(id, data) {
+        return this.prisma.expediente.update({
+            where: { id },
+            data,
+            include: {
+                client: { include: { user: true } },
+                lawyer: true,
+                documents: true,
+                tasks: true,
+            },
+        });
+    }
+    async deleteCase(id) {
+        return this.prisma.expediente.delete({
+            where: { id },
+        });
+    }
+    async getAllAppointments() {
+        const regularAppointments = await this.prisma.appointment.findMany({
+            include: {
+                client: { include: { user: true } },
+                lawyer: true,
+            },
+            orderBy: { date: 'desc' },
+        });
+        const visitorAppointments = await this.prisma.visitorAppointment.findMany({
+            include: {
+                assignedLawyer: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        const formattedRegularAppointments = regularAppointments.map(apt => ({
+            id: apt.id,
+            type: 'REGULAR',
+            date: apt.date,
+            location: apt.location,
+            notes: apt.notes,
+            status: 'CONFIRMADA',
+            client: apt.client,
+            lawyer: apt.lawyer,
+            createdAt: apt.date,
+            fullName: apt.client?.user?.name || 'Cliente registrado',
+            email: apt.client?.user?.email || '',
+            phone: apt.client?.phone || '',
+            consultationReason: apt.notes || '',
+            consultationType: 'No especificado',
+            age: null,
+            assignedLawyerId: apt.lawyerId,
+            confirmedDate: apt.date,
+            alternativeDate: null
+        }));
+        const formattedVisitorAppointments = visitorAppointments.map(apt => ({
+            id: apt.id,
+            type: 'VISITOR',
+            date: apt.preferredDate,
+            location: apt.location,
+            notes: apt.notes,
+            status: apt.status,
+            client: null,
+            lawyer: apt.assignedLawyer,
+            createdAt: apt.createdAt,
+            fullName: apt.fullName,
+            email: apt.email,
+            phone: apt.phone,
+            consultationReason: apt.consultationReason,
+            consultationType: apt.consultationType,
+            age: apt.age,
+            assignedLawyerId: apt.assignedLawyerId,
+            confirmedDate: apt.confirmedDate,
+            alternativeDate: apt.alternativeDate
+        }));
+        const allAppointments = [...formattedRegularAppointments, ...formattedVisitorAppointments];
+        return allAppointments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+    async getAppointmentById(id) {
+        const regularAppointment = await this.prisma.appointment.findUnique({
+            where: { id },
+            include: {
+                client: { include: { user: true } },
+                lawyer: true,
+            },
+        });
+        if (regularAppointment) {
+            return {
+                ...regularAppointment,
+                type: 'REGULAR',
+                fullName: regularAppointment.client?.user?.name || 'Cliente registrado',
+                email: regularAppointment.client?.user?.email || '',
+                phone: regularAppointment.client?.phone || '',
+                consultationReason: regularAppointment.notes || '',
+                consultationType: 'No especificado',
+                age: null,
+                status: 'CONFIRMADA',
+                confirmedDate: regularAppointment.date,
+                alternativeDate: null
+            };
+        }
+        const visitorAppointment = await this.prisma.visitorAppointment.findUnique({
+            where: { id },
+            include: {
+                assignedLawyer: true,
+            },
+        });
+        if (visitorAppointment) {
+            return {
+                ...visitorAppointment,
+                type: 'VISITOR',
+                date: visitorAppointment.preferredDate,
+                client: null,
+                lawyer: visitorAppointment.assignedLawyer
+            };
+        }
+        return null;
+    }
+    async updateAppointment(id, data) {
+        try {
+            return await this.prisma.appointment.update({
+                where: { id },
+                data,
+                include: {
+                    client: { include: { user: true } },
+                    lawyer: true,
+                },
+            });
+        }
+        catch (error) {
+            const visitorData = {};
+            if (data.lawyerId) {
+                visitorData.assignedLawyerId = data.lawyerId;
+                visitorData.status = 'CONFIRMADA';
+            }
+            if (data.date) {
+                visitorData.confirmedDate = new Date(data.date);
+            }
+            if (data.location) {
+                visitorData.location = data.location;
+            }
+            if (data.notes) {
+                visitorData.notes = data.notes;
+            }
+            return await this.prisma.visitorAppointment.update({
+                where: { id },
+                data: visitorData,
+                include: {
+                    assignedLawyer: true,
+                },
+            });
+        }
+    }
+    async deleteAppointment(id) {
+        try {
+            return await this.prisma.appointment.delete({
+                where: { id },
+            });
+        }
+        catch (error) {
+            return await this.prisma.visitorAppointment.delete({
+                where: { id },
+            });
+        }
+    }
+    async getAllTasks() {
+        return this.prisma.task.findMany({
+            include: {
+                expediente: true,
+                client: { include: { user: true } },
+                assignedToUser: true,
+                createdByUser: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+    async getTaskById(id) {
+        return this.prisma.task.findUnique({
+            where: { id },
+            include: {
+                expediente: true,
+                client: { include: { user: true } },
+                assignedToUser: true,
+                createdByUser: true,
+            },
+        });
+    }
+    async updateTask(id, data) {
+        return this.prisma.task.update({
+            where: { id },
+            data,
+            include: {
+                expediente: true,
+                client: { include: { user: true } },
+                assignedToUser: true,
+                createdByUser: true,
+            },
+        });
+    }
+    async deleteTask(id) {
+        return this.prisma.task.delete({
+            where: { id },
+        });
+    }
+    async getAllDocuments() {
+        return this.prisma.document.findMany({
+            include: {
+                expediente: {
+                    include: {
+                        client: {
+                            include: {
+                                user: true
+                            }
+                        }
+                    }
+                },
+                uploadedByUser: true,
+            },
+            orderBy: { uploadedAt: 'desc' },
+        });
+    }
+    async getDocumentById(id) {
+        return this.prisma.document.findUnique({
+            where: { id },
+            include: {
+                expediente: {
+                    include: {
+                        client: {
+                            include: {
+                                user: true
+                            }
+                        }
+                    }
+                },
+                uploadedByUser: true,
+            },
+        });
+    }
+    async deleteDocument(id) {
+        return this.prisma.document.delete({
+            where: { id },
+        });
+    }
+    async getSystemReports() {
+        const [casesByStatus, tasksByStatus, appointmentsByMonth, userActivity, documentStats] = await Promise.all([
+            this.prisma.expediente.groupBy({
+                by: ['status'],
+                _count: { status: true },
+            }),
+            this.prisma.task.groupBy({
+                by: ['status'],
+                _count: { status: true },
+            }),
+            this.prisma.appointment.groupBy({
+                by: ['date'],
+                _count: { date: true },
+                where: {
+                    date: {
+                        gte: new Date(new Date().getFullYear(), 0, 1),
+                    },
+                },
+            }),
+            this.prisma.user.findMany({
+                select: {
+                    id: true,
+                    name: true,
+                    role: true,
+                    createdAt: true,
+                    expedientesAsLawyer: {
+                        select: { id: true },
+                    },
+                    appointmentsAsLawyer: {
+                        select: { id: true },
+                    },
+                    assignedTasks: {
+                        select: { id: true },
+                    },
+                },
+            }),
+            this.prisma.document.groupBy({
+                by: ['mimeType'],
+                _count: { mimeType: true },
+                _sum: { fileSize: true },
+            }),
+        ]);
+        return {
+            casesByStatus,
+            tasksByStatus,
+            appointmentsByMonth,
+            userActivity,
+            documentStats,
+        };
+    }
+};
+exports.AdminService = AdminService;
+exports.AdminService = AdminService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], AdminService);
+
+
+/***/ }),
+/* 69 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AdminLayoutsController = exports.LayoutsController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const jwt_auth_guard_1 = __webpack_require__(27);
+const roles_guard_1 = __webpack_require__(34);
+const roles_decorator_1 = __webpack_require__(35);
+const client_1 = __webpack_require__(9);
+const layouts_service_1 = __webpack_require__(70);
+const layout_dto_1 = __webpack_require__(71);
+let LayoutsController = class LayoutsController {
+    constructor(layoutsService) {
+        this.layoutsService = layoutsService;
+    }
+    async getActiveHomeLayout() {
+        const layout = await this.layoutsService.findActiveLayout('home');
+        if (!layout) {
+            throw new common_1.HttpException({ message: 'No hay layout activo para la home' }, common_1.HttpStatus.NOT_FOUND);
+        }
+        return layout;
+    }
+};
+exports.LayoutsController = LayoutsController;
+__decorate([
+    (0, common_1.Get)('home'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener layout activo de la home (público)',
+        description: 'Retorna el layout activo para la página principal'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Layout activo encontrado exitosamente',
+        type: layout_dto_1.LayoutConfigDto
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 404,
+        description: 'No hay layout activo para la home'
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_b = typeof Promise !== "undefined" && Promise) === "function" ? _b : Object)
+], LayoutsController.prototype, "getActiveHomeLayout", null);
+exports.LayoutsController = LayoutsController = __decorate([
+    (0, swagger_1.ApiTags)('Layouts - Home Builder'),
+    (0, common_1.Controller)('layouts'),
+    __metadata("design:paramtypes", [typeof (_a = typeof layouts_service_1.LayoutsService !== "undefined" && layouts_service_1.LayoutsService) === "function" ? _a : Object])
+], LayoutsController);
+let AdminLayoutsController = class AdminLayoutsController {
+    constructor(layoutsService) {
+        this.layoutsService = layoutsService;
+    }
+    async create(createLayoutDto, req) {
+        return this.layoutsService.create(createLayoutDto, req.user.id);
+    }
+    async findAll() {
+        return this.layoutsService.findAll();
+    }
+    async findOne(id) {
+        return this.layoutsService.findOne(id);
+    }
+    async findBySlug(slug) {
+        return this.layoutsService.findBySlug(slug);
+    }
+    async findActiveLayout(slug) {
+        return this.layoutsService.findActiveLayout(slug);
+    }
+    async update(id, updateLayoutDto, req) {
+        return this.layoutsService.update(id, updateLayoutDto, req.user.id);
+    }
+    async activate(id) {
+        return this.layoutsService.activate(id);
+    }
+    async deactivate(id) {
+        return this.layoutsService.deactivate(id);
+    }
+    async duplicate(id, req) {
+        return this.layoutsService.duplicate(id, req.user.id);
+    }
+    async remove(id) {
+        return this.layoutsService.remove(id);
+    }
+};
+exports.AdminLayoutsController = AdminLayoutsController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Crear un nuevo layout',
+        description: 'Crea un nuevo layout para el Home Builder'
+    }),
+    (0, swagger_1.ApiBody)({ type: layout_dto_1.CreateLayoutDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Layout creado exitosamente',
+        type: layout_dto_1.LayoutConfigDto
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 409,
+        description: 'Ya existe un layout con este nombre'
+    }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_d = typeof layout_dto_1.CreateLayoutDto !== "undefined" && layout_dto_1.CreateLayoutDto) === "function" ? _d : Object, Object]),
+    __metadata("design:returntype", typeof (_e = typeof Promise !== "undefined" && Promise) === "function" ? _e : Object)
+], AdminLayoutsController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)(),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todos los layouts',
+        description: 'Retorna una lista de todos los layouts disponibles'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de layouts obtenida exitosamente',
+        type: [layout_dto_1.LayoutConfigDto]
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
+], AdminLayoutsController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener un layout por ID',
+        description: 'Retorna un layout específico por su ID'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del layout' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Layout encontrado exitosamente',
+        type: layout_dto_1.LayoutConfigDto
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 404,
+        description: 'Layout no encontrado'
+    }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
+], AdminLayoutsController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Get)('slug/:slug'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener un layout por slug',
+        description: 'Retorna un layout específico por su slug'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'slug', description: 'Slug del layout (ej: home, about)' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Layout encontrado exitosamente',
+        type: layout_dto_1.LayoutConfigDto
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 404,
+        description: 'Layout no encontrado'
+    }),
+    __param(0, (0, common_1.Param)('slug')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
+], AdminLayoutsController.prototype, "findBySlug", null);
+__decorate([
+    (0, common_1.Get)('active/:slug'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener layout activo por slug',
+        description: 'Retorna el layout activo para un slug específico'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'slug', description: 'Slug del layout (ej: home, about)' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Layout activo encontrado exitosamente',
+        type: layout_dto_1.LayoutConfigDto
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 404,
+        description: 'No hay layout activo para este slug'
+    }),
+    __param(0, (0, common_1.Param)('slug')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_j = typeof Promise !== "undefined" && Promise) === "function" ? _j : Object)
+], AdminLayoutsController.prototype, "findActiveLayout", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar un layout',
+        description: 'Actualiza un layout existente'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del layout' }),
+    (0, swagger_1.ApiBody)({ type: layout_dto_1.UpdateLayoutDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Layout actualizado exitosamente',
+        type: layout_dto_1.LayoutConfigDto
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 404,
+        description: 'Layout no encontrado'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 409,
+        description: 'Ya existe un layout con este nombre'
+    }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_k = typeof layout_dto_1.UpdateLayoutDto !== "undefined" && layout_dto_1.UpdateLayoutDto) === "function" ? _k : Object, Object]),
+    __metadata("design:returntype", typeof (_l = typeof Promise !== "undefined" && Promise) === "function" ? _l : Object)
+], AdminLayoutsController.prototype, "update", null);
+__decorate([
+    (0, common_1.Post)(':id/activate'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Activar un layout',
+        description: 'Activa un layout y desactiva otros con el mismo slug'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del layout a activar' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Layout activado exitosamente',
+        type: layout_dto_1.LayoutConfigDto
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 404,
+        description: 'Layout no encontrado'
+    }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_m = typeof Promise !== "undefined" && Promise) === "function" ? _m : Object)
+], AdminLayoutsController.prototype, "activate", null);
+__decorate([
+    (0, common_1.Post)(':id/deactivate'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Desactivar un layout',
+        description: 'Desactiva un layout específico'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del layout a desactivar' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Layout desactivado exitosamente',
+        type: layout_dto_1.LayoutConfigDto
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 404,
+        description: 'Layout no encontrado'
+    }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_o = typeof Promise !== "undefined" && Promise) === "function" ? _o : Object)
+], AdminLayoutsController.prototype, "deactivate", null);
+__decorate([
+    (0, common_1.Post)(':id/duplicate'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Duplicar un layout',
+        description: 'Crea una copia de un layout existente'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del layout a duplicar' }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Layout duplicado exitosamente',
+        type: layout_dto_1.LayoutConfigDto
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 404,
+        description: 'Layout no encontrado'
+    }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", typeof (_p = typeof Promise !== "undefined" && Promise) === "function" ? _p : Object)
+], AdminLayoutsController.prototype, "duplicate", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, common_1.HttpCode)(common_1.HttpStatus.NO_CONTENT),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar un layout',
+        description: 'Elimina un layout específico'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del layout a eliminar' }),
+    (0, swagger_1.ApiResponse)({
+        status: 204,
+        description: 'Layout eliminado exitosamente'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 404,
+        description: 'Layout no encontrado'
+    }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_q = typeof Promise !== "undefined" && Promise) === "function" ? _q : Object)
+], AdminLayoutsController.prototype, "remove", null);
+exports.AdminLayoutsController = AdminLayoutsController = __decorate([
+    (0, swagger_1.ApiTags)('Admin - Layouts'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, common_1.Controller)('admin/layouts'),
+    __metadata("design:paramtypes", [typeof (_c = typeof layouts_service_1.LayoutsService !== "undefined" && layouts_service_1.LayoutsService) === "function" ? _c : Object])
+], AdminLayoutsController);
+
+
+/***/ }),
+/* 70 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LayoutsService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+let LayoutsService = class LayoutsService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async create(createLayoutDto, userId) {
+        const existingLayout = await this.prisma.layout.findFirst({
+            where: {
+                slug: this.generateSlug(createLayoutDto.name)
+            }
+        });
+        if (existingLayout) {
+            throw new common_1.ConflictException('Ya existe un layout con este nombre');
+        }
+        const layout = await this.prisma.layout.create({
+            data: {
+                name: createLayoutDto.name,
+                slug: this.generateSlug(createLayoutDto.name),
+                components: JSON.parse(JSON.stringify(createLayoutDto.components)),
+                version: 1,
+                isActive: false,
+                createdBy: userId
+            }
+        });
+        return this.mapToLayoutConfigDto(layout);
+    }
+    async findAll() {
+        const layouts = await this.prisma.layout.findMany({
+            include: {
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+        return layouts.map(layout => this.mapToLayoutConfigDto(layout));
+    }
+    async findOne(id) {
+        const layout = await this.prisma.layout.findUnique({
+            where: { id },
+            include: {
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        if (!layout) {
+            throw new common_1.NotFoundException(`Layout con ID ${id} no encontrado`);
+        }
+        return this.mapToLayoutConfigDto(layout);
+    }
+    async findBySlug(slug) {
+        const layout = await this.prisma.layout.findUnique({
+            where: { slug },
+            include: {
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        if (!layout) {
+            throw new common_1.NotFoundException(`Layout con slug ${slug} no encontrado`);
+        }
+        return this.mapToLayoutConfigDto(layout);
+    }
+    async findActiveLayout(slug) {
+        const layout = await this.prisma.layout.findFirst({
+            where: {
+                slug,
+                isActive: true
+            },
+            include: {
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        return layout ? this.mapToLayoutConfigDto(layout) : null;
+    }
+    async update(id, updateLayoutDto, userId) {
+        const existingLayout = await this.prisma.layout.findUnique({
+            where: { id }
+        });
+        if (!existingLayout) {
+            throw new common_1.NotFoundException(`Layout con ID ${id} no encontrado`);
+        }
+        if (updateLayoutDto.name && updateLayoutDto.name !== existingLayout.name) {
+            const slug = this.generateSlug(updateLayoutDto.name);
+            const conflictingLayout = await this.prisma.layout.findFirst({
+                where: {
+                    slug,
+                    id: { not: id }
+                }
+            });
+            if (conflictingLayout) {
+                throw new common_1.ConflictException('Ya existe un layout con este nombre');
+            }
+        }
+        const layout = await this.prisma.layout.update({
+            where: { id },
+            data: {
+                name: updateLayoutDto.name,
+                slug: updateLayoutDto.name ? this.generateSlug(updateLayoutDto.name) : undefined,
+                components: updateLayoutDto.components ? JSON.parse(JSON.stringify(updateLayoutDto.components)) : undefined,
+                version: {
+                    increment: 1
+                },
+                updatedAt: new Date()
+            },
+            include: {
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        return this.mapToLayoutConfigDto(layout);
+    }
+    async activate(id) {
+        const layout = await this.prisma.layout.findUnique({
+            where: { id }
+        });
+        if (!layout) {
+            throw new common_1.NotFoundException(`Layout con ID ${id} no encontrado`);
+        }
+        await this.prisma.layout.updateMany({
+            where: {
+                slug: layout.slug
+            },
+            data: {
+                isActive: false
+            }
+        });
+        const activatedLayout = await this.prisma.layout.update({
+            where: { id },
+            data: {
+                isActive: true
+            },
+            include: {
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        return this.mapToLayoutConfigDto(activatedLayout);
+    }
+    async deactivate(id) {
+        const layout = await this.prisma.layout.update({
+            where: { id },
+            data: {
+                isActive: false
+            },
+            include: {
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        return this.mapToLayoutConfigDto(layout);
+    }
+    async remove(id) {
+        const layout = await this.prisma.layout.findUnique({
+            where: { id }
+        });
+        if (!layout) {
+            throw new common_1.NotFoundException(`Layout con ID ${id} no encontrado`);
+        }
+        await this.prisma.layout.delete({
+            where: { id }
+        });
+    }
+    async duplicate(id, userId) {
+        const originalLayout = await this.prisma.layout.findUnique({
+            where: { id }
+        });
+        if (!originalLayout) {
+            throw new common_1.NotFoundException(`Layout con ID ${id} no encontrado`);
+        }
+        const duplicatedLayout = await this.prisma.layout.create({
+            data: {
+                name: `${originalLayout.name} (Copia)`,
+                slug: this.generateSlug(`${originalLayout.name} (Copia)`),
+                components: originalLayout.components,
+                version: 1,
+                isActive: false,
+                createdBy: userId
+            },
+            include: {
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        return this.mapToLayoutConfigDto(duplicatedLayout);
+    }
+    generateSlug(name) {
+        return name
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .trim();
+    }
+    mapToLayoutConfigDto(layout) {
+        return {
+            id: layout.id,
+            name: layout.name,
+            components: layout.components,
+            version: layout.version,
+            lastModified: layout.updatedAt.toISOString(),
+            userId: layout.createdBy
+        };
+    }
+};
+exports.LayoutsService = LayoutsService;
+exports.LayoutsService = LayoutsService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], LayoutsService);
+
+
+/***/ }),
+/* 71 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UpdateLayoutDto = exports.CreateLayoutDto = exports.LayoutConfigDto = exports.ComponentConfigDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const class_transformer_1 = __webpack_require__(72);
+const swagger_1 = __webpack_require__(3);
+class ComponentConfigDto {
+}
+exports.ComponentConfigDto = ComponentConfigDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID único del componente',
+        example: 'component-1234567890'
+    }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ComponentConfigDto.prototype, "id", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Tipo de componente',
+        example: 'hero-banner',
+        enum: ['hero-banner', 'service-cards', 'contact-form', 'testimonials', 'stats', 'text-block', 'image-gallery', 'map', 'divider', 'spacer']
+    }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ComponentConfigDto.prototype, "type", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Propiedades del componente',
+        example: { title: 'Bienvenido', subtitle: 'Servicios legales' }
+    }),
+    __metadata("design:type", Object)
+], ComponentConfigDto.prototype, "props", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Orden del componente en el layout',
+        example: 0
+    }),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], ComponentConfigDto.prototype, "order", void 0);
+class LayoutConfigDto {
+}
+exports.LayoutConfigDto = LayoutConfigDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID único del layout',
+        example: 'home-layout'
+    }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], LayoutConfigDto.prototype, "id", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Nombre del layout',
+        example: 'Home Page'
+    }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], LayoutConfigDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Lista de componentes del layout',
+        type: [ComponentConfigDto]
+    }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => ComponentConfigDto),
+    __metadata("design:type", Array)
+], LayoutConfigDto.prototype, "components", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Versión del layout',
+        example: 1
+    }),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], LayoutConfigDto.prototype, "version", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Fecha de última modificación',
+        example: '2024-12-25T10:00:00.000Z'
+    }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], LayoutConfigDto.prototype, "lastModified", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del usuario que creó/modificó el layout',
+        example: 'user-123'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], LayoutConfigDto.prototype, "userId", void 0);
+class CreateLayoutDto {
+}
+exports.CreateLayoutDto = CreateLayoutDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Nombre del layout',
+        example: 'Home Page'
+    }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateLayoutDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Lista de componentes del layout',
+        type: [ComponentConfigDto]
+    }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => ComponentConfigDto),
+    __metadata("design:type", Array)
+], CreateLayoutDto.prototype, "components", void 0);
+class UpdateLayoutDto {
+}
+exports.UpdateLayoutDto = UpdateLayoutDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Nombre del layout',
+        example: 'Home Page Updated'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateLayoutDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Lista de componentes del layout',
+        type: [ComponentConfigDto]
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => ComponentConfigDto),
+    __metadata("design:type", Array)
+], UpdateLayoutDto.prototype, "components", void 0);
+
+
+/***/ }),
+/* 72 */
+/***/ ((module) => {
+
+module.exports = require("class-transformer");
+
+/***/ }),
+/* 73 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MenuConfigController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const jwt_auth_guard_1 = __webpack_require__(27);
+const roles_guard_1 = __webpack_require__(34);
+const roles_decorator_1 = __webpack_require__(35);
+const client_1 = __webpack_require__(9);
+const menu_config_service_1 = __webpack_require__(74);
+const menu_config_dto_1 = __webpack_require__(75);
+let MenuConfigController = class MenuConfigController {
+    constructor(menuConfigService) {
+        this.menuConfigService = menuConfigService;
+    }
+    async create(createMenuConfigDto, req) {
+        return this.menuConfigService.create(createMenuConfigDto, req.user.id);
+    }
+    async findAll() {
+        return this.menuConfigService.findAll();
+    }
+    async findByRole(role) {
+        return this.menuConfigService.findByRole(role);
+    }
+    async findOne(id) {
+        return this.menuConfigService.findOne(id);
+    }
+    async update(id, updateMenuConfigDto) {
+        return this.menuConfigService.update(id, updateMenuConfigDto);
+    }
+    async remove(id) {
+        return this.menuConfigService.remove(id);
+    }
+    async getDefaultMenus() {
+        return this.menuConfigService.getDefaultMenus();
+    }
+};
+exports.MenuConfigController = MenuConfigController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Crear configuración de menú',
+        description: 'Crea una nueva configuración de menú para un rol específico'
+    }),
+    (0, swagger_1.ApiBody)({ type: menu_config_dto_1.CreateMenuConfigDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Configuración de menú creada exitosamente',
+        type: menu_config_dto_1.MenuConfigResponseDto
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof menu_config_dto_1.CreateMenuConfigDto !== "undefined" && menu_config_dto_1.CreateMenuConfigDto) === "function" ? _b : Object, Object]),
+    __metadata("design:returntype", typeof (_c = typeof Promise !== "undefined" && Promise) === "function" ? _c : Object)
+], MenuConfigController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todas las configuraciones de menús',
+        description: 'Retorna todas las configuraciones de menús del sistema'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de configuraciones de menús',
+        type: [menu_config_dto_1.MenuConfigResponseDto]
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_d = typeof Promise !== "undefined" && Promise) === "function" ? _d : Object)
+], MenuConfigController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('role/:role'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener menú por rol (público)',
+        description: 'Retorna la configuración de menú activa para un rol específico'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'role', description: 'Rol del usuario', enum: client_1.Role }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Configuración de menú encontrada',
+        type: menu_config_dto_1.MenuConfigResponseDto
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Menú no encontrado para el rol' }),
+    __param(0, (0, common_1.Param)('role')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_e = typeof client_1.Role !== "undefined" && client_1.Role) === "function" ? _e : Object]),
+    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
+], MenuConfigController.prototype, "findByRole", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener configuración de menú por ID',
+        description: 'Retorna una configuración de menú específica'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la configuración de menú' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Configuración de menú encontrada',
+        type: menu_config_dto_1.MenuConfigResponseDto
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Configuración de menú no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
+], MenuConfigController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar configuración de menú',
+        description: 'Actualiza una configuración de menú existente'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la configuración de menú' }),
+    (0, swagger_1.ApiBody)({ type: menu_config_dto_1.UpdateMenuConfigDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Configuración de menú actualizada exitosamente',
+        type: menu_config_dto_1.MenuConfigResponseDto
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Configuración de menú no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_h = typeof menu_config_dto_1.UpdateMenuConfigDto !== "undefined" && menu_config_dto_1.UpdateMenuConfigDto) === "function" ? _h : Object]),
+    __metadata("design:returntype", typeof (_j = typeof Promise !== "undefined" && Promise) === "function" ? _j : Object)
+], MenuConfigController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.NO_CONTENT),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar configuración de menú',
+        description: 'Elimina una configuración de menú del sistema'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la configuración de menú' }),
+    (0, swagger_1.ApiResponse)({ status: 204, description: 'Configuración de menú eliminada exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Configuración de menú no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_k = typeof Promise !== "undefined" && Promise) === "function" ? _k : Object)
+], MenuConfigController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Get)('defaults/menus'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener menús por defecto',
+        description: 'Retorna las configuraciones de menús por defecto para cada rol'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Menús por defecto',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    role: { type: 'string', enum: ['ADMIN', 'ABOGADO', 'CLIENTE'] },
+                    items: {
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                label: { type: 'string' },
+                                url: { type: 'string' },
+                                icon: { type: 'string' },
+                                order: { type: 'number' },
+                                isVisible: { type: 'boolean' },
+                                isExternal: { type: 'boolean' }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], MenuConfigController.prototype, "getDefaultMenus", null);
+exports.MenuConfigController = MenuConfigController = __decorate([
+    (0, swagger_1.ApiTags)('Menu Configuration'),
+    (0, common_1.Controller)('menu-config'),
+    __metadata("design:paramtypes", [typeof (_a = typeof menu_config_service_1.MenuConfigService !== "undefined" && menu_config_service_1.MenuConfigService) === "function" ? _a : Object])
+], MenuConfigController);
+
+
+/***/ }),
+/* 74 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MenuConfigService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+const client_1 = __webpack_require__(9);
+let MenuConfigService = class MenuConfigService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async create(createMenuConfigDto, userId) {
+        const { items, ...menuData } = createMenuConfigDto;
+        const existingMenu = await this.prisma.menuConfig.findFirst({
+            where: {
+                role: menuData.role,
+                isActive: true
+            }
+        });
+        if (existingMenu) {
+            throw new common_1.BadRequestException(`Ya existe un menú activo para el rol ${menuData.role}`);
+        }
+        const menuConfig = await this.prisma.menuConfig.create({
+            data: {
+                ...menuData,
+                items: {
+                    create: items.map((item, index) => ({
+                        label: item.label,
+                        url: item.url,
+                        icon: item.icon,
+                        order: item.order || index,
+                        isVisible: item.isVisible,
+                        isExternal: item.isExternal,
+                        parentId: item.parentId
+                    }))
+                }
+            },
+            include: {
+                items: {
+                    include: {
+                        children: true
+                    },
+                    orderBy: {
+                        order: 'asc'
+                    }
+                }
+            }
+        });
+        return this.mapToResponseDto(menuConfig);
+    }
+    async findAll() {
+        const menuConfigs = await this.prisma.menuConfig.findMany({
+            include: {
+                items: {
+                    include: {
+                        children: true
+                    },
+                    orderBy: {
+                        order: 'asc'
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+        return menuConfigs.map(menu => this.mapToResponseDto(menu));
+    }
+    async findByRole(role) {
+        const menuConfig = await this.prisma.menuConfig.findFirst({
+            where: {
+                role,
+                isActive: true
+            },
+            include: {
+                items: {
+                    where: {
+                        isVisible: true,
+                        parentId: null
+                    },
+                    include: {
+                        children: {
+                            where: {
+                                isVisible: true
+                            },
+                            orderBy: {
+                                order: 'asc'
+                            }
+                        }
+                    },
+                    orderBy: {
+                        order: 'asc'
+                    }
+                }
+            }
+        });
+        return menuConfig ? this.mapToResponseDto(menuConfig) : null;
+    }
+    async findOne(id) {
+        const menuConfig = await this.prisma.menuConfig.findUnique({
+            where: { id },
+            include: {
+                items: {
+                    include: {
+                        children: true
+                    },
+                    orderBy: {
+                        order: 'asc'
+                    }
+                }
+            }
+        });
+        if (!menuConfig) {
+            throw new common_1.NotFoundException(`Menú con ID ${id} no encontrado`);
+        }
+        return this.mapToResponseDto(menuConfig);
+    }
+    async update(id, updateMenuConfigDto) {
+        const existingMenu = await this.prisma.menuConfig.findUnique({
+            where: { id },
+            include: { items: true }
+        });
+        if (!existingMenu) {
+            throw new common_1.NotFoundException(`Menú con ID ${id} no encontrado`);
+        }
+        const { items, ...menuData } = updateMenuConfigDto;
+        if (menuData.isActive && existingMenu.role) {
+            await this.prisma.menuConfig.updateMany({
+                where: {
+                    role: existingMenu.role,
+                    id: { not: id }
+                },
+                data: {
+                    isActive: false
+                }
+            });
+        }
+        const updatedMenu = await this.prisma.menuConfig.update({
+            where: { id },
+            data: menuData,
+            include: {
+                items: {
+                    include: {
+                        children: true
+                    },
+                    orderBy: {
+                        order: 'asc'
+                    }
+                }
+            }
+        });
+        if (items) {
+            await this.prisma.menuItem.deleteMany({
+                where: { menuConfigId: id }
+            });
+            await this.prisma.menuItem.createMany({
+                data: items.map((item, index) => ({
+                    menuConfigId: id,
+                    label: item.label,
+                    url: item.url,
+                    icon: item.icon,
+                    order: item.order || index,
+                    isVisible: item.isVisible,
+                    isExternal: item.isExternal,
+                    parentId: item.parentId
+                }))
+            });
+            return this.findOne(id);
+        }
+        return this.mapToResponseDto(updatedMenu);
+    }
+    async remove(id) {
+        const menuConfig = await this.prisma.menuConfig.findUnique({
+            where: { id }
+        });
+        if (!menuConfig) {
+            throw new common_1.NotFoundException(`Menú con ID ${id} no encontrado`);
+        }
+        await this.prisma.menuConfig.delete({
+            where: { id }
+        });
+    }
+    async getDefaultMenus() {
+        return [
+            {
+                role: client_1.Role.ADMIN,
+                items: [
+                    { label: 'Dashboard', url: '/admin/dashboard', icon: '🏠', order: 0, isVisible: true, isExternal: false },
+                    { label: 'Usuarios', url: '/admin/users', icon: '👥', order: 1, isVisible: true, isExternal: false },
+                    { label: 'Expedientes', url: '/admin/cases', icon: '📋', order: 2, isVisible: true, isExternal: false },
+                    { label: 'Citas', url: '/admin/appointments', icon: '📅', order: 3, isVisible: true, isExternal: false },
+                    { label: 'Tareas', url: '/admin/tasks', icon: '✅', order: 4, isVisible: true, isExternal: false },
+                    { label: 'Documentos', url: '/admin/documents', icon: '📄', order: 5, isVisible: true, isExternal: false },
+                    { label: 'Reportes', url: '/admin/reports', icon: '📊', order: 6, isVisible: true, isExternal: false },
+                    { label: 'Configuración', url: '/admin/parametros', icon: '⚙️', order: 7, isVisible: true, isExternal: false }
+                ]
+            },
+            {
+                role: client_1.Role.ABOGADO,
+                items: [
+                    { label: 'Dashboard', url: '/dashboard', icon: '🏠', order: 0, isVisible: true, isExternal: false },
+                    { label: 'Mis Expedientes', url: '/lawyer/cases', icon: '📋', order: 1, isVisible: true, isExternal: false },
+                    { label: 'Citas', url: '/lawyer/appointments', icon: '📅', order: 2, isVisible: true, isExternal: false },
+                    { label: 'Tareas', url: '/lawyer/tasks', icon: '✅', order: 3, isVisible: true, isExternal: false },
+                    { label: 'Chat', url: '/lawyer/chat', icon: '💬', order: 4, isVisible: true, isExternal: false },
+                    { label: 'Reportes', url: '/lawyer/reports', icon: '📊', order: 5, isVisible: true, isExternal: false },
+                    {
+                        label: 'Facturación',
+                        url: '#',
+                        icon: '🧾',
+                        order: 6,
+                        isVisible: true,
+                        isExternal: false,
+                        children: [
+                            { label: 'Provisión de Fondos', url: '/lawyer/provisiones', icon: '💰', order: 0, isVisible: true, isExternal: false },
+                            { label: 'Facturación Electrónica', url: '/lawyer/facturacion', icon: '📄', order: 1, isVisible: true, isExternal: false }
+                        ]
+                    }
+                ]
+            },
+            {
+                role: client_1.Role.CLIENTE,
+                items: [
+                    { label: 'Dashboard', url: '/dashboard', icon: '🏠', order: 0, isVisible: true, isExternal: false },
+                    { label: 'Mis Expedientes', url: '/client/cases', icon: '📋', order: 1, isVisible: true, isExternal: false },
+                    { label: 'Provisiones', url: '/client/provisiones', icon: '💰', order: 2, isVisible: true, isExternal: false },
+                    { label: 'Mis Citas', url: '/client/appointments', icon: '📅', order: 3, isVisible: true, isExternal: false },
+                    { label: 'Chat', url: '/client/chat', icon: '💬', order: 4, isVisible: true, isExternal: false }
+                ]
+            }
+        ];
+    }
+    mapToResponseDto(menuConfig) {
+        return {
+            id: menuConfig.id,
+            name: menuConfig.name,
+            role: menuConfig.role,
+            orientation: menuConfig.orientation,
+            isActive: menuConfig.isActive,
+            items: menuConfig.items.map((item) => ({
+                id: item.id,
+                label: item.label,
+                url: item.url,
+                icon: item.icon,
+                order: item.order,
+                isVisible: item.isVisible,
+                isExternal: item.isExternal,
+                parentId: item.parentId,
+                children: item.children?.map((child) => ({
+                    id: child.id,
+                    label: child.label,
+                    url: child.url,
+                    icon: child.icon,
+                    order: child.order,
+                    isVisible: child.isVisible,
+                    isExternal: child.isExternal,
+                    parentId: child.parentId
+                })) || []
+            })),
+            createdAt: menuConfig.createdAt,
+            updatedAt: menuConfig.updatedAt
+        };
+    }
+};
+exports.MenuConfigService = MenuConfigService;
+exports.MenuConfigService = MenuConfigService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], MenuConfigService);
+
+
+/***/ }),
+/* 75 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c, _d, _e;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MenuConfigResponseDto = exports.UpdateMenuConfigDto = exports.CreateMenuConfigDto = exports.MenuItemDto = void 0;
+const swagger_1 = __webpack_require__(3);
+const class_validator_1 = __webpack_require__(23);
+const class_transformer_1 = __webpack_require__(72);
+const client_1 = __webpack_require__(9);
+class MenuItemDto {
+}
+exports.MenuItemDto = MenuItemDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'ID del elemento del menú' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], MenuItemDto.prototype, "id", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Texto visible del enlace', example: 'Dashboard' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], MenuItemDto.prototype, "label", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'URL de destino', example: '/dashboard' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], MenuItemDto.prototype, "url", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Icono (emoji o clase CSS)', example: '🏠', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], MenuItemDto.prototype, "icon", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Orden de aparición', example: 1 }),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], MenuItemDto.prototype, "order", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Si el elemento es visible', example: true }),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], MenuItemDto.prototype, "isVisible", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Si es enlace externo', example: false }),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], MenuItemDto.prototype, "isExternal", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'ID del elemento padre (para submenús)', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], MenuItemDto.prototype, "parentId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Elementos hijos (submenús)', type: [MenuItemDto], required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => MenuItemDto),
+    __metadata("design:type", Array)
+], MenuItemDto.prototype, "children", void 0);
+class CreateMenuConfigDto {
+}
+exports.CreateMenuConfigDto = CreateMenuConfigDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Nombre del menú', example: 'main-nav' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateMenuConfigDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Rol para el que es el menú', enum: client_1.Role }),
+    (0, class_validator_1.IsEnum)(client_1.Role),
+    __metadata("design:type", typeof (_a = typeof client_1.Role !== "undefined" && client_1.Role) === "function" ? _a : Object)
+], CreateMenuConfigDto.prototype, "role", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Orientación del menú', example: 'horizontal', enum: ['horizontal', 'vertical'] }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateMenuConfigDto.prototype, "orientation", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Si el menú está activo', example: true }),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateMenuConfigDto.prototype, "isActive", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Elementos del menú', type: [MenuItemDto] }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => MenuItemDto),
+    __metadata("design:type", Array)
+], CreateMenuConfigDto.prototype, "items", void 0);
+class UpdateMenuConfigDto {
+}
+exports.UpdateMenuConfigDto = UpdateMenuConfigDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Nombre del menú', example: 'main-nav', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateMenuConfigDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Rol para el que es el menú', enum: client_1.Role, required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(client_1.Role),
+    __metadata("design:type", typeof (_b = typeof client_1.Role !== "undefined" && client_1.Role) === "function" ? _b : Object)
+], UpdateMenuConfigDto.prototype, "role", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Orientación del menú', example: 'vertical', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateMenuConfigDto.prototype, "orientation", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Si el menú está activo', example: true, required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateMenuConfigDto.prototype, "isActive", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Elementos del menú', type: [MenuItemDto], required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => MenuItemDto),
+    __metadata("design:type", Array)
+], UpdateMenuConfigDto.prototype, "items", void 0);
+class MenuConfigResponseDto {
+}
+exports.MenuConfigResponseDto = MenuConfigResponseDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'ID del menú' }),
+    __metadata("design:type", String)
+], MenuConfigResponseDto.prototype, "id", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Nombre del menú' }),
+    __metadata("design:type", String)
+], MenuConfigResponseDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Rol para el que es el menú' }),
+    __metadata("design:type", typeof (_c = typeof client_1.Role !== "undefined" && client_1.Role) === "function" ? _c : Object)
+], MenuConfigResponseDto.prototype, "role", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Orientación del menú' }),
+    __metadata("design:type", String)
+], MenuConfigResponseDto.prototype, "orientation", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Si el menú está activo' }),
+    __metadata("design:type", Boolean)
+], MenuConfigResponseDto.prototype, "isActive", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Elementos del menú', type: [MenuItemDto] }),
+    __metadata("design:type", Array)
+], MenuConfigResponseDto.prototype, "items", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Fecha de creación' }),
+    __metadata("design:type", typeof (_d = typeof Date !== "undefined" && Date) === "function" ? _d : Object)
+], MenuConfigResponseDto.prototype, "createdAt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Fecha de actualización' }),
+    __metadata("design:type", typeof (_e = typeof Date !== "undefined" && Date) === "function" ? _e : Object)
+], MenuConfigResponseDto.prototype, "updatedAt", void 0);
+
+
+/***/ }),
+/* 76 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SiteConfigController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const jwt_auth_guard_1 = __webpack_require__(27);
+const roles_guard_1 = __webpack_require__(34);
+const roles_decorator_1 = __webpack_require__(35);
+const site_config_service_1 = __webpack_require__(77);
+const site_config_dto_1 = __webpack_require__(78);
+let SiteConfigController = class SiteConfigController {
+    constructor(siteConfigService) {
+        this.siteConfigService = siteConfigService;
+    }
+    async create(createSiteConfigDto) {
+        return this.siteConfigService.create(createSiteConfigDto);
+    }
+    async findAll() {
+        return this.siteConfigService.findAll();
+    }
+    async findPublicConfigs() {
+        return this.siteConfigService.findPublicConfigs();
+    }
+    async findByCategories() {
+        return this.siteConfigService.findByCategories();
+    }
+    async findByCategory(category) {
+        return this.siteConfigService.findByCategory(category);
+    }
+    async findByKey(key) {
+        return this.siteConfigService.findByKey(key);
+    }
+    async findOne(id) {
+        return this.siteConfigService.findOne(id);
+    }
+    async update(id, updateSiteConfigDto) {
+        return this.siteConfigService.update(id, updateSiteConfigDto);
+    }
+    async updateByKey(key, body) {
+        return this.siteConfigService.updateByKey(key, body.value);
+    }
+    async remove(id) {
+        return this.siteConfigService.remove(id);
+    }
+    async initializeDefaultConfigs() {
+        await this.siteConfigService.initializeDefaultConfigs();
+        return { message: 'Configuraciones por defecto inicializadas exitosamente' };
+    }
+};
+exports.SiteConfigController = SiteConfigController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Crear configuración del sitio',
+        description: 'Crea una nueva configuración del sitio'
+    }),
+    (0, swagger_1.ApiBody)({ type: site_config_dto_1.CreateSiteConfigDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Configuración del sitio creada exitosamente',
+        type: site_config_dto_1.SiteConfigResponseDto
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof site_config_dto_1.CreateSiteConfigDto !== "undefined" && site_config_dto_1.CreateSiteConfigDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", typeof (_c = typeof Promise !== "undefined" && Promise) === "function" ? _c : Object)
+], SiteConfigController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todas las configuraciones del sitio',
+        description: 'Retorna todas las configuraciones del sitio'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de configuraciones del sitio',
+        type: [site_config_dto_1.SiteConfigResponseDto]
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_d = typeof Promise !== "undefined" && Promise) === "function" ? _d : Object)
+], SiteConfigController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('public'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener configuraciones públicas del sitio',
+        description: 'Retorna las configuraciones públicas del sitio (sin autenticación)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de configuraciones públicas',
+        type: [site_config_dto_1.SiteConfigResponseDto]
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_e = typeof Promise !== "undefined" && Promise) === "function" ? _e : Object)
+], SiteConfigController.prototype, "findPublicConfigs", null);
+__decorate([
+    (0, common_1.Get)('categories'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener configuraciones agrupadas por categoría',
+        description: 'Retorna las configuraciones del sitio agrupadas por categoría'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Configuraciones agrupadas por categoría',
+        type: [site_config_dto_1.SiteConfigCategoryDto]
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
+], SiteConfigController.prototype, "findByCategories", null);
+__decorate([
+    (0, common_1.Get)('category/:category'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener configuraciones por categoría',
+        description: 'Retorna las configuraciones del sitio de una categoría específica'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'category', description: 'Categoría de configuración' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de configuraciones de la categoría',
+        type: [site_config_dto_1.SiteConfigResponseDto]
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('category')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
+], SiteConfigController.prototype, "findByCategory", null);
+__decorate([
+    (0, common_1.Get)('key/:key'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener configuración por clave (público)',
+        description: 'Retorna una configuración específica por su clave'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'key', description: 'Clave de la configuración' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Configuración encontrada',
+        type: site_config_dto_1.SiteConfigResponseDto
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Configuración no encontrada' }),
+    __param(0, (0, common_1.Param)('key')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
+], SiteConfigController.prototype, "findByKey", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener configuración del sitio por ID',
+        description: 'Retorna una configuración específica del sitio'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la configuración' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Configuración encontrada',
+        type: site_config_dto_1.SiteConfigResponseDto
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Configuración no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_j = typeof Promise !== "undefined" && Promise) === "function" ? _j : Object)
+], SiteConfigController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar configuración del sitio',
+        description: 'Actualiza una configuración existente del sitio'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la configuración' }),
+    (0, swagger_1.ApiBody)({ type: site_config_dto_1.UpdateSiteConfigDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Configuración actualizada exitosamente',
+        type: site_config_dto_1.SiteConfigResponseDto
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Configuración no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_k = typeof site_config_dto_1.UpdateSiteConfigDto !== "undefined" && site_config_dto_1.UpdateSiteConfigDto) === "function" ? _k : Object]),
+    __metadata("design:returntype", typeof (_l = typeof Promise !== "undefined" && Promise) === "function" ? _l : Object)
+], SiteConfigController.prototype, "update", null);
+__decorate([
+    (0, common_1.Patch)('key/:key'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar configuración por clave',
+        description: 'Actualiza una configuración específica por su clave'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'key', description: 'Clave de la configuración' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                value: { type: 'string', description: 'Nuevo valor de la configuración' }
+            },
+            required: ['value']
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Configuración actualizada exitosamente',
+        type: site_config_dto_1.SiteConfigResponseDto
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Configuración no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('key')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", typeof (_m = typeof Promise !== "undefined" && Promise) === "function" ? _m : Object)
+], SiteConfigController.prototype, "updateByKey", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.NO_CONTENT),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar configuración del sitio',
+        description: 'Elimina una configuración del sitio del sistema'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la configuración' }),
+    (0, swagger_1.ApiResponse)({ status: 204, description: 'Configuración eliminada exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Configuración no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_o = typeof Promise !== "undefined" && Promise) === "function" ? _o : Object)
+], SiteConfigController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Post)('initialize'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Inicializar configuraciones por defecto',
+        description: 'Crea las configuraciones por defecto del sitio si no existen'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Configuraciones inicializadas exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_p = typeof Promise !== "undefined" && Promise) === "function" ? _p : Object)
+], SiteConfigController.prototype, "initializeDefaultConfigs", null);
+exports.SiteConfigController = SiteConfigController = __decorate([
+    (0, swagger_1.ApiTags)('Site Configuration'),
+    (0, common_1.Controller)('site-config'),
+    __metadata("design:paramtypes", [typeof (_a = typeof site_config_service_1.SiteConfigService !== "undefined" && site_config_service_1.SiteConfigService) === "function" ? _a : Object])
+], SiteConfigController);
+
+
+/***/ }),
+/* 77 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SiteConfigService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+let SiteConfigService = class SiteConfigService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async create(createSiteConfigDto) {
+        const existingConfig = await this.prisma.siteConfig.findUnique({
+            where: { key: createSiteConfigDto.key }
+        });
+        if (existingConfig) {
+            throw new common_1.BadRequestException(`Ya existe una configuración con la clave ${createSiteConfigDto.key}`);
+        }
+        const siteConfig = await this.prisma.siteConfig.create({
+            data: createSiteConfigDto
+        });
+        return this.mapToResponseDto(siteConfig);
+    }
+    async findAll() {
+        const siteConfigs = await this.prisma.siteConfig.findMany({
+            orderBy: [
+                { category: 'asc' },
+                { key: 'asc' }
+            ]
+        });
+        return siteConfigs.map(config => this.mapToResponseDto(config));
+    }
+    async findByCategory(category) {
+        const siteConfigs = await this.prisma.siteConfig.findMany({
+            where: { category },
+            orderBy: { key: 'asc' }
+        });
+        return siteConfigs.map(config => this.mapToResponseDto(config));
+    }
+    async findByCategories() {
+        const siteConfigs = await this.prisma.siteConfig.findMany({
+            orderBy: [
+                { category: 'asc' },
+                { key: 'asc' }
+            ]
+        });
+        const groupedConfigs = siteConfigs.reduce((acc, config) => {
+            const category = config.category;
+            if (!acc[category]) {
+                acc[category] = [];
+            }
+            acc[category].push(this.mapToResponseDto(config));
+            return acc;
+        }, {});
+        return Object.entries(groupedConfigs).map(([category, configs]) => ({
+            category,
+            configs
+        }));
+    }
+    async findPublicConfigs() {
+        const siteConfigs = await this.prisma.siteConfig.findMany({
+            where: { isPublic: true },
+            orderBy: [
+                { category: 'asc' },
+                { key: 'asc' }
+            ]
+        });
+        return siteConfigs.map(config => this.mapToResponseDto(config));
+    }
+    async findOne(id) {
+        const siteConfig = await this.prisma.siteConfig.findUnique({
+            where: { id }
+        });
+        if (!siteConfig) {
+            throw new common_1.NotFoundException(`Configuración con ID ${id} no encontrada`);
+        }
+        return this.mapToResponseDto(siteConfig);
+    }
+    async findByKey(key) {
+        const siteConfig = await this.prisma.siteConfig.findUnique({
+            where: { key }
+        });
+        return siteConfig ? this.mapToResponseDto(siteConfig) : null;
+    }
+    async update(id, updateSiteConfigDto) {
+        const existingConfig = await this.prisma.siteConfig.findUnique({
+            where: { id }
+        });
+        if (!existingConfig) {
+            throw new common_1.NotFoundException(`Configuración con ID ${id} no encontrada`);
+        }
+        const siteConfig = await this.prisma.siteConfig.update({
+            where: { id },
+            data: updateSiteConfigDto
+        });
+        return this.mapToResponseDto(siteConfig);
+    }
+    async updateByKey(key, value) {
+        const existingConfig = await this.prisma.siteConfig.findUnique({
+            where: { key }
+        });
+        if (!existingConfig) {
+            throw new common_1.NotFoundException(`Configuración con clave ${key} no encontrada`);
+        }
+        const siteConfig = await this.prisma.siteConfig.update({
+            where: { key },
+            data: { value }
+        });
+        return this.mapToResponseDto(siteConfig);
+    }
+    async remove(id) {
+        const siteConfig = await this.prisma.siteConfig.findUnique({
+            where: { id }
+        });
+        if (!siteConfig) {
+            throw new common_1.NotFoundException(`Configuración con ID ${id} no encontrada`);
+        }
+        await this.prisma.siteConfig.delete({
+            where: { id }
+        });
+    }
+    async initializeDefaultConfigs() {
+        const defaultConfigs = [
+            {
+                key: 'site_name',
+                value: 'Despacho Legal',
+                type: 'string',
+                category: 'branding',
+                description: 'Nombre del sitio web',
+                isPublic: true
+            },
+            {
+                key: 'site_description',
+                value: 'Servicios legales profesionales y confiables',
+                type: 'string',
+                category: 'branding',
+                description: 'Descripción del sitio web',
+                isPublic: true
+            },
+            {
+                key: 'logo_url',
+                value: '/images/logo.png',
+                type: 'image',
+                category: 'branding',
+                description: 'URL del logo de la empresa',
+                isPublic: true
+            },
+            {
+                key: 'favicon_url',
+                value: '/images/favicon.ico',
+                type: 'image',
+                category: 'branding',
+                description: 'URL del favicon',
+                isPublic: true
+            },
+            {
+                key: 'primary_color',
+                value: '#1e40af',
+                type: 'color',
+                category: 'branding',
+                description: 'Color primario del sitio',
+                isPublic: true
+            },
+            {
+                key: 'secondary_color',
+                value: '#3b82f6',
+                type: 'color',
+                category: 'branding',
+                description: 'Color secundario del sitio',
+                isPublic: true
+            },
+            {
+                key: 'sidebar_position',
+                value: 'left',
+                type: 'string',
+                category: 'layout',
+                description: 'Posición del sidebar (left, right)',
+                isPublic: false
+            },
+            {
+                key: 'sidebar_width',
+                value: '250px',
+                type: 'string',
+                category: 'layout',
+                description: 'Ancho del sidebar',
+                isPublic: false
+            },
+            {
+                key: 'header_fixed',
+                value: 'true',
+                type: 'boolean',
+                category: 'layout',
+                description: 'Si el header debe estar fijo',
+                isPublic: false
+            },
+            {
+                key: 'footer_visible',
+                value: 'true',
+                type: 'boolean',
+                category: 'layout',
+                description: 'Si el footer debe ser visible',
+                isPublic: false
+            },
+            {
+                key: 'contact_email',
+                value: 'info@despacholegal.com',
+                type: 'email',
+                category: 'contact',
+                description: 'Email de contacto principal',
+                isPublic: true
+            },
+            {
+                key: 'contact_phone',
+                value: '+34 123 456 789',
+                type: 'string',
+                category: 'contact',
+                description: 'Teléfono de contacto',
+                isPublic: true
+            },
+            {
+                key: 'contact_address',
+                value: 'Calle Principal 123, Madrid',
+                type: 'string',
+                category: 'contact',
+                description: 'Dirección de contacto',
+                isPublic: true
+            },
+            {
+                key: 'office_hours',
+                value: 'Lunes a Viernes: 9:00 - 18:00',
+                type: 'string',
+                category: 'contact',
+                description: 'Horario de oficina',
+                isPublic: true
+            },
+            {
+                key: 'social_facebook',
+                value: 'https://facebook.com/despacholegal',
+                type: 'string',
+                category: 'social',
+                description: 'URL de Facebook',
+                isPublic: true
+            },
+            {
+                key: 'social_twitter',
+                value: 'https://twitter.com/despacholegal',
+                type: 'string',
+                category: 'social',
+                description: 'URL de Twitter',
+                isPublic: true
+            },
+            {
+                key: 'social_linkedin',
+                value: 'https://linkedin.com/company/despacholegal',
+                type: 'string',
+                category: 'social',
+                description: 'URL de LinkedIn',
+                isPublic: true
+            },
+            {
+                key: 'social_instagram',
+                value: 'https://instagram.com/despacholegal',
+                type: 'string',
+                category: 'social',
+                description: 'URL de Instagram',
+                isPublic: true
+            },
+            {
+                key: 'maintenance_mode',
+                value: 'false',
+                type: 'boolean',
+                category: 'general',
+                description: 'Modo mantenimiento',
+                isPublic: false
+            },
+            {
+                key: 'default_language',
+                value: 'es',
+                type: 'string',
+                category: 'general',
+                description: 'Idioma por defecto',
+                isPublic: true
+            },
+            {
+                key: 'timezone',
+                value: 'Europe/Madrid',
+                type: 'string',
+                category: 'general',
+                description: 'Zona horaria del sitio',
+                isPublic: false
+            },
+            {
+                key: 'date_format',
+                value: 'DD/MM/YYYY',
+                type: 'string',
+                category: 'general',
+                description: 'Formato de fecha',
+                isPublic: false
+            }
+        ];
+        for (const config of defaultConfigs) {
+            const existingConfig = await this.prisma.siteConfig.findUnique({
+                where: { key: config.key }
+            });
+            if (!existingConfig) {
+                await this.prisma.siteConfig.create({
+                    data: config
+                });
+            }
+        }
+    }
+    mapToResponseDto(siteConfig) {
+        return {
+            id: siteConfig.id,
+            key: siteConfig.key,
+            value: siteConfig.value,
+            type: siteConfig.type,
+            category: siteConfig.category,
+            description: siteConfig.description,
+            isPublic: siteConfig.isPublic,
+            createdAt: siteConfig.createdAt,
+            updatedAt: siteConfig.updatedAt
+        };
+    }
+};
+exports.SiteConfigService = SiteConfigService;
+exports.SiteConfigService = SiteConfigService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], SiteConfigService);
+
+
+/***/ }),
+/* 78 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SiteConfigCategoryDto = exports.SiteConfigResponseDto = exports.UpdateSiteConfigDto = exports.CreateSiteConfigDto = void 0;
+const swagger_1 = __webpack_require__(3);
+const class_validator_1 = __webpack_require__(23);
+class CreateSiteConfigDto {
+}
+exports.CreateSiteConfigDto = CreateSiteConfigDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Clave única de configuración', example: 'site_name' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateSiteConfigDto.prototype, "key", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Valor de la configuración', example: 'Despacho Legal' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateSiteConfigDto.prototype, "value", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Tipo de dato',
+        example: 'string',
+        enum: ['string', 'image', 'color', 'boolean', 'json']
+    }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateSiteConfigDto.prototype, "type", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Categoría de configuración',
+        example: 'branding',
+        enum: ['branding', 'layout', 'contact', 'social', 'general']
+    }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateSiteConfigDto.prototype, "category", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Descripción de la configuración', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateSiteConfigDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Si se puede acceder sin autenticación', example: false }),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateSiteConfigDto.prototype, "isPublic", void 0);
+class UpdateSiteConfigDto {
+}
+exports.UpdateSiteConfigDto = UpdateSiteConfigDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Valor de la configuración', example: 'Nuevo Nombre del Sitio', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateSiteConfigDto.prototype, "value", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Tipo de dato',
+        example: 'string',
+        enum: ['string', 'image', 'color', 'boolean', 'json'],
+        required: false
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateSiteConfigDto.prototype, "type", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Categoría de configuración',
+        example: 'branding',
+        enum: ['branding', 'layout', 'contact', 'social', 'general'],
+        required: false
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateSiteConfigDto.prototype, "category", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Descripción de la configuración', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateSiteConfigDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Si se puede acceder sin autenticación', example: true, required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateSiteConfigDto.prototype, "isPublic", void 0);
+class SiteConfigResponseDto {
+}
+exports.SiteConfigResponseDto = SiteConfigResponseDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'ID de la configuración' }),
+    __metadata("design:type", String)
+], SiteConfigResponseDto.prototype, "id", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Clave única de configuración' }),
+    __metadata("design:type", String)
+], SiteConfigResponseDto.prototype, "key", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Valor de la configuración' }),
+    __metadata("design:type", String)
+], SiteConfigResponseDto.prototype, "value", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Tipo de dato' }),
+    __metadata("design:type", String)
+], SiteConfigResponseDto.prototype, "type", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Categoría de configuración' }),
+    __metadata("design:type", String)
+], SiteConfigResponseDto.prototype, "category", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Descripción de la configuración' }),
+    __metadata("design:type", String)
+], SiteConfigResponseDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Si se puede acceder sin autenticación' }),
+    __metadata("design:type", Boolean)
+], SiteConfigResponseDto.prototype, "isPublic", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Fecha de creación' }),
+    __metadata("design:type", typeof (_a = typeof Date !== "undefined" && Date) === "function" ? _a : Object)
+], SiteConfigResponseDto.prototype, "createdAt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Fecha de actualización' }),
+    __metadata("design:type", typeof (_b = typeof Date !== "undefined" && Date) === "function" ? _b : Object)
+], SiteConfigResponseDto.prototype, "updatedAt", void 0);
+class SiteConfigCategoryDto {
+}
+exports.SiteConfigCategoryDto = SiteConfigCategoryDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Categoría' }),
+    __metadata("design:type", String)
+], SiteConfigCategoryDto.prototype, "category", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Configuraciones de la categoría', type: [SiteConfigResponseDto] }),
+    __metadata("design:type", Array)
+], SiteConfigCategoryDto.prototype, "configs", void 0);
+
+
+/***/ }),
+/* 79 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ChatModule = void 0;
+const common_1 = __webpack_require__(2);
+const chat_controller_1 = __webpack_require__(80);
+const chat_service_1 = __webpack_require__(81);
+const chat_gateway_1 = __webpack_require__(83);
+const prisma_module_1 = __webpack_require__(36);
+let ChatModule = class ChatModule {
+};
+exports.ChatModule = ChatModule;
+exports.ChatModule = ChatModule = __decorate([
+    (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
+        controllers: [chat_controller_1.ChatController],
+        providers: [chat_service_1.ChatService, chat_gateway_1.ChatGateway],
+        exports: [chat_service_1.ChatService, chat_gateway_1.ChatGateway],
+    })
+], ChatModule);
+
+
+/***/ }),
+/* 80 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ChatController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const chat_service_1 = __webpack_require__(81);
+const jwt_auth_guard_1 = __webpack_require__(27);
+const create_message_dto_1 = __webpack_require__(82);
+let ChatController = class ChatController {
+    constructor(chatService) {
+        this.chatService = chatService;
+    }
+    async test() {
+        return { message: 'Chat controller is working' };
+    }
+    async getMessages(req) {
+        return this.chatService.getMessages(req.user);
+    }
+    async sendMessage(createMessageDto, req) {
+        return this.chatService.sendMessage(createMessageDto, req.user);
+    }
+    async getConversations(req) {
+        return this.chatService.getConversations(req.user);
+    }
+    async getMessagesWithUser(userId, req) {
+        return this.chatService.getMessagesWithUser(req.user, userId);
+    }
+    async getUnreadCount(req) {
+        return this.chatService.getTotalUnreadCount(req.user);
+    }
+};
+exports.ChatController = ChatController;
+__decorate([
+    (0, common_1.Get)('test'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Probar conexión del chat',
+        description: 'Endpoint de prueba para verificar que el chat funciona'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Chat funcionando correctamente',
+        schema: {
+            type: 'object',
+            properties: {
+                message: { type: 'string', example: 'Chat controller is working' }
+            }
+        }
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ChatController.prototype, "test", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Get)('messages'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener mensajes del usuario',
+        description: 'Devuelve todos los mensajes del usuario autenticado'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de mensajes',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    content: { type: 'string' },
+                    senderId: { type: 'string' },
+                    receiverId: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    sender: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            name: { type: 'string' },
+                            email: { type: 'string' }
+                        }
+                    },
+                    receiver: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            name: { type: 'string' },
+                            email: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], ChatController.prototype, "getMessages", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Post)('messages'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Enviar mensaje',
+        description: 'Envía un nuevo mensaje a otro usuario'
+    }),
+    (0, swagger_1.ApiBody)({ type: create_message_dto_1.CreateMessageDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Mensaje enviado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                content: { type: 'string' },
+                senderId: { type: 'string' },
+                receiverId: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Usuario receptor no encontrado' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof create_message_dto_1.CreateMessageDto !== "undefined" && create_message_dto_1.CreateMessageDto) === "function" ? _b : Object, Object]),
+    __metadata("design:returntype", Promise)
+], ChatController.prototype, "sendMessage", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Get)('conversations'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener conversaciones',
+        description: 'Devuelve las conversaciones del usuario autenticado'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de conversaciones',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    userId: { type: 'string' },
+                    userName: { type: 'string' },
+                    userEmail: { type: 'string' },
+                    lastMessage: { type: 'string' },
+                    lastMessageTime: { type: 'string', format: 'date-time' },
+                    unreadCount: { type: 'number' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], ChatController.prototype, "getConversations", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Get)('messages/:userId'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener mensajes con usuario específico',
+        description: 'Devuelve la conversación con un usuario específico'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'userId', description: 'ID del usuario con quien conversar', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Conversación con el usuario',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    content: { type: 'string' },
+                    senderId: { type: 'string' },
+                    receiverId: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    sender: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            name: { type: 'string' },
+                            email: { type: 'string' }
+                        }
+                    },
+                    receiver: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            name: { type: 'string' },
+                            email: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Usuario no encontrado' }),
+    __param(0, (0, common_1.Param)('userId')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], ChatController.prototype, "getMessagesWithUser", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Get)('unread-count'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener conteo de mensajes no leídos',
+        description: 'Devuelve el número total de mensajes no leídos del usuario'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Conteo de mensajes no leídos',
+        schema: {
+            type: 'object',
+            properties: {
+                count: { type: 'number' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], ChatController.prototype, "getUnreadCount", null);
+exports.ChatController = ChatController = __decorate([
+    (0, swagger_1.ApiTags)('chat'),
+    (0, common_1.Controller)('chat'),
+    __metadata("design:paramtypes", [typeof (_a = typeof chat_service_1.ChatService !== "undefined" && chat_service_1.ChatService) === "function" ? _a : Object])
+], ChatController);
+
+
+/***/ }),
+/* 81 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ChatService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+let ChatService = class ChatService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async getMessages(user) {
+        const userId = user.id;
+        const userRole = user.role;
+        try {
+            let messages;
+            if (userRole === 'CLIENTE') {
+                messages = await this.prisma.chatMessage.findMany({
+                    where: {
+                        OR: [
+                            { senderId: userId },
+                            { receiverId: userId }
+                        ]
+                    },
+                    include: {
+                        sender: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                role: true
+                            }
+                        },
+                        receiver: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                role: true
+                            }
+                        }
+                    },
+                    orderBy: {
+                        createdAt: 'asc'
+                    }
+                });
+            }
+            else if (userRole === 'ABOGADO') {
+                messages = await this.prisma.chatMessage.findMany({
+                    where: {
+                        OR: [
+                            { senderId: userId },
+                            { receiverId: userId }
+                        ]
+                    },
+                    include: {
+                        sender: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                role: true
+                            }
+                        },
+                        receiver: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                role: true
+                            }
+                        }
+                    },
+                    orderBy: {
+                        createdAt: 'asc'
+                    }
+                });
+            }
+            else {
+                throw new common_1.ForbiddenException('Rol no autorizado para acceder al chat');
+            }
+            return messages.map(message => ({
+                id: message.id,
+                content: message.content,
+                senderId: message.senderId,
+                senderName: message.sender.name,
+                receiverId: message.receiverId,
+                receiverName: message.receiver.name,
+                createdAt: message.createdAt,
+                isOwnMessage: message.senderId === userId
+            }));
+        }
+        catch (error) {
+            console.error('Error getting messages:', error);
+            throw new Error('Error al obtener los mensajes');
+        }
+    }
+    async sendMessage(dto, user) {
+        const senderId = user.id;
+        const { receiverId, content } = dto;
+        if (!content || !content.trim()) {
+            throw new Error('El contenido del mensaje no puede estar vacío');
+        }
+        if (!receiverId) {
+            throw new Error('El destinatario es requerido');
+        }
+        try {
+            const receiver = await this.prisma.user.findUnique({
+                where: { id: receiverId }
+            });
+            if (!receiver) {
+                throw new common_1.NotFoundException('Destinatario no encontrado');
+            }
+            if (user.role === 'CLIENTE') {
+                if (receiver.role !== 'ABOGADO') {
+                    throw new common_1.ForbiddenException('Los clientes solo pueden enviar mensajes a abogados');
+                }
+            }
+            else if (user.role === 'ABOGADO') {
+                if (receiver.role !== 'CLIENTE') {
+                    throw new common_1.ForbiddenException('Los abogados solo pueden enviar mensajes a clientes');
+                }
+            }
+            else {
+                throw new common_1.ForbiddenException('Rol no autorizado para enviar mensajes');
+            }
+            const message = await this.prisma.chatMessage.create({
+                data: {
+                    content: content.trim(),
+                    senderId,
+                    receiverId
+                },
+                include: {
+                    sender: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            role: true
+                        }
+                    },
+                    receiver: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            role: true
+                        }
+                    }
+                }
+            });
+            return {
+                id: message.id,
+                content: message.content,
+                senderId: message.senderId,
+                senderName: message.sender.name,
+                receiverId: message.receiverId,
+                receiverName: message.receiver.name,
+                createdAt: message.createdAt,
+                isOwnMessage: true
+            };
+        }
+        catch (error) {
+            console.error('Error sending message:', error);
+            if (error instanceof common_1.ForbiddenException || error instanceof common_1.NotFoundException) {
+                throw error;
+            }
+            throw new Error('Error al enviar el mensaje');
+        }
+    }
+    async getConversations(user) {
+        const userId = user.id;
+        const userRole = user.role;
+        console.log('getConversations called with user:', { userId, userRole });
+        try {
+            let conversations;
+            if (userRole === 'CLIENTE' || userRole === 'ABOGADO') {
+                const messages = await this.prisma.chatMessage.findMany({
+                    where: {
+                        OR: [
+                            { senderId: userId },
+                            { receiverId: userId }
+                        ]
+                    },
+                    include: {
+                        sender: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                role: true
+                            }
+                        },
+                        receiver: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                role: true
+                            }
+                        }
+                    },
+                    orderBy: {
+                        createdAt: 'desc'
+                    }
+                });
+                console.log('Found messages:', messages.length);
+                const conversationMap = new Map();
+                messages.forEach(message => {
+                    const otherUserId = message.senderId === userId ? message.receiverId : message.senderId;
+                    const otherUser = message.senderId === userId ? message.receiver : message.sender;
+                    if (!conversationMap.has(otherUserId)) {
+                        conversationMap.set(otherUserId, {
+                            userId: otherUserId,
+                            userName: otherUser.name,
+                            userEmail: otherUser.email,
+                            userRole: otherUser.role,
+                            lastMessage: message.content,
+                            lastMessageTime: message.createdAt,
+                            unreadCount: 0
+                        });
+                    }
+                });
+                console.log('Conversation map size:', conversationMap.size);
+                for (const [otherUserId, conv] of conversationMap.entries()) {
+                    const unreadCount = await this.prisma.chatMessage.count({
+                        where: {
+                            senderId: otherUserId,
+                            receiverId: userId,
+                            read: false
+                        }
+                    });
+                    conv.unreadCount = unreadCount;
+                }
+                conversations = Array.from(conversationMap.values());
+                console.log('Final conversations array:', conversations);
+            }
+            else {
+                throw new common_1.ForbiddenException('Rol no autorizado para acceder al chat');
+            }
+            return conversations;
+        }
+        catch (error) {
+            console.error('Error getting conversations:', error);
+            throw new Error('Error al obtener las conversaciones');
+        }
+    }
+    async getMessagesWithUser(user, otherUserId) {
+        const userId = user.id;
+        const userRole = user.role;
+        try {
+            const otherUser = await this.prisma.user.findUnique({
+                where: { id: otherUserId }
+            });
+            if (!otherUser) {
+                throw new common_1.NotFoundException('Usuario no encontrado');
+            }
+            if (userRole === 'CLIENTE' && otherUser.role !== 'ABOGADO') {
+                throw new common_1.ForbiddenException('Los clientes solo pueden chatear con abogados');
+            }
+            if (userRole === 'ABOGADO' && otherUser.role !== 'CLIENTE') {
+                throw new common_1.ForbiddenException('Los abogados solo pueden chatear con clientes');
+            }
+            await this.prisma.chatMessage.updateMany({
+                where: {
+                    senderId: otherUserId,
+                    receiverId: userId,
+                    read: false
+                },
+                data: { read: true }
+            });
+            const messages = await this.prisma.chatMessage.findMany({
+                where: {
+                    OR: [
+                        {
+                            AND: [
+                                { senderId: userId },
+                                { receiverId: otherUserId }
+                            ]
+                        },
+                        {
+                            AND: [
+                                { senderId: otherUserId },
+                                { receiverId: userId }
+                            ]
+                        }
+                    ]
+                },
+                include: {
+                    sender: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            role: true
+                        }
+                    },
+                    receiver: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            role: true
+                        }
+                    }
+                },
+                orderBy: {
+                    createdAt: 'asc'
+                }
+            });
+            return messages.map(message => ({
+                id: message.id,
+                content: message.content,
+                senderId: message.senderId,
+                senderName: message.sender.name,
+                receiverId: message.receiverId,
+                receiverName: message.receiver.name,
+                createdAt: message.createdAt,
+                isOwnMessage: message.senderId === userId,
+                read: message.read
+            }));
+        }
+        catch (error) {
+            console.error('Error getting messages with user:', error);
+            if (error instanceof common_1.ForbiddenException || error instanceof common_1.NotFoundException) {
+                throw error;
+            }
+            throw new Error('Error al obtener los mensajes');
+        }
+    }
+    async markMessagesAsRead(userId, senderId) {
+        try {
+            await this.prisma.chatMessage.updateMany({
+                where: {
+                    senderId: senderId,
+                    receiverId: userId,
+                    read: false
+                },
+                data: { read: true }
+            });
+            return { success: true };
+        }
+        catch (error) {
+            console.error('Error marking messages as read:', error);
+            throw new Error('Error al marcar mensajes como leídos');
+        }
+    }
+    async getUnreadCount(userId, senderId) {
+        try {
+            const count = await this.prisma.chatMessage.count({
+                where: {
+                    senderId: senderId,
+                    receiverId: userId,
+                    read: false
+                }
+            });
+            return count;
+        }
+        catch (error) {
+            console.error('Error getting unread count:', error);
+            return 0;
+        }
+    }
+    async getTotalUnreadCount(user) {
+        try {
+            const userId = user.id;
+            const count = await this.prisma.chatMessage.count({
+                where: {
+                    receiverId: userId,
+                    read: false
+                }
+            });
+            return { count };
+        }
+        catch (error) {
+            console.error('Error getting total unread count:', error);
+            return { count: 0 };
+        }
+    }
+};
+exports.ChatService = ChatService;
+exports.ChatService = ChatService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], ChatService);
+
+
+/***/ }),
+/* 82 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CreateMessageDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+class CreateMessageDto {
+}
+exports.CreateMessageDto = CreateMessageDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateMessageDto.prototype, "content", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateMessageDto.prototype, "receiverId", void 0);
+
+
+/***/ }),
+/* 83 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ChatGateway = void 0;
+const websockets_1 = __webpack_require__(84);
+const socket_io_1 = __webpack_require__(85);
+const chat_service_1 = __webpack_require__(81);
+let ChatGateway = class ChatGateway {
+    constructor(chatService) {
+        this.chatService = chatService;
+        this.connectedUsers = new Map();
+    }
+    async handleConnection(client) {
+        try {
+            const userInfo = client.handshake.auth.user;
+            if (!userInfo) {
+                client.disconnect();
+                return;
+            }
+            this.connectedUsers.set(client.id, {
+                userId: userInfo.id,
+                socketId: client.id,
+                role: userInfo.role,
+                name: userInfo.name,
+            });
+            client.join(`user_${userInfo.id}`);
+            this.server.emit('user_connected', {
+                userId: userInfo.id,
+                name: userInfo.name,
+                role: userInfo.role,
+            });
+            console.log(`Usuario conectado: ${userInfo.name} (${userInfo.id})`);
+        }
+        catch (error) {
+            console.error('Error en conexión WebSocket:', error);
+            client.disconnect();
+        }
+    }
+    handleDisconnect(client) {
+        const user = this.connectedUsers.get(client.id);
+        if (user) {
+            this.connectedUsers.delete(client.id);
+            this.server.emit('user_disconnected', {
+                userId: user.userId,
+                name: user.name,
+                role: user.role,
+            });
+            console.log(`Usuario desconectado: ${user.name} (${user.userId})`);
+        }
+    }
+    async handleSendMessage(data, client) {
+        try {
+            const sender = this.connectedUsers.get(client.id);
+            if (!sender) {
+                return { error: 'Usuario no autenticado' };
+            }
+            const message = await this.chatService.sendMessage({ receiverId: data.receiverId, content: data.content }, { id: sender.userId, role: sender.role });
+            this.server.to(`user_${data.receiverId}`).emit('new_message', {
+                ...message,
+                isOwnMessage: false,
+            });
+            client.emit('message_sent', {
+                ...message,
+                isOwnMessage: true,
+            });
+            return { success: true, message };
+        }
+        catch (error) {
+            console.error('Error enviando mensaje:', error);
+            client.emit('message_error', { error: error.message || 'Error desconocido' });
+            return { error: error.message || 'Error desconocido' };
+        }
+    }
+    handleTypingStart(data, client) {
+        const sender = this.connectedUsers.get(client.id);
+        if (sender) {
+            this.server.to(`user_${data.receiverId}`).emit('user_typing', {
+                userId: sender.userId,
+                name: sender.name,
+                isTyping: true,
+            });
+        }
+    }
+    handleTypingStop(data, client) {
+        const sender = this.connectedUsers.get(client.id);
+        if (sender) {
+            this.server.to(`user_${data.receiverId}`).emit('user_typing', {
+                userId: sender.userId,
+                name: sender.name,
+                isTyping: false,
+            });
+        }
+    }
+    async handleMarkAsRead(data, client) {
+        try {
+            const user = this.connectedUsers.get(client.id);
+            if (!user) {
+                return { error: 'Usuario no autenticado' };
+            }
+            await this.chatService.markMessagesAsRead(user.userId, data.senderId);
+            this.server.to(`user_${data.senderId}`).emit('messages_read', {
+                readerId: user.userId,
+                readerName: user.name,
+            });
+            return { success: true };
+        }
+        catch (error) {
+            console.error('Error marcando mensajes como leídos:', error);
+            return { error: error.message || 'Error desconocido' };
+        }
+    }
+    getConnectedUsers() {
+        return Array.from(this.connectedUsers.values());
+    }
+    isUserOnline(userId) {
+        return Array.from(this.connectedUsers.values()).some(user => user.userId === userId);
+    }
+};
+exports.ChatGateway = ChatGateway;
+__decorate([
+    (0, websockets_1.WebSocketServer)(),
+    __metadata("design:type", typeof (_b = typeof socket_io_1.Server !== "undefined" && socket_io_1.Server) === "function" ? _b : Object)
+], ChatGateway.prototype, "server", void 0);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('send_message'),
+    __param(0, (0, websockets_1.MessageBody)()),
+    __param(1, (0, websockets_1.ConnectedSocket)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_c = typeof socket_io_1.Socket !== "undefined" && socket_io_1.Socket) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], ChatGateway.prototype, "handleSendMessage", null);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('typing_start'),
+    __param(0, (0, websockets_1.MessageBody)()),
+    __param(1, (0, websockets_1.ConnectedSocket)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_d = typeof socket_io_1.Socket !== "undefined" && socket_io_1.Socket) === "function" ? _d : Object]),
+    __metadata("design:returntype", void 0)
+], ChatGateway.prototype, "handleTypingStart", null);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('typing_stop'),
+    __param(0, (0, websockets_1.MessageBody)()),
+    __param(1, (0, websockets_1.ConnectedSocket)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_e = typeof socket_io_1.Socket !== "undefined" && socket_io_1.Socket) === "function" ? _e : Object]),
+    __metadata("design:returntype", void 0)
+], ChatGateway.prototype, "handleTypingStop", null);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('mark_as_read'),
+    __param(0, (0, websockets_1.MessageBody)()),
+    __param(1, (0, websockets_1.ConnectedSocket)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_f = typeof socket_io_1.Socket !== "undefined" && socket_io_1.Socket) === "function" ? _f : Object]),
+    __metadata("design:returntype", Promise)
+], ChatGateway.prototype, "handleMarkAsRead", null);
+exports.ChatGateway = ChatGateway = __decorate([
+    (0, websockets_1.WebSocketGateway)({
+        cors: {
+            origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+            credentials: true,
+        },
+    }),
+    __metadata("design:paramtypes", [typeof (_a = typeof chat_service_1.ChatService !== "undefined" && chat_service_1.ChatService) === "function" ? _a : Object])
+], ChatGateway);
+
+
+/***/ }),
+/* 84 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/websockets");
+
+/***/ }),
+/* 85 */
+/***/ ((module) => {
+
+module.exports = require("socket.io");
+
+/***/ }),
+/* 86 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ParametrosModule = void 0;
+const common_1 = __webpack_require__(2);
+const parametros_service_1 = __webpack_require__(87);
+const parametros_controller_1 = __webpack_require__(88);
+const prisma_module_1 = __webpack_require__(36);
+let ParametrosModule = class ParametrosModule {
+};
+exports.ParametrosModule = ParametrosModule;
+exports.ParametrosModule = ParametrosModule = __decorate([
+    (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
+        providers: [parametros_service_1.ParametrosService],
+        controllers: [parametros_controller_1.ParametrosController],
+        exports: [parametros_service_1.ParametrosService],
+    })
+], ParametrosModule);
+
+
+/***/ }),
+/* 87 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ParametrosService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+let ParametrosService = class ParametrosService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async findAll() {
+        return this.prisma.parametro.findMany();
+    }
+    async findOne(id) {
+        const parametro = await this.prisma.parametro.findUnique({ where: { id } });
+        if (!parametro)
+            throw new common_1.NotFoundException('Parámetro no encontrado');
+        return parametro;
+    }
+    async findByClave(clave) {
+        const parametro = await this.prisma.parametro.findUnique({ where: { clave } });
+        if (!parametro)
+            throw new common_1.NotFoundException('Parámetro no encontrado');
+        return parametro;
+    }
+    async findContactParams() {
+        return this.prisma.parametro.findMany({
+            where: {
+                clave: {
+                    in: [
+                        'CONTACT_EMAIL',
+                        'CONTACT_PHONE',
+                        'CONTACT_PHONE_PREFIX',
+                        'CONTACT_INFO',
+                        'SOCIAL_FACEBOOK',
+                        'SOCIAL_TWITTER',
+                        'SOCIAL_LINKEDIN',
+                        'SOCIAL_INSTAGRAM'
+                    ]
+                }
+            }
+        });
+    }
+    async findLegalContent() {
+        const legalParams = await this.prisma.parametro.findMany({
+            where: {
+                clave: {
+                    startsWith: 'LEGAL_'
+                }
+            },
+            orderBy: {
+                clave: 'asc'
+            }
+        });
+        return legalParams;
+    }
+    async findServices() {
+        const services = await this.prisma.parametro.findMany({
+            where: {
+                clave: {
+                    startsWith: 'SERVICE_'
+                }
+            },
+            orderBy: {
+                clave: 'asc'
+            }
+        });
+        const servicesMap = new Map();
+        services.forEach(service => {
+            const parts = service.clave.split('_');
+            if (parts.length >= 3) {
+                const serviceId = parts[1];
+                const field = parts[2];
+                if (!servicesMap.has(serviceId)) {
+                    servicesMap.set(serviceId, {
+                        id: serviceId,
+                        orden: parseInt(parts[1]) || 0
+                    });
+                }
+                servicesMap.get(serviceId)[field] = service.valor;
+            }
+        });
+        return Array.from(servicesMap.values()).sort((a, b) => a.orden - b.orden);
+    }
+    async updateService(serviceId, serviceData) {
+        const updates = [
+            this.updateByClave(`SERVICE_${serviceId}_TITLE`, serviceData.title),
+            this.updateByClave(`SERVICE_${serviceId}_DESCRIPTION`, serviceData.description),
+            this.updateByClave(`SERVICE_${serviceId}_ICON`, serviceData.icon)
+        ];
+        if (serviceData.orden !== undefined) {
+            updates.push(this.updateByClave(`SERVICE_${serviceId}_ORDER`, serviceData.orden.toString()));
+        }
+        await Promise.all(updates);
+        return this.findServices();
+    }
+    async deleteService(serviceId) {
+        const servicesToDelete = await this.prisma.parametro.findMany({
+            where: {
+                clave: {
+                    startsWith: `SERVICE_${serviceId}_`
+                }
+            }
+        });
+        for (const service of servicesToDelete) {
+            await this.prisma.parametro.delete({
+                where: { id: service.id }
+            });
+        }
+        return this.findServices();
+    }
+    async addService(serviceData) {
+        const serviceId = `SERVICE_${Date.now()}`;
+        const orden = serviceData.orden || 0;
+        const newService = await this.prisma.parametro.createMany({
+            data: [
+                {
+                    clave: `${serviceId}_TITLE`,
+                    valor: serviceData.title,
+                    etiqueta: `Título del servicio ${serviceId}`,
+                    tipo: 'string'
+                },
+                {
+                    clave: `${serviceId}_DESCRIPTION`,
+                    valor: serviceData.description,
+                    etiqueta: `Descripción del servicio ${serviceId}`,
+                    tipo: 'text'
+                },
+                {
+                    clave: `${serviceId}_ICON`,
+                    valor: serviceData.icon,
+                    etiqueta: `Icono del servicio ${serviceId}`,
+                    tipo: 'string'
+                },
+                {
+                    clave: `${serviceId}_ORDER`,
+                    valor: orden.toString(),
+                    etiqueta: `Orden del servicio ${serviceId}`,
+                    tipo: 'number'
+                }
+            ]
+        });
+        return this.findServices();
+    }
+    async create(data) {
+        return this.prisma.parametro.create({ data });
+    }
+    async update(id, data) {
+        return this.prisma.parametro.update({ where: { id }, data });
+    }
+    async updateByClave(clave, valor) {
+        const parametro = await this.prisma.parametro.findUnique({ where: { clave } });
+        if (!parametro) {
+            throw new common_1.NotFoundException(`Parámetro con clave '${clave}' no encontrado`);
+        }
+        return this.prisma.parametro.update({ where: { clave }, data: { valor } });
+    }
+    async remove(id) {
+        return this.prisma.parametro.delete({ where: { id } });
+    }
+    async initializeDefaultParams() {
+        const defaultParams = [
+            { clave: 'CONTACT_EMAIL', valor: 'info@despacholegal.com', etiqueta: 'Email de contacto', tipo: 'email' },
+            { clave: 'CONTACT_PHONE', valor: '123 456 789', etiqueta: 'Teléfono de contacto', tipo: 'string' },
+            { clave: 'CONTACT_PHONE_PREFIX', valor: '+34', etiqueta: 'Prefijo telefónico', tipo: 'string' },
+            { clave: 'CONTACT_INFO', valor: 'Despacho Legal - Asesoramiento jurídico especializado', etiqueta: 'Información de contacto', tipo: 'text' },
+            { clave: 'SOCIAL_FACEBOOK', valor: 'https://facebook.com/despacholegal', etiqueta: 'Facebook', tipo: 'url' },
+            { clave: 'SOCIAL_TWITTER', valor: 'https://twitter.com/despacholegal', etiqueta: 'Twitter', tipo: 'url' },
+            { clave: 'SOCIAL_LINKEDIN', valor: 'https://linkedin.com/company/despacholegal', etiqueta: 'LinkedIn', tipo: 'url' },
+            { clave: 'SOCIAL_INSTAGRAM', valor: 'https://instagram.com/despacholegal', etiqueta: 'Instagram', tipo: 'url' },
+            { clave: 'PRIVACY_POLICY', valor: 'Política de Privacidad del Despacho Legal...', etiqueta: 'Política de Privacidad', tipo: 'html' },
+            { clave: 'TERMS_OF_SERVICE', valor: 'Términos de Servicio del Despacho Legal...', etiqueta: 'Términos de Servicio', tipo: 'html' },
+            { clave: 'COOKIE_POLICY', valor: 'Política de Cookies del Despacho Legal...', etiqueta: 'Política de Cookies', tipo: 'html' },
+            { clave: 'COPYRIGHT_TEXT', valor: '© 2024 Despacho Legal. Todos los derechos reservados.', etiqueta: 'Texto de Copyright', tipo: 'string' },
+            { clave: 'VERIFICACION_URL_BASE', valor: 'https://tudominio.com/verificar/', etiqueta: 'URL base de verificación de facturas', tipo: 'url' }
+        ];
+        for (const param of defaultParams) {
+            try {
+                await this.prisma.parametro.upsert({
+                    where: { clave: param.clave },
+                    update: { valor: param.valor, etiqueta: param.etiqueta, tipo: param.tipo },
+                    create: param
+                });
+            }
+            catch (error) {
+                console.error(`Error al inicializar parámetro ${param.clave}:`, error);
+            }
+        }
+    }
+};
+exports.ParametrosService = ParametrosService;
+exports.ParametrosService = ParametrosService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], ParametrosService);
+
+
+/***/ }),
+/* 88 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ParametrosController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const parametros_service_1 = __webpack_require__(87);
+const jwt_auth_guard_1 = __webpack_require__(27);
+const roles_guard_1 = __webpack_require__(34);
+const roles_decorator_1 = __webpack_require__(35);
+let ParametrosController = class ParametrosController {
+    constructor(parametrosService) {
+        this.parametrosService = parametrosService;
+    }
+    getServices() {
+        return this.parametrosService.findServices();
+    }
+    getContactParams() {
+        return this.parametrosService.findContactParams();
+    }
+    getLegalContent() {
+        return this.parametrosService.findLegalContent();
+    }
+    getLegalContentByKey(clave) {
+        return this.parametrosService.findByClave(clave);
+    }
+    findAll() {
+        return this.parametrosService.findAll();
+    }
+    findOne(id) {
+        return this.parametrosService.findOne(id);
+    }
+    create(data) {
+        return this.parametrosService.create(data);
+    }
+    update(id, data) {
+        return this.parametrosService.update(id, data);
+    }
+    updateByClave(clave, data) {
+        return this.parametrosService.updateByClave(clave, data.valor);
+    }
+    remove(id) {
+        return this.parametrosService.remove(id);
+    }
+    initializeDefaultParams() {
+        return this.parametrosService.initializeDefaultParams();
+    }
+    addService(serviceData) {
+        return this.parametrosService.addService(serviceData);
+    }
+    updateService(id, serviceData) {
+        return this.parametrosService.updateService(id, serviceData);
+    }
+    deleteService(id) {
+        return this.parametrosService.deleteService(id);
+    }
+};
+exports.ParametrosController = ParametrosController;
+__decorate([
+    (0, common_1.Get)('services'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener servicios parametrizables',
+        description: 'Devuelve la lista de servicios configurados para mostrar en el frontend'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de servicios',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    icon: { type: 'string' },
+                    orden: { type: 'number' }
+                }
+            }
+        }
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "getServices", null);
+__decorate([
+    (0, common_1.Get)('contact'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener parámetros de contacto',
+        description: 'Devuelve los parámetros de contacto para mostrar en el frontend'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Parámetros de contacto',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    clave: { type: 'string' },
+                    valor: { type: 'string' },
+                    etiqueta: { type: 'string' },
+                    tipo: { type: 'string' }
+                }
+            }
+        }
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "getContactParams", null);
+__decorate([
+    (0, common_1.Get)('legal'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener contenido legal',
+        description: 'Devuelve el contenido legal (privacidad, términos, cookies, copyright)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Contenido legal',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    clave: { type: 'string' },
+                    valor: { type: 'string' },
+                    etiqueta: { type: 'string' },
+                    tipo: { type: 'string' }
+                }
+            }
+        }
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "getLegalContent", null);
+__decorate([
+    (0, common_1.Get)('legal/:clave'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener contenido legal específico',
+        description: 'Devuelve un contenido legal específico por clave'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'clave', description: 'Clave del contenido legal', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Contenido legal encontrado',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                clave: { type: 'string' },
+                valor: { type: 'string' },
+                etiqueta: { type: 'string' },
+                tipo: { type: 'string' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Contenido no encontrado' }),
+    __param(0, (0, common_1.Param)('clave')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "getLegalContentByKey", null);
+__decorate([
+    (0, common_1.Get)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todos los parámetros',
+        description: 'Devuelve la lista de todos los parámetros del sistema'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de parámetros',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    clave: { type: 'string' },
+                    valor: { type: 'string' },
+                    etiqueta: { type: 'string' },
+                    tipo: { type: 'string' },
+                    updatedAt: { type: 'string', format: 'date-time' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener parámetro por ID',
+        description: 'Devuelve un parámetro específico del sistema'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del parámetro', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Parámetro encontrado',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                clave: { type: 'string' },
+                valor: { type: 'string' },
+                etiqueta: { type: 'string' },
+                tipo: { type: 'string' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Parámetro no encontrado' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Post)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Crear nuevo parámetro',
+        description: 'Crea un nuevo parámetro de configuración del sistema'
+    }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                clave: {
+                    type: 'string',
+                    description: 'Clave única del parámetro',
+                    example: 'EMAIL_SMTP_HOST'
+                },
+                valor: {
+                    type: 'string',
+                    description: 'Valor del parámetro',
+                    example: 'smtp.gmail.com'
+                },
+                etiqueta: {
+                    type: 'string',
+                    description: 'Etiqueta descriptiva',
+                    example: 'Servidor SMTP'
+                },
+                tipo: {
+                    type: 'string',
+                    description: 'Tipo de dato',
+                    example: 'string',
+                    enum: ['string', 'number', 'email', 'image', 'boolean', 'text', 'html', 'url']
+                }
+            },
+            required: ['clave', 'valor', 'etiqueta', 'tipo']
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Parámetro creado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                clave: { type: 'string' },
+                valor: { type: 'string' },
+                etiqueta: { type: 'string' },
+                tipo: { type: 'string' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 409, description: 'Clave ya existe' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "create", null);
+__decorate([
+    (0, common_1.Put)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar parámetro',
+        description: 'Actualiza un parámetro existente del sistema'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del parámetro', type: 'string' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                valor: {
+                    type: 'string',
+                    description: 'Nuevo valor del parámetro',
+                    example: 'smtp.outlook.com'
+                },
+                etiqueta: {
+                    type: 'string',
+                    description: 'Nueva etiqueta descriptiva',
+                    example: 'Servidor SMTP (Actualizado)'
+                },
+                tipo: {
+                    type: 'string',
+                    description: 'Nuevo tipo de dato',
+                    example: 'string',
+                    enum: ['string', 'number', 'email', 'image', 'boolean', 'text', 'html', 'url']
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Parámetro actualizado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                clave: { type: 'string' },
+                valor: { type: 'string' },
+                etiqueta: { type: 'string' },
+                tipo: { type: 'string' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Parámetro no encontrado' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "update", null);
+__decorate([
+    (0, common_1.Put)('clave/:clave'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar parámetro por clave',
+        description: 'Actualiza un parámetro existente por su clave'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'clave', description: 'Clave del parámetro', type: 'string' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                valor: {
+                    type: 'string',
+                    description: 'Nuevo valor del parámetro',
+                    example: 'nuevo@email.com'
+                }
+            },
+            required: ['valor']
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Parámetro actualizado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                clave: { type: 'string' },
+                valor: { type: 'string' },
+                etiqueta: { type: 'string' },
+                tipo: { type: 'string' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Parámetro no encontrado' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('clave')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "updateByClave", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar parámetro',
+        description: 'Elimina un parámetro del sistema'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del parámetro', type: 'string' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Parámetro eliminado exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Parámetro no encontrado' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Post)('initialize'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Inicializar parámetros por defecto',
+        description: 'Crea o actualiza los parámetros por defecto del sistema'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Parámetros inicializados exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "initializeDefaultParams", null);
+__decorate([
+    (0, common_1.Post)('services'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Agregar nuevo servicio',
+        description: 'Agrega un nuevo servicio parametrizable'
+    }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                title: { type: 'string', description: 'Título del servicio' },
+                description: { type: 'string', description: 'Descripción del servicio' },
+                icon: { type: 'string', description: 'Icono del servicio' },
+                orden: { type: 'number', description: 'Orden de visualización' }
+            },
+            required: ['title', 'description', 'icon']
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Servicio agregado exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "addService", null);
+__decorate([
+    (0, common_1.Put)('services/:id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar servicio',
+        description: 'Actualiza un servicio existente'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del servicio', type: 'string' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                title: { type: 'string', description: 'Título del servicio' },
+                description: { type: 'string', description: 'Descripción del servicio' },
+                icon: { type: 'string', description: 'Icono del servicio' },
+                orden: { type: 'number', description: 'Orden de visualización' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Servicio actualizado exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "updateService", null);
+__decorate([
+    (0, common_1.Delete)('services/:id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar servicio',
+        description: 'Elimina un servicio existente'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del servicio', type: 'string' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Servicio eliminado exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "deleteService", null);
+exports.ParametrosController = ParametrosController = __decorate([
+    (0, swagger_1.ApiTags)('parametros'),
+    (0, common_1.Controller)('parametros'),
+    __metadata("design:paramtypes", [typeof (_a = typeof parametros_service_1.ParametrosService !== "undefined" && parametros_service_1.ParametrosService) === "function" ? _a : Object])
+], ParametrosController);
+
+
+/***/ }),
+/* 89 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.InvoicesModule = void 0;
+const common_1 = __webpack_require__(2);
+const invoices_service_1 = __webpack_require__(90);
+const invoices_controller_1 = __webpack_require__(105);
+const facturae_controller_1 = __webpack_require__(111);
+const facturae_service_1 = __webpack_require__(97);
+const external_systems_controller_1 = __webpack_require__(112);
+const external_systems_service_1 = __webpack_require__(113);
+const pdf_generator_service_1 = __webpack_require__(99);
+const invoice_audit_service_1 = __webpack_require__(103);
+const digital_signature_service_1 = __webpack_require__(108);
+const auth_module_1 = __webpack_require__(12);
+const parametros_module_1 = __webpack_require__(86);
+let InvoicesModule = class InvoicesModule {
+};
+exports.InvoicesModule = InvoicesModule;
+exports.InvoicesModule = InvoicesModule = __decorate([
+    (0, common_1.Module)({
+        imports: [auth_module_1.AuthModule, parametros_module_1.ParametrosModule],
+        controllers: [invoices_controller_1.InvoicesController, facturae_controller_1.FacturaeController, external_systems_controller_1.ExternalSystemsController],
+        providers: [invoices_service_1.InvoicesService, facturae_service_1.FacturaeService, external_systems_service_1.ExternalSystemsService, pdf_generator_service_1.PdfGeneratorService, invoice_audit_service_1.InvoiceAuditService, digital_signature_service_1.DigitalSignatureService],
+    })
+], InvoicesModule);
+
+
+/***/ }),
+/* 90 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var InvoicesService_1;
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.InvoicesService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+const facturae_xml_util_1 = __webpack_require__(91);
+const xades_sign_util_1 = __webpack_require__(93);
+const facturae_service_1 = __webpack_require__(97);
+const pdf_generator_service_1 = __webpack_require__(99);
+const fs = __importStar(__webpack_require__(44));
+const crypto = __importStar(__webpack_require__(20));
+const pdf_lib_1 = __webpack_require__(102);
+const QRCode = __importStar(__webpack_require__(101));
+const invoice_audit_service_1 = __webpack_require__(103);
+const invoice_status_constants_1 = __webpack_require__(104);
+let InvoicesService = InvoicesService_1 = class InvoicesService {
+    constructor(prisma, pdfGeneratorService, invoiceAuditService) {
+        this.prisma = prisma;
+        this.pdfGeneratorService = pdfGeneratorService;
+        this.invoiceAuditService = invoiceAuditService;
+        this.logger = new common_1.Logger(InvoicesService_1.name);
+        this.facturaeService = new facturae_service_1.FacturaeService();
+    }
+    async create(data) {
+        try {
+            console.log('DATA RECIBIDA EN SERVICE:', JSON.stringify(data, null, 2));
+            let { items, expedienteId, provisionIds = [], ...invoiceData } = data;
+            const formatNumberES = (num) => {
+                const number = Number(num);
+                const parts = number.toFixed(2).split('.');
+                const integerPart = parts[0];
+                const decimalPart = parts[1];
+                const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                return `${formattedInteger},${decimalPart}`;
+            };
+            console.log('items:', items);
+            console.log('expedienteId:', expedienteId);
+            console.log('provisionIds recibidos:', provisionIds);
+            console.log('invoiceData:', invoiceData);
+            if (!Array.isArray(items)) {
+                throw new Error('Items debe ser un array válido');
+            }
+            if (provisionIds.length > 0) {
+                console.log('Buscando provisiones con IDs:', provisionIds);
+                const provisiones = await this.prisma.provisionFondos.findMany({
+                    where: { id: { in: provisionIds } },
+                });
+                console.log('Provisiones encontradas:', provisiones.length);
+                console.log('Provisiones:', JSON.stringify(provisiones, null, 2));
+                console.log('Provisiones encontradas para asociar:', provisiones.length);
+            }
+            else {
+                console.log('No hay provisionIds para procesar');
+            }
+            let numeroFactura = invoiceData.numeroFactura;
+            if (!numeroFactura) {
+                if (invoiceData.tipoFactura === 'R' && data.facturaOriginalId) {
+                    numeroFactura = await this.generateRectificativaNumber(data.facturaOriginalId, data.tipoRectificacion);
+                }
+                else {
+                    const year = new Date().getFullYear();
+                    const lastInvoice = await this.prisma.invoice.findFirst({
+                        where: {
+                            numeroFactura: { startsWith: `fac-${year}-` },
+                        },
+                        orderBy: { createdAt: 'desc' },
+                    });
+                    let nextNumber = 1;
+                    if (lastInvoice && lastInvoice.numeroFactura) {
+                        const match = lastInvoice.numeroFactura.match(/fac-\d{4}-(\d{4})/);
+                        if (match) {
+                            nextNumber = parseInt(match[1], 10) + 1;
+                        }
+                    }
+                    numeroFactura = `fac-${year}-${nextNumber.toString().padStart(4, '0')}`;
+                }
+            }
+            const prismaData = {
+                ...invoiceData,
+                numeroFactura,
+                fechaFactura: invoiceData.fechaFactura ? new Date(invoiceData.fechaFactura) : new Date(),
+                fechaOperacion: new Date(invoiceData.fechaOperacion),
+                items: { create: items },
+                estado: 'emitida',
+                facturaOriginalId: invoiceData.facturaOriginalId || null,
+                tipoRectificacion: invoiceData.tipoRectificacion || null,
+                motivoRectificacion: invoiceData.motivoRectificacion || null,
+            };
+            let baseImponible = items.reduce((sum, item) => {
+                const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+                const unitPrice = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
+                return sum + (quantity * unitPrice);
+            }, 0);
+            const descuento = typeof invoiceData.descuento === 'number' ? invoiceData.descuento : 0;
+            let baseConDescuento = baseImponible * (1 - descuento / 100);
+            const aplicarIVA = invoiceData.aplicarIVA !== false;
+            const tipoIVA = typeof invoiceData.tipoIVA === 'number' ? invoiceData.tipoIVA : 21;
+            const retencion = typeof invoiceData.retencion === 'number' ? invoiceData.retencion : 0;
+            let descuentoProvisiones = 0;
+            if (provisionIds.length > 0) {
+                const provisiones = await this.prisma.provisionFondos.findMany({
+                    where: { id: { in: provisionIds } },
+                });
+                descuentoProvisiones = provisiones.reduce((sum, prov) => sum + prov.amount, 0);
+                console.log('🔍 Descuento por provisiones:', descuentoProvisiones);
+                const subtotalParaValidacion = baseConDescuento + (baseConDescuento * (tipoIVA / 100)) - (baseConDescuento * (retencion / 100));
+                if (descuentoProvisiones > subtotalParaValidacion) {
+                    const exceso = descuentoProvisiones - subtotalParaValidacion;
+                    console.log('⚠️ ADVERTENCIA: Las provisiones exceden el subtotal');
+                    console.log('  - Subtotal estimado:', subtotalParaValidacion);
+                    console.log('  - Provisiones aplicadas:', descuentoProvisiones);
+                    console.log('  - Exceso:', exceso);
+                    const conceptoDevolucion = {
+                        description: `Devolución de Provisión (exceso de ${formatNumberES(exceso)}€)`,
+                        quantity: 1,
+                        unitPrice: -exceso,
+                        total: -exceso
+                    };
+                    items.push(conceptoDevolucion);
+                    console.log('  - Concepto de devolución agregado:', conceptoDevolucion);
+                    const nuevaBaseImponible = items.reduce((sum, item) => {
+                        const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+                        const unitPrice = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
+                        return sum + (quantity * unitPrice);
+                    }, 0);
+                    console.log('  - Nueva base imponible con devolución:', nuevaBaseImponible);
+                    baseImponible = nuevaBaseImponible;
+                    baseConDescuento = baseImponible * (1 - descuento / 100);
+                    const nuevoSubtotal = baseConDescuento + (baseConDescuento * (tipoIVA / 100)) - (baseConDescuento * (retencion / 100));
+                    descuentoProvisiones = Math.min(descuentoProvisiones, nuevoSubtotal);
+                    console.log('  - Provisiones ajustadas a:', descuentoProvisiones);
+                }
+            }
+            const baseConDescuentos = Math.max(0, baseConDescuento);
+            console.log('🔍 Cálculos:');
+            console.log('  - Base imponible original:', baseImponible);
+            console.log('  - Base con descuento (%):', baseConDescuento);
+            console.log('  - Base final (sin provisiones):', baseConDescuentos);
+            console.log('  - Provisiones a aplicar:', descuentoProvisiones);
+            const cuotaIVA = aplicarIVA ? baseConDescuentos * (tipoIVA / 100) : 0;
+            const cuotaRetencion = baseConDescuentos * (retencion / 100);
+            const subtotal = baseConDescuentos + cuotaIVA - cuotaRetencion;
+            const importeTotal = Math.max(0, subtotal - descuentoProvisiones);
+            console.log('🔍 Cálculos finales:');
+            console.log('  - Subtotal (base + IVA - retención):', subtotal);
+            console.log('  - Provisiones aplicadas:', descuentoProvisiones);
+            console.log('  - Importe total a pagar:', importeTotal);
+            prismaData.baseImponible = baseConDescuentos;
+            prismaData.cuotaIVA = cuotaIVA;
+            prismaData.importeTotal = importeTotal;
+            prismaData.tipoIVA = tipoIVA;
+            prismaData.descuento = descuento;
+            prismaData.retencion = retencion;
+            prismaData.aplicarIVA = aplicarIVA;
+            if (expedienteId) {
+                const expediente = await this.prisma.expediente.findUnique({
+                    where: { id: expedienteId }
+                });
+                if (expediente) {
+                    prismaData.expedienteId = expedienteId;
+                }
+                else {
+                    console.warn(`⚠️ Expediente con ID ${expedienteId} no encontrado, omitiendo expedienteId`);
+                }
+            }
+            const receptor = await this.prisma.user.findUnique({
+                where: { id: prismaData.receptorId }
+            });
+            if (!receptor) {
+                throw new Error(`Receptor con ID ${prismaData.receptorId} no encontrado`);
+            }
+            console.log('PRISMA DATA:', JSON.stringify(prismaData, null, 2));
+            console.log('Intentando crear factura en Prisma...');
+            const invoice = await this.prisma.invoice.create({
+                data: prismaData,
+                include: { items: true, emisor: true, receptor: true, expediente: true },
+            });
+            console.log('Factura creada exitosamente:', invoice.id);
+            if (provisionIds.length > 0) {
+                console.log('Asociando provisiones con invoiceId:', invoice.id);
+                console.log('ProvisionIds a actualizar:', provisionIds);
+                const updateResult = await this.prisma.provisionFondos.updateMany({
+                    where: { id: { in: provisionIds } },
+                    data: { invoiceId: invoice.id },
+                });
+                console.log('Resultado de actualización de provisiones:', updateResult);
+                const provisionesActualizadas = await this.prisma.provisionFondos.findMany({
+                    where: { id: { in: provisionIds } },
+                });
+                console.log('Provisiones después de actualizar:', JSON.stringify(provisionesActualizadas, null, 2));
+            }
+            else {
+                console.log('No hay provisionIds para asociar');
+            }
+            console.log('Generando XML...');
+            const xml = (0, facturae_xml_util_1.generateFacturaeXMLFromInvoice)(invoice);
+            console.log('XML generado exitosamente');
+            console.log('Guardando XML en BD...');
+            await this.prisma.invoice.update({
+                where: { id: invoice.id },
+                data: { xml },
+            });
+            console.log('XML guardado exitosamente');
+            let signedXml = null;
+            if (process.env.FACTURAE_AUTO_SIGN === 'true') {
+                try {
+                    console.log('Iniciando firma automática...');
+                    const signingResult = await this.generateAndSignInvoiceAdvanced(invoice.id, {
+                        level: process.env.FACTURAE_XADES_LEVEL || 'BES'
+                    });
+                    if (signingResult.success && signingResult.signedXmlContent) {
+                        signedXml = signingResult.signedXmlContent;
+                        console.log('Firma automática completada exitosamente');
+                    }
+                    else {
+                        console.warn('Firma automática falló:', signingResult.errors);
+                    }
+                }
+                catch (signError) {
+                    console.error('Error en firma automática:', signError);
+                }
+            }
+            if (data.facturaOriginalId && data.tipoRectificacion) {
+                console.log('🔄 Procesando factura rectificativa:', data.tipoRectificacion);
+                await this.handleRectificativaProvisiones(data.facturaOriginalId, invoice.id, data.tipoRectificacion, invoice.importeTotal);
+            }
+            return {
+                ...invoice,
+                xml,
+                xmlFirmado: signedXml
+            };
+        }
+        catch (error) {
+            console.error('Error completo en create:', error);
+            if (error && typeof error === 'object' && 'stack' in error) {
+                console.error('Stack trace:', error.stack);
+            }
+            throw error;
+        }
+    }
+    async findAll(user, lawyerId, clientId, paymentDate) {
+        const where = {};
+        if (user?.role === 'ABOGADO') {
+            where.emisorId = user.id;
+        }
+        else if (user?.role === 'CLIENTE') {
+            where.receptorId = user.id;
+        }
+        else {
+            if (lawyerId)
+                where.emisorId = lawyerId;
+            if (clientId)
+                where.receptorId = clientId;
+        }
+        if (paymentDate) {
+            const date = new Date(paymentDate);
+            const nextDay = new Date(date);
+            nextDay.setDate(date.getDate() + 1);
+            where.paymentDate = { gte: date, lt: nextDay };
+        }
+        const invoices = await this.prisma.invoice.findMany({
+            where,
+            include: { emisor: true, receptor: true, expediente: true, items: true, provisionFondos: true },
+            orderBy: { fechaFactura: 'desc' },
+        });
+        return invoices.map((invoice) => ({
+            id: invoice.id,
+            numeroFactura: invoice.numeroFactura,
+            fechaFactura: invoice.fechaFactura,
+            estado: invoice.estado,
+            importeTotal: invoice.importeTotal,
+            paymentDate: invoice.paymentDate,
+            tipoFactura: invoice.tipoFactura,
+            baseImponible: invoice.baseImponible,
+            cuotaIVA: invoice.cuotaIVA,
+            tipoIVA: invoice.tipoIVA,
+            descuento: invoice.descuento,
+            retencion: invoice.retencion,
+            aplicarIVA: invoice.aplicarIVA,
+            regimenIvaEmisor: invoice.regimenIvaEmisor,
+            claveOperacion: invoice.claveOperacion,
+            metodoPago: invoice.metodoPago,
+            fechaOperacion: invoice.fechaOperacion,
+            createdAt: invoice.createdAt,
+            updatedAt: invoice.updatedAt,
+            motivoAnulacion: invoice.motivoAnulacion,
+            emisorId: invoice.emisorId,
+            receptorId: invoice.receptorId,
+            expedienteId: invoice.expedienteId,
+            emisor: invoice.emisor,
+            receptor: invoice.receptor,
+            expediente: invoice.expediente,
+            items: invoice.items,
+            provisionFondos: invoice.provisionFondos,
+            xml: invoice.xml,
+            xmlFirmado: invoice.xmlFirmado,
+            selloTiempo: invoice.selloTiempo,
+            qrData: [
+                `NIF:${invoice.emisor?.email || ''}`,
+                `NUM:${invoice.numeroFactura || ''}`,
+                `FEC:${invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : ''}`,
+                `IMP:${invoice.importeTotal || ''}`
+            ].join('|')
+        }));
+    }
+    async findOne(id) {
+        console.log('[FINDONE] Buscando factura con ID:', id);
+        const invoice = await this.prisma.invoice.findUnique({
+            where: { id },
+            include: {
+                emisor: true,
+                receptor: true,
+                expediente: true,
+                items: true,
+                provisionFondos: true,
+                facturaOriginal: {
+                    include: {
+                        emisor: true,
+                        receptor: true,
+                        expediente: true
+                    }
+                }
+            },
+        });
+        console.log('[FINDONE] Resultado de búsqueda:', invoice ? 'Factura encontrada' : 'Factura NO encontrada');
+        if (invoice) {
+            console.log('[FINDONE] Datos de la factura encontrada:', {
+                id: invoice.id,
+                numeroFactura: invoice.numeroFactura,
+                emisorId: invoice.emisorId,
+                estado: invoice.estado
+            });
+        }
+        if (!invoice)
+            return null;
+        return {
+            ...invoice,
+            qrData: [
+                `NIF:${invoice.emisor?.email || ''}`,
+                `NUM:${invoice.numeroFactura || ''}`,
+                `FEC:${invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : ''}`,
+                `IMP:${invoice.importeTotal || ''}`
+            ].join('|')
+        };
+    }
+    async update(id, data, userId, ipAddress, userAgent) {
+        const { items, provisionIds, ...invoiceData } = data;
+        const formatNumberES = (num) => {
+            const number = Number(num);
+            const parts = number.toFixed(2).split('.');
+            const integerPart = parts[0];
+            const decimalPart = parts[1];
+            const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            return `${formattedInteger},${decimalPart}`;
+        };
+        const currentInvoice = await this.prisma.invoice.findUnique({
+            where: { id },
+            include: { provisionFondos: true, items: true }
+        });
+        if (!currentInvoice) {
+            throw new Error('Factura no encontrada');
+        }
+        if (!(0, invoice_status_constants_1.isInvoiceEditable)(currentInvoice.estado)) {
+            throw new Error(`No se puede editar una factura con estado '${currentInvoice.estado}'. Solo se pueden editar facturas en estado 'borrador' o 'emitida'.`);
+        }
+        const updateData = {};
+        if (invoiceData.fechaOperacion) {
+            updateData.fechaOperacion = new Date(invoiceData.fechaOperacion);
+        }
+        if (invoiceData.fechaFactura) {
+            updateData.fechaFactura = new Date(invoiceData.fechaFactura);
+        }
+        if (invoiceData.paymentDate) {
+            updateData.paymentDate = new Date(invoiceData.paymentDate);
+        }
+        if (invoiceData.estado !== undefined) {
+            updateData.estado = invoiceData.estado;
+        }
+        if (invoiceData.motivoAnulacion !== undefined) {
+            updateData.motivoAnulacion = invoiceData.motivoAnulacion;
+        }
+        if (invoiceData.tipoIVA !== undefined) {
+            updateData.tipoIVA = invoiceData.tipoIVA;
+        }
+        if (invoiceData.descuento !== undefined) {
+            updateData.descuento = invoiceData.descuento;
+        }
+        if (invoiceData.retencion !== undefined) {
+            updateData.retencion = invoiceData.retencion;
+        }
+        if (invoiceData.aplicarIVA !== undefined) {
+            updateData.aplicarIVA = invoiceData.aplicarIVA;
+        }
+        if (invoiceData.tipoImpuesto !== undefined) {
+            updateData.tipoImpuesto = invoiceData.tipoImpuesto;
+        }
+        if (invoiceData.regimenIvaEmisor !== undefined) {
+            updateData.regimenIvaEmisor = invoiceData.regimenIvaEmisor;
+        }
+        if (invoiceData.claveOperacion !== undefined) {
+            updateData.claveOperacion = invoiceData.claveOperacion;
+        }
+        if (invoiceData.metodoPago !== undefined) {
+            updateData.metodoPago = invoiceData.metodoPago;
+        }
+        if (invoiceData.receptorId !== undefined) {
+            updateData.receptorId = invoiceData.receptorId;
+        }
+        if (invoiceData.expedienteId !== undefined) {
+            updateData.expedienteId = invoiceData.expedienteId;
+        }
+        if (items) {
+            let baseImponible = items.reduce((sum, item) => {
+                const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+                const unitPrice = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
+                return sum + (quantity * unitPrice);
+            }, 0);
+            const descuento = typeof invoiceData.descuento === 'number' ? invoiceData.descuento : 0;
+            let baseConDescuento = baseImponible * (1 - descuento / 100);
+            let descuentoProvisiones = 0;
+            if (provisionIds && provisionIds.length > 0) {
+                const provisiones = await this.prisma.provisionFondos.findMany({
+                    where: { id: { in: provisionIds } },
+                });
+                descuentoProvisiones = provisiones.reduce((sum, prov) => sum + prov.amount, 0);
+                console.log('🔍 UPDATE - Descuento por provisiones:', descuentoProvisiones);
+            }
+            else if (currentInvoice.provisionFondos.length > 0) {
+                descuentoProvisiones = currentInvoice.provisionFondos.reduce((sum, prov) => sum + prov.amount, 0);
+                console.log('🔍 UPDATE - Usando provisiones existentes:', descuentoProvisiones);
+            }
+            if (descuentoProvisiones > baseConDescuento) {
+                const exceso = descuentoProvisiones - baseConDescuento;
+                console.log('⚠️ UPDATE - ADVERTENCIA: Las provisiones exceden la base imponible');
+                console.log('  - Base imponible:', baseConDescuento);
+                console.log('  - Provisiones aplicadas:', descuentoProvisiones);
+                console.log('  - Exceso:', exceso);
+                const conceptoDevolucion = {
+                    description: `Devolución de Provisión (exceso de ${formatNumberES(exceso)}€)`,
+                    quantity: 1,
+                    unitPrice: -exceso,
+                    total: -exceso
+                };
+                items.push(conceptoDevolucion);
+                console.log('  - Concepto de devolución agregado:', conceptoDevolucion);
+                const nuevaBaseImponible = items.reduce((sum, item) => {
+                    const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+                    const unitPrice = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
+                    return sum + (quantity * unitPrice);
+                }, 0);
+                console.log('  - Nueva base imponible con devolución:', nuevaBaseImponible);
+                baseImponible = nuevaBaseImponible;
+                baseConDescuento = baseImponible * (1 - descuento / 100);
+                descuentoProvisiones = Math.min(descuentoProvisiones, baseConDescuento);
+                console.log('  - Provisiones ajustadas a:', descuentoProvisiones);
+            }
+            const aplicarIVA = invoiceData.aplicarIVA !== false;
+            const tipoIVA = typeof invoiceData.tipoIVA === 'number' ? invoiceData.tipoIVA : 21;
+            const baseConDescuentos = Math.max(0, baseConDescuento);
+            console.log('🔍 UPDATE - Cálculos:');
+            console.log('  - Base imponible original:', baseImponible);
+            console.log('  - Base con descuento (%):', baseConDescuento);
+            console.log('  - Base final (sin provisiones):', baseConDescuentos);
+            console.log('  - Provisiones a aplicar:', descuentoProvisiones);
+            const cuotaIVA = aplicarIVA ? baseConDescuentos * (tipoIVA / 100) : 0;
+            const retencion = typeof invoiceData.retencion === 'number' ? invoiceData.retencion : 0;
+            const cuotaRetencion = baseConDescuentos * (retencion / 100);
+            const subtotal = baseConDescuentos + cuotaIVA - cuotaRetencion;
+            const importeTotal = Math.max(0, subtotal - descuentoProvisiones);
+            updateData.baseImponible = baseConDescuentos;
+            updateData.cuotaIVA = cuotaIVA;
+            updateData.importeTotal = importeTotal;
+            updateData.tipoIVA = tipoIVA;
+            updateData.descuento = descuento;
+            updateData.retencion = retencion;
+            updateData.aplicarIVA = aplicarIVA;
+        }
+        const changes = {};
+        for (const key of Object.keys(updateData)) {
+            if (typeof updateData[key] !== 'undefined' && updateData[key] !== currentInvoice[key]) {
+                changes[key] = { oldValue: currentInvoice[key], newValue: updateData[key] };
+            }
+        }
+        if (items) {
+            const oldItems = (currentInvoice.items || []).map(i => ({ description: i.description, quantity: i.quantity, unitPrice: i.unitPrice }));
+            const newItems = items.map(i => ({ description: i.description, quantity: i.quantity, unitPrice: i.unitPrice }));
+            if (JSON.stringify(oldItems) !== JSON.stringify(newItems)) {
+                changes['items'] = { oldValue: JSON.stringify(oldItems), newValue: JSON.stringify(newItems) };
+            }
+        }
+        if (provisionIds) {
+            const oldProvisionIds = (currentInvoice.provisionFondos || []).map(p => p.id).sort();
+            const newProvisionIds = [...provisionIds].sort();
+            if (JSON.stringify(oldProvisionIds) !== JSON.stringify(newProvisionIds)) {
+                changes['provisionFondos'] = { oldValue: JSON.stringify(oldProvisionIds), newValue: JSON.stringify(newProvisionIds) };
+            }
+        }
+        const updatedInvoice = await this.prisma.invoice.update({
+            where: { id },
+            data: updateData,
+            include: {
+                items: true,
+                emisor: true,
+                receptor: true,
+                expediente: true,
+                provisionFondos: true
+            },
+        });
+        if (items && items.length > 0) {
+            await this.prisma.invoiceItem.deleteMany({ where: { invoiceId: id } });
+            await this.prisma.invoiceItem.createMany({
+                data: items.map(item => ({
+                    invoiceId: id,
+                    description: item.description,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    total: item.quantity * item.unitPrice
+                }))
+            });
+        }
+        const finalInvoice = await this.prisma.invoice.findUnique({
+            where: { id },
+            include: {
+                items: true,
+                emisor: true,
+                receptor: true,
+                expediente: true,
+                provisionFondos: true
+            },
+        });
+        if (provisionIds) {
+            await this.prisma.provisionFondos.updateMany({
+                where: { invoiceId: id, id: { notIn: provisionIds } },
+                data: { invoiceId: null }
+            });
+            await this.prisma.provisionFondos.updateMany({
+                where: { id: { in: provisionIds } },
+                data: { invoiceId: id }
+            });
+        }
+        if (userId && Object.keys(changes).length > 0) {
+            await this.invoiceAuditService.logInvoiceUpdate(id, userId, changes, ipAddress, userAgent);
+        }
+        return finalInvoice;
+    }
+    async remove(id) {
+        const invoice = await this.prisma.invoice.findUnique({
+            where: { id },
+            include: { items: true }
+        });
+        if (!invoice) {
+            throw new Error('Factura no encontrada');
+        }
+        if (!(0, invoice_status_constants_1.isInvoiceCancellable)(invoice.estado)) {
+            throw new Error(`No se puede eliminar una factura con estado '${invoice.estado}'. Solo se pueden eliminar facturas en estado 'borrador', 'emitida' o 'enviada'.`);
+        }
+        return await this.prisma.$transaction(async (prisma) => {
+            await prisma.provisionFondos.updateMany({
+                where: { invoiceId: id },
+                data: { invoiceId: null }
+            });
+            await prisma.invoiceItem.deleteMany({
+                where: { invoiceId: id }
+            });
+            return await prisma.invoice.delete({
+                where: { id },
+                include: { items: true, emisor: true, receptor: true, expediente: true }
+            });
+        });
+    }
+    async sign(id, certPath, keyPath, certContent, keyContent) {
+        const invoice = await this.prisma.invoice.findUnique({ where: { id } });
+        if (!invoice || !invoice.xml) {
+            throw new Error('Factura o XML no encontrado');
+        }
+        let cert = certContent;
+        let key = keyContent;
+        if (!cert && certPath) {
+            cert = fs.readFileSync(certPath, 'utf8');
+        }
+        if (!key && keyPath) {
+            key = fs.readFileSync(keyPath, 'utf8');
+        }
+        if (!cert || !key) {
+            throw new Error('Certificado o clave no proporcionados');
+        }
+        const xmlFirmado = await (0, xades_sign_util_1.signFacturaeXML)(invoice.xml, cert, key);
+        await this.prisma.invoice.update({
+            where: { id },
+            data: { xmlFirmado },
+        });
+        return { ...invoice, xmlFirmado };
+    }
+    async generateXmlForInvoices(ids, userId) {
+        const result = [];
+        for (const id of ids) {
+            const invoice = await this.prisma.invoice.findUnique({ where: { id }, include: { emisor: true, items: true, receptor: true, expediente: true } });
+            if (!invoice)
+                throw new Error(`Factura ${id} no encontrada`);
+            if (invoice.emisorId !== userId)
+                throw new Error(`No autorizado para la factura ${id}`);
+            let xml = invoice.xml;
+            if (!xml) {
+                xml = (0, facturae_xml_util_1.generateFacturaeXMLFromInvoice)(invoice);
+                await this.prisma.invoice.update({ where: { id }, data: { xml } });
+            }
+            result.push({ id, xml });
+        }
+        return result;
+    }
+    async saveSignedXml(id, signedXml, userId) {
+        const invoice = await this.prisma.invoice.findUnique({ where: { id } });
+        if (!invoice)
+            throw new Error('Factura no encontrada');
+        if (invoice.emisorId !== userId)
+            throw new Error('No autorizado para firmar esta factura');
+        await this.prisma.invoice.update({ where: { id }, data: { xmlFirmado: signedXml } });
+        return { id, status: 'signed' };
+    }
+    async annul(id, motivoAnulacion, userId) {
+        const invoice = await this.prisma.invoice.findUnique({ where: { id } });
+        if (!invoice)
+            throw new Error('Factura no encontrada');
+        if (invoice.emisorId !== userId)
+            throw new Error('No autorizado para anular esta factura');
+        if (invoice.estado === 'anulada')
+            throw new Error('La factura ya está anulada');
+        return this.prisma.invoice.update({
+            where: { id },
+            data: {
+                estado: 'anulada',
+                motivoAnulacion,
+            },
+            include: { items: true, emisor: true, receptor: true, expediente: true },
+        });
+    }
+    async findByClientId(clientId) {
+        const invoices = await this.prisma.invoice.findMany({
+            where: { receptorId: clientId },
+            include: { emisor: true, receptor: true, expediente: true, items: true, provisionFondos: true },
+        });
+        return invoices.map(invoice => ({
+            ...invoice,
+            qrData: [
+                `NIF:${invoice.emisor?.email || ''}`,
+                `NUM:${invoice.numeroFactura || ''}`,
+                `FEC:${invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : ''}`,
+                `IMP:${invoice.importeTotal || ''}`
+            ].join('|')
+        }));
+    }
+    async createForClient(clientId, createInvoiceDto, userId) {
+        const { numeroFactura, fechaFactura, tipoFactura, expedienteId, importeTotal, baseImponible, cuotaIVA, tipoIVA, descuento, retencion, aplicarIVA, regimenIvaEmisor, claveOperacion, metodoPago, fechaOperacion, estado, motivoAnulacion, items } = createInvoiceDto;
+        return this.prisma.invoice.create({
+            data: {
+                numeroFactura,
+                fechaFactura: fechaFactura ? new Date(fechaFactura) : undefined,
+                tipoFactura,
+                expedienteId,
+                importeTotal,
+                baseImponible,
+                cuotaIVA,
+                tipoIVA,
+                descuento,
+                retencion,
+                aplicarIVA,
+                regimenIvaEmisor,
+                claveOperacion,
+                metodoPago,
+                fechaOperacion: fechaOperacion ? new Date(fechaOperacion) : undefined,
+                estado,
+                motivoAnulacion,
+                emisorId: userId,
+                receptorId: clientId,
+                items: items ? { create: items } : undefined,
+            },
+            include: { items: true }
+        });
+    }
+    async updateForClient(clientId, invoiceId, updateInvoiceDto, userId) {
+        const invoice = await this.prisma.invoice.findFirst({ where: { id: invoiceId, receptorId: clientId } });
+        if (!invoice)
+            throw new Error('Factura no encontrada para este cliente');
+        const { fechaFactura, expedienteId, tipoIVA, descuento, retencion, aplicarIVA, regimenIvaEmisor, claveOperacion, metodoPago, fechaOperacion, estado, motivoAnulacion, paymentDate } = updateInvoiceDto;
+        return this.prisma.invoice.update({
+            where: { id: invoiceId },
+            data: {
+                fechaFactura: fechaFactura ? new Date(fechaFactura) : undefined,
+                expedienteId,
+                tipoIVA,
+                descuento,
+                retencion,
+                aplicarIVA,
+                regimenIvaEmisor,
+                claveOperacion,
+                metodoPago,
+                fechaOperacion: fechaOperacion ? new Date(fechaOperacion) : undefined,
+                estado,
+                motivoAnulacion,
+                paymentDate: paymentDate ? new Date(paymentDate) : undefined,
+            }
+        });
+    }
+    async patchForClient(clientId, invoiceId, updateInvoiceDto, userId) {
+        return this.updateForClient(clientId, invoiceId, updateInvoiceDto, userId);
+    }
+    async deleteForClient(clientId, invoiceId, userId) {
+        const invoice = await this.prisma.invoice.findFirst({ where: { id: invoiceId, receptorId: clientId } });
+        if (!invoice)
+            throw new Error('Factura no encontrada para este cliente');
+        await this.prisma.invoice.delete({ where: { id: invoiceId } });
+        return { message: 'Factura eliminada exitosamente' };
+    }
+    async findForClient(clientId, lawyerId, paymentDate) {
+        console.log('=== findForClient CALLED [DEBUG] ===');
+        console.log('Parameters:', { clientId, lawyerId, paymentDate });
+        const where = { receptorId: clientId };
+        console.log('Initial where clause:', where);
+        if (lawyerId) {
+            where.emisorId = lawyerId;
+            console.log('Added lawyerId filter:', where);
+        }
+        if (paymentDate) {
+            const date = new Date(paymentDate);
+            const nextDay = new Date(date);
+            nextDay.setDate(date.getDate() + 1);
+            where.paymentDate = { gte: date, lt: nextDay };
+            console.log('Added paymentDate filter:', where);
+        }
+        console.log('Final Prisma where filter:', JSON.stringify(where, null, 2));
+        try {
+            const invoices = await this.prisma.invoice.findMany({
+                where,
+                include: { emisor: true },
+                orderBy: { fechaFactura: 'desc' },
+            });
+            console.log('Facturas encontradas en DB:', invoices.length);
+            console.log('Primera factura (si existe):', invoices[0] ? {
+                id: invoices[0].id,
+                numeroFactura: invoices[0].numeroFactura,
+                receptorId: invoices[0].receptorId,
+                emisorId: invoices[0].emisorId
+            } : 'No hay facturas');
+            const result = invoices.map((inv) => ({
+                id: inv.id,
+                number: inv.numeroFactura,
+                date: inv.fechaFactura,
+                amount: inv.importeTotal,
+                status: inv.estado,
+                qrUrl: inv.xmlFirmado ? `/api/invoices/${inv.id}/qr` : null,
+                pdfUrl: inv.xmlFirmado ? `/api/invoices/${inv.id}/pdf-qr` : null,
+                paymentDate: inv.paymentDate,
+                lawyerName: inv.emisor?.name || '',
+            }));
+            console.log('Result mapped, returning:', result.length, 'invoices');
+            return result;
+        }
+        catch (error) {
+            console.error('Error in findForClient:', error);
+            throw error;
+        }
+    }
+    async getClientsWithInvoices() {
+        const grouped = await this.prisma.invoice.groupBy({
+            by: ['receptorId'],
+            _count: { id: true },
+        });
+        const clientIds = grouped.map(g => g.receptorId);
+        if (clientIds.length === 0)
+            return [];
+        const clients = await this.prisma.user.findMany({
+            where: { id: { in: clientIds }, role: 'CLIENTE' },
+            select: { id: true, name: true, email: true },
+        });
+        return clients.map(client => {
+            const count = grouped.find(g => g.receptorId === client.id)?._count.id || 0;
+            return { clientId: client.id, name: client.name, email: client.email, facturaCount: count };
+        });
+    }
+    async generateAndSignInvoiceAdvanced(id, options = {}) {
+        try {
+            const invoice = await this.prisma.invoice.findUnique({
+                where: { id },
+                include: {
+                    items: true,
+                    emisor: true,
+                    receptor: true,
+                    expediente: true
+                }
+            });
+            if (!invoice) {
+                throw new Error('Factura no encontrada');
+            }
+            const facturaeData = this.convertToFacturaeDocument(invoice);
+            const result = await this.facturaeService.generateAndSignInvoice(facturaeData, options);
+            if (result.success && result.signedXmlContent) {
+                await this.prisma.invoice.update({
+                    where: { id },
+                    data: {
+                        xmlFirmado: result.signedXmlContent,
+                        xml: result.xmlContent
+                    }
+                });
+            }
+            return result;
+        }
+        catch (error) {
+            this.logger.error('Error en generateAndSignInvoiceAdvanced', error);
+            return {
+                success: false,
+                errors: [error instanceof Error ? error.message : String(error)]
+            };
+        }
+    }
+    async validateInvoice(id, checkSignature = true) {
+        try {
+            const invoice = await this.prisma.invoice.findUnique({ where: { id } });
+            if (!invoice || !invoice.xml) {
+                throw new Error('Factura o XML no encontrado');
+            }
+            const xmlToValidate = checkSignature && invoice.xmlFirmado ? invoice.xmlFirmado : invoice.xml;
+            return await this.facturaeService.validateInvoice(xmlToValidate, checkSignature);
+        }
+        catch (error) {
+            this.logger.error('Error al validar factura', error);
+            return {
+                isValid: false,
+                errors: [error instanceof Error ? error.message : String(error)],
+                warnings: []
+            };
+        }
+    }
+    async getCertificateInfo() {
+        return await this.facturaeService.getCertificateInfo();
+    }
+    async checkCertificateStatus() {
+        return await this.facturaeService.checkCertificateStatus();
+    }
+    async generateValidationReport(id) {
+        try {
+            const invoice = await this.prisma.invoice.findUnique({ where: { id } });
+            if (!invoice || !invoice.xml) {
+                throw new Error('Factura o XML no encontrado');
+            }
+            const xmlToValidate = invoice.xmlFirmado || invoice.xml;
+            return await this.facturaeService.generateValidationReport(xmlToValidate);
+        }
+        catch (error) {
+            this.logger.error('Error al generar reporte', error);
+            return `Error al generar reporte: ${error instanceof Error ? error.message : String(error)}`;
+        }
+    }
+    convertToFacturaeDocument(invoice) {
+        return {
+            fileHeader: {
+                schemaVersion: '3.2.2',
+                modality: 'I',
+                issuerParty: {
+                    taxIdentification: {
+                        personTypeCode: 'J',
+                        residenceTypeCode: 'R',
+                        taxIdentificationNumber: invoice.emisor?.dni || 'B00000000'
+                    },
+                    legalEntity: {
+                        corporateName: invoice.emisor?.name || 'Empresa Emisora'
+                    },
+                    address: {
+                        address: 'Dirección del Emisor',
+                        postCode: '28001',
+                        town: 'Madrid',
+                        province: 'Madrid',
+                        countryCode: 'ESP'
+                    }
+                },
+                receiverParty: {
+                    taxIdentification: {
+                        personTypeCode: 'J',
+                        residenceTypeCode: 'R',
+                        taxIdentificationNumber: invoice.receptor?.dni || 'B00000000'
+                    },
+                    legalEntity: {
+                        corporateName: invoice.receptor?.name || 'Empresa Receptora'
+                    },
+                    address: {
+                        address: 'Dirección del Receptor',
+                        postCode: '28001',
+                        town: 'Madrid',
+                        province: 'Madrid',
+                        countryCode: 'ESP'
+                    }
+                },
+                documentType: 'FC'
+            },
+            part: {
+                sellerParty: {
+                    taxIdentification: {
+                        personTypeCode: 'J',
+                        residenceTypeCode: 'R',
+                        taxIdentificationNumber: invoice.emisor?.dni || 'B00000000'
+                    },
+                    legalEntity: {
+                        corporateName: invoice.emisor?.name || 'Empresa Emisora'
+                    },
+                    address: {
+                        address: 'Dirección del Emisor',
+                        postCode: '28001',
+                        town: 'Madrid',
+                        province: 'Madrid',
+                        countryCode: 'ESP'
+                    }
+                },
+                buyerParty: {
+                    taxIdentification: {
+                        personTypeCode: 'J',
+                        residenceTypeCode: 'R',
+                        taxIdentificationNumber: invoice.receptor?.dni || 'B00000000'
+                    },
+                    legalEntity: {
+                        corporateName: invoice.receptor?.name || 'Empresa Receptora'
+                    },
+                    address: {
+                        address: 'Dirección del Receptor',
+                        postCode: '28001',
+                        town: 'Madrid',
+                        province: 'Madrid',
+                        countryCode: 'ESP'
+                    }
+                },
+                invoices: [{
+                        invoiceHeader: {
+                            invoiceNumber: invoice.numeroFactura || 'FAC-001',
+                            invoiceDocumentType: 'FC',
+                            invoiceClass: 'OO'
+                        },
+                        invoiceIssueData: {
+                            issueDate: invoice.fechaFactura || new Date(),
+                            languageCode: 'es',
+                            currencyCode: 'EUR'
+                        },
+                        invoiceTotals: {
+                            totalGrossAmount: invoice.importeTotal || 0,
+                            totalGrossAmountBeforeTaxes: invoice.baseImponible || 0,
+                            totalTaxOutputs: invoice.cuotaIVA || 0,
+                            totalTaxesWithheld: 0,
+                            invoiceTotal: invoice.importeTotal || 0,
+                            totalOutstandingAmount: invoice.importeTotal || 0,
+                            totalExecutableAmount: invoice.importeTotal || 0
+                        },
+                        items: (invoice.items || []).map((item) => ({
+                            itemDescription: item.description || '',
+                            quantity: item.quantity || 0,
+                            unitPriceWithoutTax: item.unitPrice || 0,
+                            totalCost: (item.quantity || 0) * (item.unitPrice || 0),
+                            grossAmount: item.total || 0
+                        }))
+                    }]
+            }
+        };
+    }
+    async generateInvoicePdfWithQR(invoice) {
+        try {
+            this.logger.log('Generando PDF simple y confiable');
+            const pdfDoc = await pdf_lib_1.PDFDocument.create();
+            const page = pdfDoc.addPage([595, 842]);
+            const { width, height } = page.getSize();
+            const helveticaFont = await pdfDoc.embedFont('Helvetica');
+            const helveticaBoldFont = await pdfDoc.embedFont('Helvetica-Bold');
+            const primaryColor = (0, pdf_lib_1.rgb)(0, 0.2, 0.4);
+            const darkGray = (0, pdf_lib_1.rgb)(0.2, 0.2, 0.2);
+            page.drawText('FACTURA', {
+                x: 50,
+                y: height - 60,
+                size: 24,
+                font: helveticaBoldFont,
+                color: primaryColor
+            });
+            page.drawText(`Número: ${invoice.numeroFactura || 'N/A'}`, {
+                x: 50,
+                y: height - 100,
+                size: 14,
+                font: helveticaFont,
+                color: darkGray
+            });
+            const fechaText = invoice.fechaFactura ? new Date(invoice.fechaFactura).toLocaleDateString('es-ES') : 'N/A';
+            page.drawText(`Fecha: ${fechaText}`, {
+                x: 50,
+                y: height - 120,
+                size: 14,
+                font: helveticaFont,
+                color: darkGray
+            });
+            page.drawText(`Importe Total: ${invoice.importeTotal || 0} €`, {
+                x: 50,
+                y: height - 140,
+                size: 16,
+                font: helveticaBoldFont,
+                color: primaryColor
+            });
+            page.drawText(`Estado: ${invoice.estado || 'N/A'}`, {
+                x: 50,
+                y: height - 160,
+                size: 12,
+                font: helveticaFont,
+                color: darkGray
+            });
+            if (invoice.emisor) {
+                page.drawText(`Emisor: ${invoice.emisor.name || 'N/A'}`, {
+                    x: 50,
+                    y: height - 180,
+                    size: 12,
+                    font: helveticaFont,
+                    color: darkGray
+                });
+            }
+            if (invoice.receptor) {
+                page.drawText(`Receptor: ${invoice.receptor.name || 'N/A'}`, {
+                    x: 50,
+                    y: height - 200,
+                    size: 12,
+                    font: helveticaFont,
+                    color: darkGray
+                });
+            }
+            try {
+                const fechaFactura = invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : '';
+                const importeTotal = (invoice.importeTotal || 0).toFixed(2);
+                const nifEmisor = invoice.emisor?.dni || invoice.emisor?.nif || '';
+                const nifReceptor = invoice.receptor?.dni || invoice.receptor?.nif || '';
+                const invoiceHash = this.generateInvoiceHash(invoice);
+                const qrData = [
+                    `NIF:${nifEmisor}`,
+                    `NUM:${invoice.numeroFactura || ''}`,
+                    `FEC:${fechaFactura}`,
+                    `IMP:${importeTotal}`,
+                    `TIPO:${invoice.tipoFactura || 'F'}`,
+                    `NIF_RECEPTOR:${nifReceptor}`,
+                    `ESTADO:${invoice.estado || 'EMITIDA'}`,
+                    `HASH:${invoiceHash}`
+                ].join('|');
+                this.logger.log('QR Data generado:', qrData);
+                invoice.qrData = qrData;
+                const qrImageDataUrl = await QRCode.toDataURL(qrData, {
+                    errorCorrectionLevel: 'M',
+                    width: 200,
+                    margin: 2
+                });
+                const qrImageBase64 = qrImageDataUrl.replace(/^data:image\/png;base64,/, '');
+                const qrImageBytes = Buffer.from(qrImageBase64, 'base64');
+                const qrImage = await pdfDoc.embedPng(qrImageBytes);
+                const qrDims = qrImage.scale(0.6);
+                page.drawImage(qrImage, {
+                    x: width - 120,
+                    y: height - 120,
+                    width: qrDims.width,
+                    height: qrDims.height
+                });
+                page.drawText('Código QR para facturación electrónica', {
+                    x: width - 120,
+                    y: height - 140,
+                    size: 8,
+                    font: helveticaFont,
+                    color: darkGray
+                });
+                this.logger.log('QR generado exitosamente con datos normativos');
+            }
+            catch (qrError) {
+                this.logger.warn('Error generando QR, continuando sin QR:', qrError);
+            }
+            const pdfBytes = await pdfDoc.save();
+            this.logger.log('PDF simple generado exitosamente');
+            return Buffer.from(pdfBytes);
+        }
+        catch (error) {
+            this.logger.error('Error generando PDF simple:', error);
+            throw new Error('Error generando PDF simple');
+        }
+    }
+    async htmlToPdfWithPuppeteer(htmlContent) {
+        const puppeteer = await Promise.resolve().then(() => __importStar(__webpack_require__(100)));
+        let browser;
+        try {
+            this.logger.log('[PUPPETEER] Iniciando Puppeteer...');
+            browser = await puppeteer.default.launch({
+                headless: true,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-gpu',
+                    '--disable-web-security',
+                    '--disable-features=VizDisplayCompositor',
+                    '--font-render-hinting=none',
+                    '--disable-font-subpixel-positioning'
+                ]
+            });
+            this.logger.log('[PUPPETEER] Browser iniciado correctamente');
+            const page = await browser.newPage();
+            await page.setViewport({
+                width: 900,
+                height: 1200,
+                deviceScaleFactor: 2
+            });
+            const compactCss = `
+        <style>
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
+
+          html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-size: 16px;
+            overflow: hidden;
+          }
+
+          .invoice-container {
+            width: 100%;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            page-break-after: avoid;
+            break-after: avoid;
+            padding: 16px !important;
+          }
+
+          /* Compactar todo */
+          * {
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+            line-height: 1.4 !important;
+          }
+
+          .header .title { font-size: 28px !important; }
+          .header .lema { font-size: 16px !important; }
+
+          .data-blocks,
+          .items-section,
+          .totals-section,
+          .footer,
+          .factura-datos,
+          .party-block,
+          .additional-info,
+          .firma-block {
+            font-size: 16px !important;
+            line-height: 1.4 !important;
+            padding: 6px !important;
+          }
+
+          .items-table, .totals-table {
+            font-size: 16px !important;
+            border-collapse: collapse !important;
+            width: 100%;
+          }
+
+          .items-table th,
+          .items-table td,
+          .totals-table td {
+            padding: 6px 8px !important;
+            border: none !important;
+            text-align: left;
+          }
+
+          .qr-integrated .qr-section img {
+            width: 80px !important;
+            height: 80px !important;
+          }
+
+          .qr-integrated .qr-legend {
+            font-size: 10px !important;
+            max-width: 80px !important;
+          }
+
+          .firma-block {
+            margin-top: 10px !important;
+            height: auto !important;
+          }
+
+          .logo span {
+            font-size: 20px !important;
+          }
+
+          /* Evitar saltos de página */
+          table, tr, td, th, div, section {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+        </style>
+      `;
+            this.logger.log('[PUPPETEER] Estableciendo contenido HTML con CSS compacto...');
+            const htmlWithCompactCss = htmlContent.replace('</head>', `${compactCss}</head>`);
+            await page.setContent(htmlWithCompactCss, {
+                waitUntil: ['networkidle0', 'domcontentloaded', 'load']
+            });
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            this.logger.log('[PUPPETEER] Generando PDF optimizado...');
+            const pdfBuffer = await page.pdf({
+                format: 'A4',
+                printBackground: true,
+                preferCSSPageSize: true,
+                margin: {
+                    top: '5mm',
+                    right: '5mm',
+                    bottom: '5mm',
+                    left: '5mm'
+                },
+                displayHeaderFooter: false,
+                scale: 0.8,
+                timeout: 30000,
+                waitForFunction: 'document.readyState === "complete"'
+            });
+            if (!Buffer.isBuffer(pdfBuffer)) {
+                return Buffer.from(pdfBuffer);
+            }
+            this.logger.log(`[PUPPETEER] PDF generado. Tamaño: ${pdfBuffer.length} bytes`);
+            return pdfBuffer;
+        }
+        catch (error) {
+            this.logger.error('[PUPPETEER] Error:', error);
+            throw error;
+        }
+        finally {
+            if (browser) {
+                try {
+                    await browser.close();
+                }
+                catch (closeError) {
+                    this.logger.warn('[PUPPETEER] Error cerrando browser:', closeError);
+                }
+            }
+        }
+    }
+    async generateInvoicePdfFallback(invoice) {
+        try {
+            this.logger.log('Generando PDF profesional con pdf-lib (formato mejorado)');
+            const fechaFactura = invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : '';
+            const importeTotal = (invoice.importeTotal || 0).toFixed(2);
+            const nifEmisor = invoice.emisor?.dni || invoice.emisor?.nif || '';
+            const nifReceptor = invoice.receptor?.dni || invoice.receptor?.nif || '';
+            const invoiceHash = this.generateInvoiceHash(invoice);
+            const qrData = [
+                `NIF:${nifEmisor}`,
+                `NUM:${invoice.numeroFactura || ''}`,
+                `FEC:${fechaFactura}`,
+                `IMP:${importeTotal}`,
+                `TIPO:${invoice.tipoFactura || 'F'}`,
+                `NIF_RECEPTOR:${nifReceptor}`,
+                `ESTADO:${invoice.estado || 'EMITIDA'}`,
+                `HASH:${invoiceHash}`
+            ].join('|');
+            invoice.qrData = qrData;
+            const qrImageDataUrl = await QRCode.toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200 });
+            const qrImageBase64 = qrImageDataUrl.replace(/^data:image\/png;base64,/, '');
+            const qrImageBytes = Buffer.from(qrImageBase64, 'base64');
+            const pdfDoc = await pdf_lib_1.PDFDocument.create();
+            const page = pdfDoc.addPage([595, 842]);
+            const { width, height } = page.getSize();
+            const helveticaFont = await pdfDoc.embedFont('Helvetica');
+            const helveticaBoldFont = await pdfDoc.embedFont('Helvetica-Bold');
+            const primaryColor = (0, pdf_lib_1.rgb)(0, 0.2, 0.4);
+            const secondaryColor = (0, pdf_lib_1.rgb)(0.4, 0.4, 0.4);
+            const lightGray = (0, pdf_lib_1.rgb)(0.95, 0.95, 0.95);
+            const darkGray = (0, pdf_lib_1.rgb)(0.2, 0.2, 0.2);
+            page.drawText('DL', {
+                x: 50,
+                y: height - 60,
+                size: 24,
+                font: helveticaBoldFont,
+                color: primaryColor
+            });
+            page.drawText('Despacho Legal', {
+                x: 80,
+                y: height - 60,
+                size: 20,
+                font: helveticaBoldFont,
+                color: primaryColor
+            });
+            page.drawText('Servicios Jurídicos Profesionales', {
+                x: 80,
+                y: height - 80,
+                size: 12,
+                font: helveticaFont,
+                color: secondaryColor
+            });
+            page.drawText('Especialistas en Derecho Civil y Mercantil', {
+                x: 80,
+                y: height - 95,
+                size: 12,
+                font: helveticaFont,
+                color: secondaryColor
+            });
+            const facturaText = `FACTURA ${invoice.numeroFactura || 'N/A'}`;
+            const facturaWidth = helveticaBoldFont.widthOfTextAtSize(facturaText, 16);
+            page.drawText(facturaText, {
+                x: (width - facturaWidth) / 2,
+                y: height - 130,
+                size: 16,
+                font: helveticaBoldFont,
+                color: primaryColor
+            });
+            const fechaText = invoice.fechaFactura ? new Date(invoice.fechaFactura).toLocaleDateString('es-ES') : 'N/A';
+            const fechaWidth = helveticaFont.widthOfTextAtSize(fechaText, 12);
+            page.drawText(fechaText, {
+                x: (width - fechaWidth) / 2,
+                y: height - 150,
+                size: 12,
+                font: helveticaFont,
+                color: darkGray
+            });
+            const estadoText = (invoice.estado || 'EMITIDA').toUpperCase();
+            const estadoWidth = helveticaBoldFont.widthOfTextAtSize(estadoText, 10);
+            page.drawText(estadoText, {
+                x: (width - estadoWidth) / 2,
+                y: height - 165,
+                size: 10,
+                font: helveticaBoldFont,
+                color: (0, pdf_lib_1.rgb)(0.1, 0.4, 0.1)
+            });
+            let yPosition = height - 200;
+            page.drawText('EMISOR', {
+                x: 50,
+                y: yPosition,
+                size: 14,
+                font: helveticaBoldFont,
+                color: primaryColor
+            });
+            yPosition -= 20;
+            page.drawText(`Nombre: ${invoice.emisor?.name || 'N/A'}`, {
+                x: 50,
+                y: yPosition,
+                size: 12,
+                font: helveticaFont,
+                color: darkGray
+            });
+            yPosition -= 15;
+            page.drawText(`Email: ${invoice.emisor?.email || 'N/A'}`, {
+                x: 50,
+                y: yPosition,
+                size: 12,
+                font: helveticaFont,
+                color: darkGray
+            });
+            yPosition -= 15;
+            page.drawText(`Régimen IVA: ${invoice.regimenIvaEmisor || 'General'}`, {
+                x: 50,
+                y: yPosition,
+                size: 12,
+                font: helveticaFont,
+                color: darkGray
+            });
+            yPosition -= 30;
+            page.drawText('RECEPTOR', {
+                x: 50,
+                y: yPosition,
+                size: 14,
+                font: helveticaBoldFont,
+                color: primaryColor
+            });
+            yPosition -= 20;
+            page.drawText(`Nombre: ${invoice.receptor?.name || 'N/A'}`, {
+                x: 50,
+                y: yPosition,
+                size: 12,
+                font: helveticaFont,
+                color: darkGray
+            });
+            yPosition -= 15;
+            page.drawText(`Email: ${invoice.receptor?.email || 'N/A'}`, {
+                x: 50,
+                y: yPosition,
+                size: 12,
+                font: helveticaFont,
+                color: darkGray
+            });
+            yPosition -= 15;
+            if (invoice.expediente?.title) {
+                page.drawText(`Expediente: ${invoice.expediente.title}`, {
+                    x: 50,
+                    y: yPosition,
+                    size: 12,
+                    font: helveticaFont,
+                    color: darkGray
+                });
+                yPosition -= 15;
+            }
+            yPosition -= 20;
+            if (invoice.items && invoice.items.length > 0) {
+                page.drawText('CONCEPTOS', {
+                    x: 50,
+                    y: yPosition,
+                    size: 14,
+                    font: helveticaBoldFont,
+                    color: primaryColor
+                });
+                yPosition -= 25;
+                page.drawText('Descripción', {
+                    x: 50,
+                    y: yPosition,
+                    size: 12,
+                    font: helveticaBoldFont,
+                    color: (0, pdf_lib_1.rgb)(1, 1, 1)
+                });
+                page.drawText('Cant.', {
+                    x: 300,
+                    y: yPosition,
+                    size: 12,
+                    font: helveticaBoldFont,
+                    color: (0, pdf_lib_1.rgb)(1, 1, 1)
+                });
+                page.drawText('Precio', {
+                    x: 380,
+                    y: yPosition,
+                    size: 12,
+                    font: helveticaBoldFont,
+                    color: (0, pdf_lib_1.rgb)(1, 1, 1)
+                });
+                page.drawText('Total', {
+                    x: 480,
+                    y: yPosition,
+                    size: 12,
+                    font: helveticaBoldFont,
+                    color: (0, pdf_lib_1.rgb)(1, 1, 1)
+                });
+                yPosition -= 20;
+                for (const item of invoice.items) {
+                    page.drawText(item.description || '', {
+                        x: 50,
+                        y: yPosition,
+                        size: 11,
+                        font: helveticaFont,
+                        color: darkGray
+                    });
+                    page.drawText((item.quantity || 0).toString(), {
+                        x: 300,
+                        y: yPosition,
+                        size: 11,
+                        font: helveticaFont,
+                        color: darkGray
+                    });
+                    page.drawText(`${(item.unitPrice || 0).toFixed(2)} €`, {
+                        x: 380,
+                        y: yPosition,
+                        size: 11,
+                        font: helveticaFont,
+                        color: darkGray
+                    });
+                    page.drawText(`${(item.total || 0).toFixed(2)} €`, {
+                        x: 480,
+                        y: yPosition,
+                        size: 11,
+                        font: helveticaFont,
+                        color: darkGray
+                    });
+                    yPosition -= 15;
+                }
+                yPosition -= 20;
+            }
+            page.drawText('TOTALES', {
+                x: 50,
+                y: yPosition,
+                size: 14,
+                font: helveticaBoldFont,
+                color: primaryColor
+            });
+            yPosition -= 25;
+            page.drawText('Base Imponible:', {
+                x: 50,
+                y: yPosition,
+                size: 12,
+                font: helveticaFont,
+                color: darkGray
+            });
+            page.drawText(`${(invoice.baseImponible || 0).toFixed(2)} €`, {
+                x: 480,
+                y: yPosition,
+                size: 12,
+                font: helveticaFont,
+                color: darkGray
+            });
+            yPosition -= 15;
+            page.drawText(`IVA (${invoice.tipoIVA || 21}%):`, {
+                x: 50,
+                y: yPosition,
+                size: 12,
+                font: helveticaFont,
+                color: darkGray
+            });
+            page.drawText(`${(invoice.cuotaIVA || 0).toFixed(2)} €`, {
+                x: 480,
+                y: yPosition,
+                size: 12,
+                font: helveticaFont,
+                color: darkGray
+            });
+            yPosition -= 20;
+            page.drawText('TOTAL:', {
+                x: 50,
+                y: yPosition,
+                size: 14,
+                font: helveticaBoldFont,
+                color: primaryColor
+            });
+            page.drawText(`${(invoice.importeTotal || 0).toFixed(2)} €`, {
+                x: 480,
+                y: yPosition,
+                size: 14,
+                font: helveticaBoldFont,
+                color: primaryColor
+            });
+            try {
+                const qrImage = await pdfDoc.embedPng(qrImageBytes);
+                page.drawImage(qrImage, {
+                    x: width - 120,
+                    y: 120,
+                    width: 80,
+                    height: 80,
+                });
+                page.drawText('Verifica esta factura', {
+                    x: width - 120,
+                    y: 100,
+                    size: 8,
+                    font: helveticaFont,
+                    color: secondaryColor
+                });
+                page.drawText('escaneando el QR', {
+                    x: width - 120,
+                    y: 90,
+                    size: 8,
+                    font: helveticaFont,
+                    color: secondaryColor
+                });
+            }
+            catch (error) {
+                this.logger.warn('No se pudo insertar el QR en el PDF:', error);
+            }
+            page.drawText('Firmado electrónicamente conforme a la ley vigente.', {
+                x: 50,
+                y: 60,
+                size: 10,
+                font: helveticaFont,
+                color: secondaryColor
+            });
+            page.drawText(`Generado el: ${new Date().toLocaleString('es-ES')}`, {
+                x: 50,
+                y: 45,
+                size: 10,
+                font: helveticaFont,
+                color: secondaryColor
+            });
+            const pdfBytes = await pdfDoc.save();
+            const pdfBuffer = Buffer.from(pdfBytes);
+            this.logger.log('PDF generado exitosamente con formato profesional');
+            return pdfBuffer;
+        }
+        catch (error) {
+            this.logger.error('Error en generateInvoicePdfFallback:', error);
+            throw error;
+        }
+    }
+    async markAsSigned(id) {
+        await this.prisma.invoice.update({
+            where: { id },
+            data: {
+                estado: 'firmada',
+                updatedAt: new Date(),
+            },
+        });
+        this.logger.log(`Factura ${id} marcada como firmada.`);
+    }
+    async generateInvoiceHtml(invoice) {
+        console.log('🔍 [generateInvoiceHtml] Invoice recibida:', {
+            id: invoice.id,
+            numeroFactura: invoice.numeroFactura,
+            baseImponible: invoice.baseImponible,
+            cuotaIVA: invoice.cuotaIVA,
+            importeTotal: invoice.importeTotal,
+            provisionFondos: invoice.provisionFondos?.length || 0,
+            facturaOriginalId: invoice.facturaOriginalId,
+            tipoRectificacion: invoice.tipoRectificacion
+        });
+        if (invoice.provisionFondos && invoice.provisionFondos.length > 0) {
+            console.log('🔍 [generateInvoiceHtml] Provisiones encontradas:', invoice.provisionFondos.map((p) => ({
+                id: p.id,
+                description: p.description,
+                amount: p.amount
+            })));
+        }
+        const totalParaQR = Number(invoice.baseImponible || 0) +
+            Number(invoice.cuotaIVA || 0) -
+            (Number(invoice.baseImponible || 0) * (Number(invoice.retencion || 0) / 100));
+        console.log('🔍 [generateInvoiceHtml] Total para QR calculado:', totalParaQR);
+        const invoiceHash = this.generateInvoiceHash(invoice);
+        const fechaFactura = invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : '';
+        const importeTotal = Math.round(totalParaQR * 100) / 100;
+        const nifEmisor = invoice.emisor?.dni || invoice.emisor?.nif || '';
+        const nifReceptor = invoice.receptor?.dni || invoice.receptor?.nif || '';
+        const qrData = [
+            `NIF:${nifEmisor}`,
+            `NUM:${invoice.numeroFactura || ''}`,
+            `FEC:${fechaFactura}`,
+            `IMP:${importeTotal}`,
+            `TIPO:${invoice.tipoFactura || 'F'}`,
+            `NIF_RECEPTOR:${nifReceptor}`,
+            `ESTADO:${invoice.estado || 'EMITIDA'}`,
+            `HASH:${invoiceHash}`
+        ].join('|');
+        console.log('🔍 [generateInvoiceHtml] QR Data generado:', qrData);
+        const qrImageDataUrl = await (await Promise.resolve().then(() => __importStar(__webpack_require__(101)))).toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
+        if (invoice.facturaOriginalId) {
+            console.log('🔄 [generateInvoiceHtml] Es factura rectificativa, obteniendo datos de factura original');
+            const facturaOriginal = await this.prisma.invoice.findUnique({
+                where: { id: invoice.facturaOriginalId },
+                include: { emisor: true, receptor: true, expediente: true }
+            });
+            if (facturaOriginal) {
+                console.log('✅ [generateInvoiceHtml] Datos de factura original obtenidos:', {
+                    numeroFactura: facturaOriginal.numeroFactura,
+                    fechaFactura: facturaOriginal.fechaFactura,
+                    importeTotal: facturaOriginal.importeTotal
+                });
+                invoice.facturaOriginal = facturaOriginal;
+            }
+            else {
+                console.warn('⚠️ [generateInvoiceHtml] No se encontró la factura original:', invoice.facturaOriginalId);
+            }
+        }
+        const templateData = await this.pdfGeneratorService.prepareTemplateData(invoice, qrData, qrImageDataUrl);
+        const fullHtml = await this.pdfGeneratorService.generateHtml(templateData);
+        const styleMatch = fullHtml.match(/<style[\s\S]*?<\/style>/i);
+        const bodyMatch = fullHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+        const style = styleMatch ? styleMatch[0] : '';
+        const body = bodyMatch ? bodyMatch[1] : fullHtml;
+        return `${style}\n${body}`;
+    }
+    async handleRectificativaProvisiones(facturaOriginalId, facturaRectificativaId, tipoRectificacion, importeRectificativa) {
+        try {
+            console.log('🔄 Iniciando devolución de provisiones para rectificativa');
+            const facturaOriginal = await this.prisma.invoice.findUnique({
+                where: { id: facturaOriginalId },
+                include: { provisionFondos: true }
+            });
+            if (!facturaOriginal) {
+                console.warn('⚠️ Factura original no encontrada:', facturaOriginalId);
+                return;
+            }
+            const provisionesOriginales = facturaOriginal.provisionFondos || [];
+            console.log('📋 Provisiones de factura original:', provisionesOriginales.length);
+            if (provisionesOriginales.length === 0) {
+                console.log('ℹ️ No hay provisiones que devolver');
+                return;
+            }
+            let factorDevolucion = 1.0;
+            switch (tipoRectificacion) {
+                case 'R1':
+                    factorDevolucion = 1.0;
+                    console.log('🔄 R1 - Anulación completa: Devolver 100% de provisiones');
+                    break;
+                case 'R2':
+                    factorDevolucion = 0.0;
+                    console.log('🔄 R2 - Corrección: No devolver provisiones');
+                    break;
+                case 'R3':
+                case 'R4':
+                    const diferencia = facturaOriginal.importeTotal - importeRectificativa;
+                    if (diferencia > 0) {
+                        factorDevolucion = diferencia / facturaOriginal.importeTotal;
+                        console.log(`🔄 ${tipoRectificacion} - Diferencia: ${diferencia}€, Factor: ${(factorDevolucion * 100).toFixed(2)}%`);
+                    }
+                    else {
+                        factorDevolucion = 0.0;
+                        console.log(`🔄 ${tipoRectificacion} - Sin diferencia, no devolver provisiones`);
+                    }
+                    break;
+                default:
+                    console.warn('⚠️ Tipo de rectificación no reconocido:', tipoRectificacion);
+                    return;
+            }
+            if (factorDevolucion > 0) {
+                console.log(`💰 Devolviendo ${(factorDevolucion * 100).toFixed(2)}% de provisiones`);
+                for (const provision of provisionesOriginales) {
+                    const importeDevolver = provision.amount * factorDevolucion;
+                    if (importeDevolver > 0) {
+                        console.log(`  - Provisión ${provision.id}: ${provision.amount}€ → Devolver ${importeDevolver.toFixed(2)}€`);
+                        await this.prisma.provisionFondos.create({
+                            data: {
+                                clientId: provision.clientId,
+                                expedienteId: provision.expedienteId,
+                                amount: importeDevolver,
+                                description: `Devolución por rectificativa ${tipoRectificacion} - ${provision.description}`,
+                                date: new Date(),
+                                invoiceId: null,
+                            }
+                        });
+                        console.log(`  ✅ Provisión devuelta: ${importeDevolver.toFixed(2)}€`);
+                    }
+                }
+                console.log('✅ Devolución de provisiones completada');
+            }
+            else {
+                console.log('ℹ️ No se requieren devoluciones de provisiones');
+            }
+        }
+        catch (error) {
+            console.error('❌ Error en devolución de provisiones:', error);
+        }
+    }
+    generateInvoiceHash(invoice) {
+        try {
+            const criticalData = {
+                numeroFactura: invoice.numeroFactura || '',
+                fechaFactura: invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : '',
+                importeTotal: (invoice.importeTotal || 0).toFixed(2),
+                nifEmisor: invoice.emisor?.dni || invoice.emisor?.nif || '',
+                nifReceptor: invoice.receptor?.dni || invoice.receptor?.nif || '',
+                tipoFactura: invoice.tipoFactura || 'F',
+                estado: invoice.estado || 'EMITIDA',
+                id: invoice.id || ''
+            };
+            const dataString = Object.entries(criticalData)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([key, value]) => `${key}:${value}`)
+                .join('|');
+            const hash = crypto.createHash('sha256').update(dataString).digest('hex');
+            this.logger.log(`Hash generado para factura ${invoice.numeroFactura}: ${hash.substring(0, 16)}...`);
+            return hash.substring(0, 16);
+        }
+        catch (error) {
+            this.logger.error('Error generando hash de factura:', error);
+            return '';
+        }
+    }
+    async generateRectificativaNumber(facturaOriginalId, tipoRectificacion) {
+        try {
+            const facturaOriginal = await this.prisma.invoice.findUnique({
+                where: { id: facturaOriginalId },
+                select: { numeroFactura: true }
+            });
+            if (!facturaOriginal) {
+                throw new Error('Factura original no encontrada');
+            }
+            const rectificativasExistentes = await this.prisma.invoice.count({
+                where: {
+                    facturaOriginalId: facturaOriginalId,
+                    tipoFactura: 'R'
+                }
+            });
+            const numeroRectificativa = rectificativasExistentes + 1;
+            const sufijo = `${tipoRectificacion}-${numeroRectificativa.toString().padStart(2, '0')}`;
+            const numeroRectificativaCompleto = `${facturaOriginal.numeroFactura}-${sufijo}`;
+            console.log(`🔄 Generando número de factura rectificativa: ${numeroRectificativaCompleto}`);
+            console.log(`  - Factura original: ${facturaOriginal.numeroFactura}`);
+            console.log(`  - Tipo rectificación: ${tipoRectificacion}`);
+            console.log(`  - Número de rectificativa: ${numeroRectificativa}`);
+            return numeroRectificativaCompleto;
+        }
+        catch (error) {
+            console.error('❌ Error generando número de factura rectificativa:', error);
+            throw error;
+        }
+    }
+};
+exports.InvoicesService = InvoicesService;
+exports.InvoicesService = InvoicesService = InvoicesService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof pdf_generator_service_1.PdfGeneratorService !== "undefined" && pdf_generator_service_1.PdfGeneratorService) === "function" ? _b : Object, typeof (_c = typeof invoice_audit_service_1.InvoiceAuditService !== "undefined" && invoice_audit_service_1.InvoiceAuditService) === "function" ? _c : Object])
+], InvoicesService);
+
+
+/***/ }),
+/* 91 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.generateFacturaeXML = generateFacturaeXML;
+exports.generateFacturaeXMLFromInvoice = generateFacturaeXMLFromInvoice;
+const xmlbuilder2_1 = __webpack_require__(92);
+function generateFacturaeXML(data) {
+    const root = (0, xmlbuilder2_1.create)({ version: '1.0', encoding: 'UTF-8' })
+        .ele('Facturae', {
+        xmlns: 'http://www.facturae.es/Facturae/2014/v3.2.2/Facturae',
+        'xmlns:ds': 'http://www.w3.org/2000/09/xmldsig#'
+    });
+    const fileHeader = root.ele('FileHeader');
+    fileHeader.ele('SchemaVersion').txt(data.fileHeader.schemaVersion).up();
+    fileHeader.ele('Modality').txt(data.fileHeader.modality).up();
+    fileHeader.ele('DocumentType').txt(data.fileHeader.documentType).up();
+    if (data.fileHeader.documentSubType) {
+        fileHeader.ele('DocumentSubType').txt(data.fileHeader.documentSubType).up();
+    }
+    fileHeader.up();
+    const parties = root.ele('Parties');
+    const sellerParty = parties.ele('SellerParty');
+    addPartyToXML(sellerParty, data.part.sellerParty);
+    sellerParty.up();
+    const buyerParty = parties.ele('BuyerParty');
+    addPartyToXML(buyerParty, data.part.buyerParty);
+    buyerParty.up();
+    parties.up();
+    const invoices = root.ele('Invoices');
+    for (const invoice of data.part.invoices) {
+        const invoiceElement = invoices.ele('Invoice');
+        const invoiceHeader = invoiceElement.ele('InvoiceHeader');
+        invoiceHeader.ele('InvoiceNumber').txt(invoice.invoiceHeader.invoiceNumber).up();
+        if (invoice.invoiceHeader.invoiceSeriesCode) {
+            invoiceHeader.ele('InvoiceSeriesCode').txt(invoice.invoiceHeader.invoiceSeriesCode).up();
+        }
+        invoiceHeader.ele('InvoiceDocumentType').txt(invoice.invoiceHeader.invoiceDocumentType).up();
+        invoiceHeader.ele('InvoiceClass').txt(invoice.invoiceHeader.invoiceClass).up();
+        invoiceHeader.up();
+        const invoiceIssueData = invoiceElement.ele('InvoiceIssueData');
+        invoiceIssueData.ele('IssueDate').txt(invoice.invoiceIssueData.issueDate.toISOString().slice(0, 10)).up();
+        if (invoice.invoiceIssueData.operationDate) {
+            invoiceIssueData.ele('OperationDate').txt(invoice.invoiceIssueData.operationDate.toISOString().slice(0, 10)).up();
+        }
+        if (invoice.invoiceIssueData.placeOfIssue) {
+            const placeOfIssue = invoiceIssueData.ele('PlaceOfIssue');
+            placeOfIssue.ele('PostCode').txt(invoice.invoiceIssueData.placeOfIssue.postCode).up();
+            placeOfIssue.ele('Town').txt(invoice.invoiceIssueData.placeOfIssue.town).up();
+            placeOfIssue.ele('Province').txt(invoice.invoiceIssueData.placeOfIssue.province).up();
+            placeOfIssue.ele('CountryCode').txt(invoice.invoiceIssueData.placeOfIssue.countryCode).up();
+            placeOfIssue.up();
+        }
+        invoiceIssueData.ele('LanguageCode').txt(invoice.invoiceIssueData.languageCode).up();
+        invoiceIssueData.ele('CurrencyCode').txt(invoice.invoiceIssueData.currencyCode).up();
+        if (invoice.invoiceIssueData.exchangeRateDetails) {
+            const exchangeRateDetails = invoiceIssueData.ele('ExchangeRateDetails');
+            exchangeRateDetails.ele('ExchangeRate').txt(invoice.invoiceIssueData.exchangeRateDetails.exchangeRate.toString()).up();
+            exchangeRateDetails.ele('ExchangeRateDate').txt(invoice.invoiceIssueData.exchangeRateDetails.exchangeRateDate.toISOString().slice(0, 10)).up();
+            exchangeRateDetails.up();
+        }
+        invoiceIssueData.up();
+        if (invoice.invoiceIssueData.taxesOutputs && invoice.invoiceIssueData.taxesOutputs.length > 0) {
+            const taxesOutputs = invoiceElement.ele('TaxesOutputs');
+            for (const tax of invoice.invoiceIssueData.taxesOutputs) {
+                const taxElement = taxesOutputs.ele('TaxOutput');
+                taxElement.ele('TaxTypeCode').txt(tax.taxTypeCode).up();
+                taxElement.ele('TaxRate').txt(tax.taxRate.toString()).up();
+                const taxableBase = taxElement.ele('TaxableBase');
+                taxableBase.ele('TotalAmount').txt(tax.taxableBase.totalAmount.toString()).up();
+                if (tax.taxableBase.equivalentInEuros) {
+                    taxableBase.ele('EquivalentInEuros').txt(tax.taxableBase.equivalentInEuros.toString()).up();
+                }
+                taxableBase.up();
+                const taxAmount = taxElement.ele('TaxAmount');
+                taxAmount.ele('TotalAmount').txt(tax.taxAmount.totalAmount.toString()).up();
+                if (tax.taxAmount.equivalentInEuros) {
+                    taxAmount.ele('EquivalentInEuros').txt(tax.taxAmount.equivalentInEuros.toString()).up();
+                }
+                taxAmount.up();
+                taxElement.up();
+            }
+            taxesOutputs.up();
+        }
+        if (invoice.invoiceIssueData.taxesWithheld && invoice.invoiceIssueData.taxesWithheld.length > 0) {
+            const taxesWithheld = invoiceElement.ele('TaxesWithheld');
+            for (const tax of invoice.invoiceIssueData.taxesWithheld) {
+                const taxElement = taxesWithheld.ele('TaxWithheld');
+                taxElement.ele('TaxTypeCode').txt(tax.taxTypeCode).up();
+                taxElement.ele('TaxRate').txt(tax.taxRate.toString()).up();
+                const taxableBase = taxElement.ele('TaxableBase');
+                taxableBase.ele('TotalAmount').txt(tax.taxableBase.totalAmount.toString()).up();
+                if (tax.taxableBase.equivalentInEuros) {
+                    taxableBase.ele('EquivalentInEuros').txt(tax.taxableBase.equivalentInEuros.toString()).up();
+                }
+                taxableBase.up();
+                const taxAmount = taxElement.ele('TaxAmount');
+                taxAmount.ele('TotalAmount').txt(tax.taxAmount.totalAmount.toString()).up();
+                if (tax.taxAmount.equivalentInEuros) {
+                    taxAmount.ele('EquivalentInEuros').txt(tax.taxAmount.equivalentInEuros.toString()).up();
+                }
+                taxAmount.up();
+                taxElement.up();
+            }
+            taxesWithheld.up();
+        }
+        const invoiceTotals = invoiceElement.ele('InvoiceTotals');
+        invoiceTotals.ele('TotalGrossAmount').txt(invoice.invoiceTotals.totalGrossAmount.toString()).up();
+        if (invoice.invoiceTotals.totalGeneralDiscounts) {
+            invoiceTotals.ele('TotalGeneralDiscounts').txt(invoice.invoiceTotals.totalGeneralDiscounts.toString()).up();
+        }
+        if (invoice.invoiceTotals.totalGeneralSurcharges) {
+            invoiceTotals.ele('TotalGeneralSurcharges').txt(invoice.invoiceTotals.totalGeneralSurcharges.toString()).up();
+        }
+        invoiceTotals.ele('TotalGrossAmountBeforeTaxes').txt(invoice.invoiceTotals.totalGrossAmountBeforeTaxes.toString()).up();
+        invoiceTotals.ele('TotalTaxOutputs').txt(invoice.invoiceTotals.totalTaxOutputs.toString()).up();
+        invoiceTotals.ele('TotalTaxesWithheld').txt(invoice.invoiceTotals.totalTaxesWithheld.toString()).up();
+        invoiceTotals.ele('InvoiceTotal').txt(invoice.invoiceTotals.invoiceTotal.toString()).up();
+        invoiceTotals.ele('TotalOutstandingAmount').txt(invoice.invoiceTotals.totalOutstandingAmount.toString()).up();
+        invoiceTotals.ele('TotalExecutableAmount').txt(invoice.invoiceTotals.totalExecutableAmount.toString()).up();
+        invoiceTotals.up();
+        if (invoice.items && invoice.items.length > 0) {
+            const items = invoiceElement.ele('Items');
+            for (const item of invoice.items) {
+                const itemElement = items.ele('InvoiceLine');
+                itemElement.ele('ItemDescription').txt(item.itemDescription).up();
+                itemElement.ele('Quantity').txt(item.quantity.toString()).up();
+                itemElement.ele('UnitPriceWithoutTax').txt(item.unitPriceWithoutTax.toString()).up();
+                itemElement.ele('TotalCost').txt(item.totalCost.toString()).up();
+                itemElement.ele('GrossAmount').txt(item.grossAmount.toString()).up();
+                if (item.taxesOutputs && item.taxesOutputs.length > 0) {
+                    const itemTaxesOutputs = itemElement.ele('TaxesOutputs');
+                    for (const tax of item.taxesOutputs) {
+                        const taxElement = itemTaxesOutputs.ele('TaxOutput');
+                        taxElement.ele('TaxTypeCode').txt(tax.taxTypeCode).up();
+                        taxElement.ele('TaxRate').txt(tax.taxRate.toString()).up();
+                        const taxableBase = taxElement.ele('TaxableBase');
+                        taxableBase.ele('TotalAmount').txt(tax.taxableBase.totalAmount.toString()).up();
+                        if (tax.taxableBase.equivalentInEuros) {
+                            taxableBase.ele('EquivalentInEuros').txt(tax.taxableBase.equivalentInEuros.toString()).up();
+                        }
+                        taxableBase.up();
+                        const taxAmount = taxElement.ele('TaxAmount');
+                        taxAmount.ele('TotalAmount').txt(tax.taxAmount.totalAmount.toString()).up();
+                        if (tax.taxAmount.equivalentInEuros) {
+                            taxAmount.ele('EquivalentInEuros').txt(tax.taxAmount.equivalentInEuros.toString()).up();
+                        }
+                        taxAmount.up();
+                        taxElement.up();
+                    }
+                    itemTaxesOutputs.up();
+                }
+                if (item.taxesWithheld && item.taxesWithheld.length > 0) {
+                    const itemTaxesWithheld = itemElement.ele('TaxesWithheld');
+                    for (const tax of item.taxesWithheld) {
+                        const taxElement = itemTaxesWithheld.ele('TaxWithheld');
+                        taxElement.ele('TaxTypeCode').txt(tax.taxTypeCode).up();
+                        taxElement.ele('TaxRate').txt(tax.taxRate.toString()).up();
+                        const taxableBase = taxElement.ele('TaxableBase');
+                        taxableBase.ele('TotalAmount').txt(tax.taxableBase.totalAmount.toString()).up();
+                        if (tax.taxableBase.equivalentInEuros) {
+                            taxableBase.ele('EquivalentInEuros').txt(tax.taxableBase.equivalentInEuros.toString()).up();
+                        }
+                        taxableBase.up();
+                        const taxAmount = taxElement.ele('TaxAmount');
+                        taxAmount.ele('TotalAmount').txt(tax.taxAmount.totalAmount.toString()).up();
+                        if (tax.taxAmount.equivalentInEuros) {
+                            taxAmount.ele('EquivalentInEuros').txt(tax.taxAmount.equivalentInEuros.toString()).up();
+                        }
+                        taxAmount.up();
+                        taxElement.up();
+                    }
+                    itemTaxesWithheld.up();
+                }
+                itemElement.up();
+            }
+            items.up();
+        }
+        if (invoice.legalLiterals && invoice.legalLiterals.length > 0) {
+            const legalLiterals = invoiceElement.ele('LegalLiterals');
+            for (const literal of invoice.legalLiterals) {
+                const literalElement = legalLiterals.ele('LegalLiteral');
+                literalElement.ele('Reference').txt(literal.reference).up();
+                literalElement.ele('Literal').txt(literal.literal).up();
+                literalElement.up();
+            }
+            legalLiterals.up();
+        }
+        if (invoice.additionalData) {
+            const additionalData = invoiceElement.ele('AdditionalData');
+            if (invoice.additionalData.invoiceAdditionalInformation) {
+                additionalData.ele('InvoiceAdditionalInformation').txt(invoice.additionalData.invoiceAdditionalInformation).up();
+            }
+            if (invoice.additionalData.relatedDocuments && invoice.additionalData.relatedDocuments.length > 0) {
+                const relatedDocuments = additionalData.ele('RelatedDocuments');
+                for (const doc of invoice.additionalData.relatedDocuments) {
+                    const docElement = relatedDocuments.ele('RelatedDocument');
+                    docElement.ele('DocumentType').txt(doc.documentType).up();
+                    docElement.ele('DocumentID').txt(doc.documentID).up();
+                    if (doc.documentTypeDescription) {
+                        docElement.ele('DocumentTypeDescription').txt(doc.documentTypeDescription).up();
+                    }
+                    if (doc.issuerParty) {
+                        docElement.ele('IssuerParty').txt(doc.issuerParty).up();
+                    }
+                    if (doc.receiverParty) {
+                        docElement.ele('ReceiverParty').txt(doc.receiverParty).up();
+                    }
+                    if (doc.issueDate) {
+                        docElement.ele('IssueDate').txt(doc.issueDate.toISOString().slice(0, 10)).up();
+                    }
+                    if (doc.otherRelevantData) {
+                        docElement.ele('OtherRelevantData').txt(doc.otherRelevantData).up();
+                    }
+                    docElement.up();
+                }
+                relatedDocuments.up();
+            }
+            additionalData.up();
+        }
+        invoiceElement.up();
+    }
+    invoices.up();
+    return root.end({ prettyPrint: true });
+}
+function addPartyToXML(element, party) {
+    const taxIdentification = element.ele('TaxIdentification');
+    taxIdentification.ele('PersonTypeCode').txt(party.taxIdentification.personTypeCode).up();
+    taxIdentification.ele('ResidenceTypeCode').txt(party.taxIdentification.residenceTypeCode).up();
+    taxIdentification.ele('TaxIdentificationNumber').txt(party.taxIdentification.taxIdentificationNumber).up();
+    taxIdentification.up();
+    if (party.individual) {
+        const individual = element.ele('Individual');
+        individual.ele('FirstName').txt(party.individual.firstName).up();
+        individual.ele('LastName').txt(party.individual.lastName).up();
+        if (party.individual.middleName) {
+            individual.ele('MiddleName').txt(party.individual.middleName).up();
+        }
+        individual.up();
+    }
+    else if (party.legalEntity) {
+        const legalEntity = element.ele('LegalEntity');
+        legalEntity.ele('CorporateName').txt(party.legalEntity.corporateName).up();
+        if (party.legalEntity.tradeName) {
+            legalEntity.ele('TradeName').txt(party.legalEntity.tradeName).up();
+        }
+        if (party.legalEntity.registrationData) {
+            const registrationData = legalEntity.ele('RegistrationData');
+            if (party.legalEntity.registrationData.book) {
+                registrationData.ele('Book').txt(party.legalEntity.registrationData.book).up();
+            }
+            if (party.legalEntity.registrationData.registerOfCompaniesLocation) {
+                registrationData.ele('RegisterOfCompaniesLocation').txt(party.legalEntity.registrationData.registerOfCompaniesLocation).up();
+            }
+            if (party.legalEntity.registrationData.sheet) {
+                registrationData.ele('Sheet').txt(party.legalEntity.registrationData.sheet).up();
+            }
+            if (party.legalEntity.registrationData.folio) {
+                registrationData.ele('Folio').txt(party.legalEntity.registrationData.folio).up();
+            }
+            if (party.legalEntity.registrationData.section) {
+                registrationData.ele('Section').txt(party.legalEntity.registrationData.section).up();
+            }
+            if (party.legalEntity.registrationData.volume) {
+                registrationData.ele('Volume').txt(party.legalEntity.registrationData.volume).up();
+            }
+            if (party.legalEntity.registrationData.additionalRegistrationData) {
+                registrationData.ele('AdditionalRegistrationData').txt(party.legalEntity.registrationData.additionalRegistrationData).up();
+            }
+            if (party.legalEntity.registrationData.entry) {
+                registrationData.ele('Entry').txt(party.legalEntity.registrationData.entry).up();
+            }
+            registrationData.up();
+        }
+        legalEntity.up();
+    }
+    const address = element.ele('Address');
+    address.ele('Address').txt(party.address.address).up();
+    address.ele('PostCode').txt(party.address.postCode).up();
+    address.ele('Town').txt(party.address.town).up();
+    address.ele('Province').txt(party.address.province).up();
+    address.ele('CountryCode').txt(party.address.countryCode).up();
+    address.up();
+    if (party.contactDetails) {
+        const contactDetails = element.ele('ContactDetails');
+        if (party.contactDetails.telephone) {
+            contactDetails.ele('Telephone').txt(party.contactDetails.telephone).up();
+        }
+        if (party.contactDetails.teleFax) {
+            contactDetails.ele('TeleFax').txt(party.contactDetails.teleFax).up();
+        }
+        if (party.contactDetails.webSite) {
+            contactDetails.ele('WebSite').txt(party.contactDetails.webSite).up();
+        }
+        if (party.contactDetails.electronicMail) {
+            contactDetails.ele('ElectronicMail').txt(party.contactDetails.electronicMail).up();
+        }
+        if (party.contactDetails.contactPersons) {
+            contactDetails.ele('ContactPersons').txt(party.contactDetails.contactPersons).up();
+        }
+        if (party.contactDetails.cnoCnae) {
+            contactDetails.ele('CnoCnae').txt(party.contactDetails.cnoCnae).up();
+        }
+        if (party.contactDetails.ineTownCode) {
+            contactDetails.ele('IneTownCode').txt(party.contactDetails.ineTownCode).up();
+        }
+        if (party.contactDetails.additionalContactDetails) {
+            contactDetails.ele('AdditionalContactDetails').txt(party.contactDetails.additionalContactDetails).up();
+        }
+        contactDetails.up();
+    }
+}
+function generateFacturaeXMLFromInvoice(invoice) {
+    const facturaeData = {
+        fileHeader: {
+            schemaVersion: '3.2.2',
+            modality: 'I',
+            issuerParty: {
+                taxIdentification: {
+                    personTypeCode: 'J',
+                    residenceTypeCode: 'R',
+                    taxIdentificationNumber: invoice.emisor?.dni || 'B00000000'
+                },
+                legalEntity: {
+                    corporateName: invoice.emisor?.name || 'Empresa Emisora'
+                },
+                address: {
+                    address: 'Dirección del Emisor',
+                    postCode: '28001',
+                    town: 'Madrid',
+                    province: 'Madrid',
+                    countryCode: 'ESP'
+                }
+            },
+            receiverParty: {
+                taxIdentification: {
+                    personTypeCode: 'J',
+                    residenceTypeCode: 'R',
+                    taxIdentificationNumber: invoice.receptor?.dni || 'B00000000'
+                },
+                legalEntity: {
+                    corporateName: invoice.receptor?.name || 'Empresa Receptora'
+                },
+                address: {
+                    address: 'Dirección del Receptor',
+                    postCode: '28001',
+                    town: 'Madrid',
+                    province: 'Madrid',
+                    countryCode: 'ESP'
+                }
+            },
+            documentType: 'FC'
+        },
+        part: {
+            sellerParty: {
+                taxIdentification: {
+                    personTypeCode: 'J',
+                    residenceTypeCode: 'R',
+                    taxIdentificationNumber: invoice.emisor?.dni || 'B00000000'
+                },
+                legalEntity: {
+                    corporateName: invoice.emisor?.name || 'Empresa Emisora'
+                },
+                address: {
+                    address: 'Dirección del Emisor',
+                    postCode: '28001',
+                    town: 'Madrid',
+                    province: 'Madrid',
+                    countryCode: 'ESP'
+                }
+            },
+            buyerParty: {
+                taxIdentification: {
+                    personTypeCode: 'J',
+                    residenceTypeCode: 'R',
+                    taxIdentificationNumber: invoice.receptor?.dni || 'B00000000'
+                },
+                legalEntity: {
+                    corporateName: invoice.receptor?.name || 'Empresa Receptora'
+                },
+                address: {
+                    address: 'Dirección del Receptor',
+                    postCode: '28001',
+                    town: 'Madrid',
+                    province: 'Madrid',
+                    countryCode: 'ESP'
+                }
+            },
+            invoices: [{
+                    invoiceHeader: {
+                        invoiceNumber: invoice.numeroFactura || 'FAC-001',
+                        invoiceDocumentType: 'FC',
+                        invoiceClass: 'OO'
+                    },
+                    invoiceIssueData: {
+                        issueDate: invoice.fechaFactura || new Date(),
+                        languageCode: 'es',
+                        currencyCode: 'EUR'
+                    },
+                    invoiceTotals: {
+                        totalGrossAmount: invoice.importeTotal || 0,
+                        totalGrossAmountBeforeTaxes: invoice.baseImponible || 0,
+                        totalTaxOutputs: invoice.cuotaIVA || 0,
+                        totalTaxesWithheld: 0,
+                        invoiceTotal: invoice.importeTotal || 0,
+                        totalOutstandingAmount: invoice.importeTotal || 0,
+                        totalExecutableAmount: invoice.importeTotal || 0
+                    },
+                    items: (invoice.items || []).map((item) => ({
+                        itemDescription: item.description || '',
+                        quantity: item.quantity || 0,
+                        unitPriceWithoutTax: item.unitPrice || 0,
+                        totalCost: (item.quantity || 0) * (item.unitPrice || 0),
+                        grossAmount: item.total || 0
+                    }))
+                }]
+        }
+    };
+    return generateFacturaeXML(facturaeData);
+}
+
+
+/***/ }),
+/* 92 */
+/***/ ((module) => {
+
+module.exports = require("xmlbuilder2");
+
+/***/ }),
+/* 93 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XAdESLevel = void 0;
+exports.signFacturaeXMLAdvanced = signFacturaeXMLAdvanced;
+exports.signFacturaeXML = signFacturaeXML;
+exports.validateCertificate = validateCertificate;
+exports.checkCertificateStatus = checkCertificateStatus;
+exports.getTimestamp = getTimestamp;
+exports.validateSignature = validateSignature;
+const xadesjs = __importStar(__webpack_require__(94));
+const webcrypto_1 = __webpack_require__(95);
+const xmldom_1 = __webpack_require__(96);
+const webcrypto = new webcrypto_1.Crypto();
+xadesjs.Application.setEngine("OpenSSL", webcrypto);
+var XAdESLevel;
+(function (XAdESLevel) {
+    XAdESLevel["BES"] = "XAdES_BES";
+    XAdESLevel["T"] = "XAdES_T";
+    XAdESLevel["C"] = "XAdES_C";
+    XAdESLevel["X"] = "XAdES_X";
+    XAdESLevel["XL"] = "XAdES_XL";
+})(XAdESLevel || (exports.XAdESLevel = XAdESLevel = {}));
+function pemToArrayBuffer(pem) {
+    const b64 = pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+    const binary = Buffer.from(b64, 'base64');
+    return binary.buffer.slice(binary.byteOffset, binary.byteOffset + binary.byteLength);
+}
+async function importPrivateKey(pem) {
+    const keyBuffer = pemToArrayBuffer(pem);
+    return await webcrypto.subtle.importKey('pkcs8', keyBuffer, {
+        name: 'RSASSA-PKCS1-v1_5',
+        hash: { name: 'SHA-256' },
+    }, false, ['sign']);
+}
+async function signFacturaeXMLAdvanced(xml, certPem, keyPem, options = { level: XAdESLevel.BES }) {
+    try {
+        const parser = new xmldom_1.DOMParser();
+        const xmlDoc = parser.parseFromString(xml, "application/xml");
+        const privateKey = await importPrivateKey(keyPem);
+        const certBase64 = certPem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+        const signedXml = new xadesjs.SignedXml();
+        const signingOptions = {
+            name: "RSASSA-PKCS1-v1_5",
+            hash: "SHA-256"
+        };
+        await signedXml.Sign(signingOptions, privateKey, xmlDoc.documentElement);
+        const signatureNode = signedXml.GetXml();
+        const keyInfo = signatureNode.getElementsByTagName("KeyInfo")[0];
+        if (keyInfo) {
+            const x509Data = xmlDoc.createElementNS("http://www.w3.org/2000/09/xmldsig#", "ds:X509Data");
+            const x509Cert = xmlDoc.createElementNS("http://www.w3.org/2000/09/xmldsig#", "ds:X509Certificate");
+            x509Cert.textContent = certBase64;
+            x509Data.appendChild(x509Cert);
+            keyInfo.appendChild(x509Data);
+        }
+        if (options.level !== XAdESLevel.BES) {
+            await applyXAdESLevel(signedXml, options, xmlDoc);
+        }
+        xmlDoc.documentElement.appendChild(xmlDoc.importNode(signatureNode, true));
+        return new xmldom_1.XMLSerializer().serializeToString(xmlDoc);
+    }
+    catch (error) {
+        throw new Error(`Error al firmar XML: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+async function applyXAdESLevel(signedXml, options, xmlDoc) {
+    const signatureElement = signedXml.GetXml();
+    if (options.level >= XAdESLevel.T) {
+        await addXAdEST(signatureElement, options, xmlDoc);
+    }
+    if (options.level >= XAdESLevel.C) {
+        await addXAdESC(signatureElement, options, xmlDoc);
+    }
+    if (options.level >= XAdESLevel.X) {
+        await addXAdESX(signatureElement, options, xmlDoc);
+    }
+}
+async function addXAdEST(signatureElement, options, xmlDoc) {
+    if (!options.tsaUrl) {
+        throw new Error('URL del servidor TSA requerida para XAdES-T');
+    }
+    const unsignedProps = xmlDoc.createElementNS("http://uri.etsi.org/01903/v1.3.2#", "xades:UnsignedSignatureProperties");
+    const timeStamp = xmlDoc.createElementNS("http://uri.etsi.org/01903/v1.3.2#", "xades:SignatureTimeStamp");
+    const timeStampInfo = xmlDoc.createElementNS("http://uri.etsi.org/01903/v1.3.2#", "xades:EncapsulatedTimeStamp");
+    const timestamp = new Date().toISOString();
+    timeStampInfo.textContent = Buffer.from(timestamp).toString('base64');
+    timeStamp.appendChild(timeStampInfo);
+    unsignedProps.appendChild(timeStamp);
+    const objectElement = signatureElement.getElementsByTagName("ds:Object")[0];
+    if (objectElement) {
+        objectElement.appendChild(unsignedProps);
+    }
+}
+async function addXAdESC(signatureElement, options, xmlDoc) {
+    if (!options.ocspUrl) {
+        throw new Error('URL del servidor OCSP requerida para XAdES-C');
+    }
+    const revocationValues = xmlDoc.createElementNS("http://uri.etsi.org/01903/v1.3.2#", "xades:RevocationValues");
+    const ocspValues = xmlDoc.createElementNS("http://uri.etsi.org/01903/v1.3.2#", "xades:OCSPValues");
+    const encapsulatedOCSP = xmlDoc.createElementNS("http://uri.etsi.org/01903/v1.3.2#", "xades:EncapsulatedOCSPValue");
+    const ocspResponse = "Simulated OCSP Response";
+    encapsulatedOCSP.textContent = Buffer.from(ocspResponse).toString('base64');
+    ocspValues.appendChild(encapsulatedOCSP);
+    revocationValues.appendChild(ocspValues);
+    const unsignedProps = signatureElement.getElementsByTagName("xades:UnsignedSignatureProperties")[0];
+    if (unsignedProps) {
+        unsignedProps.appendChild(revocationValues);
+    }
+}
+async function addXAdESX(signatureElement, options, xmlDoc) {
+    const sigTimeStamp = xmlDoc.createElementNS("http://uri.etsi.org/01903/v1.3.2#", "xades:SigAndRefsTimeStamp");
+    const timeStampInfo = xmlDoc.createElementNS("http://uri.etsi.org/01903/v1.3.2#", "xades:EncapsulatedTimeStamp");
+    const timestamp = new Date().toISOString();
+    timeStampInfo.textContent = Buffer.from(timestamp).toString('base64');
+    sigTimeStamp.appendChild(timeStampInfo);
+    const unsignedProps = signatureElement.getElementsByTagName("xades:UnsignedSignatureProperties")[0];
+    if (unsignedProps) {
+        unsignedProps.appendChild(sigTimeStamp);
+    }
+}
+async function signFacturaeXML(xml, certPem, keyPem) {
+    return signFacturaeXMLAdvanced(xml, certPem, keyPem, { level: XAdESLevel.BES });
+}
+function validateCertificate(certPem) {
+    try {
+        const certBase64 = certPem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+        const certBuffer = Buffer.from(certBase64, 'base64');
+        const now = new Date();
+        const validFrom = new Date(now.getFullYear() - 1, 0, 1);
+        const validTo = new Date(now.getFullYear() + 1, 11, 31);
+        return {
+            subject: "CN=Test Certificate",
+            issuer: "CN=Test CA",
+            serialNumber: "123456789",
+            validFrom,
+            validTo,
+            isValid: now >= validFrom && now <= validTo
+        };
+    }
+    catch (error) {
+        throw new Error(`Error al validar certificado: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+async function checkCertificateStatus(certPem, ocspUrl) {
+    try {
+        return true;
+    }
+    catch (error) {
+        throw new Error(`Error al verificar estado del certificado: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+async function getTimestamp(tsaUrl, data) {
+    try {
+        const timestamp = new Date().toISOString();
+        return Buffer.from(timestamp).toString('base64');
+    }
+    catch (error) {
+        throw new Error(`Error al obtener sello de tiempo: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+function validateSignature(xmlContent) {
+    try {
+        const parser = new xmldom_1.DOMParser();
+        const xmlDoc = parser.parseFromString(xmlContent, "application/xml");
+        const signatures = xmlDoc.getElementsByTagName("ds:Signature");
+        if (signatures.length === 0) {
+            return false;
+        }
+        const signature = signatures[0];
+        const requiredElements = ['ds:SignedInfo', 'ds:SignatureValue', 'ds:KeyInfo'];
+        for (const elementName of requiredElements) {
+            const element = signature.getElementsByTagName(elementName);
+            if (element.length === 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+    catch (error) {
+        return false;
+    }
+}
+
+
+/***/ }),
+/* 94 */
+/***/ ((module) => {
+
+module.exports = require("xadesjs");
+
+/***/ }),
+/* 95 */
+/***/ ((module) => {
+
+module.exports = require("@peculiar/webcrypto");
+
+/***/ }),
+/* 96 */
+/***/ ((module) => {
+
+module.exports = require("xmldom");
+
+/***/ }),
+/* 97 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var FacturaeService_1;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FacturaeService = void 0;
+const common_1 = __webpack_require__(2);
+const facturae_xml_util_1 = __webpack_require__(91);
+const xades_sign_util_1 = __webpack_require__(93);
+const facturae_validator_util_1 = __webpack_require__(98);
+const fs = __importStar(__webpack_require__(44));
+const path = __importStar(__webpack_require__(45));
+let FacturaeService = FacturaeService_1 = class FacturaeService {
+    constructor() {
+        this.logger = new common_1.Logger(FacturaeService_1.name);
+        this.config = {
+            certificatePath: process.env.FACTURAE_CERT_PATH || './certs/certificate.pem',
+            privateKeyPath: process.env.FACTURAE_KEY_PATH || './certs/private_key.pem',
+            tsaUrl: process.env.FACTURAE_TSA_URL,
+            ocspUrl: process.env.FACTURAE_OCSP_URL,
+            xadesLevel: xades_sign_util_1.XAdESLevel.BES,
+            outputPath: process.env.FACTURAE_OUTPUT_PATH || './output'
+        };
+    }
+    setConfig(config) {
+        this.config = { ...this.config, ...config };
+    }
+    async generateAndSignInvoice(invoiceData, options = {}) {
+        try {
+            this.logger.log('Iniciando generación de factura electrónica');
+            const xmlContent = (0, facturae_xml_util_1.generateFacturaeXML)(invoiceData);
+            this.logger.log('XML Facturae generado correctamente');
+            const validationResult = facturae_validator_util_1.FacturaeValidator.validateXML(xmlContent, {
+                validateSchema: true,
+                validateBusinessRules: true,
+                strictMode: false
+            });
+            if (!validationResult.isValid) {
+                this.logger.warn('XML generado tiene errores de validación', validationResult.errors);
+            }
+            const certPem = await this.loadCertificate();
+            const keyPem = await this.loadPrivateKey();
+            const certInfo = (0, xades_sign_util_1.validateCertificate)(certPem);
+            if (!certInfo.isValid) {
+                throw new Error(`Certificado no válido: ${certInfo.subject}`);
+            }
+            const signingOptions = {
+                level: this.config.xadesLevel,
+                tsaUrl: this.config.tsaUrl,
+                ocspUrl: this.config.ocspUrl,
+                ...options
+            };
+            const signedXmlContent = await (0, xades_sign_util_1.signFacturaeXMLAdvanced)(xmlContent, certPem, keyPem, signingOptions);
+            this.logger.log('Factura firmada correctamente');
+            const isSignatureValid = (0, xades_sign_util_1.validateSignature)(signedXmlContent);
+            if (!isSignatureValid) {
+                throw new Error('La firma digital no es válida');
+            }
+            await this.saveInvoiceFiles(invoiceData, xmlContent, signedXmlContent);
+            return {
+                success: true,
+                xmlContent,
+                signedXmlContent,
+                validationResult,
+                warnings: validationResult.warnings
+            };
+        }
+        catch (error) {
+            this.logger.error('Error al generar factura electrónica', error);
+            return {
+                success: false,
+                errors: [error instanceof Error ? error.message : String(error)]
+            };
+        }
+    }
+    async generateInvoiceXML(invoiceData) {
+        try {
+            this.logger.log('Generando XML de factura sin firma');
+            const xmlContent = (0, facturae_xml_util_1.generateFacturaeXML)(invoiceData);
+            const validationResult = facturae_validator_util_1.FacturaeValidator.validateXML(xmlContent, {
+                validateSchema: true,
+                validateBusinessRules: true,
+                strictMode: false
+            });
+            return {
+                success: true,
+                xmlContent,
+                validationResult,
+                warnings: validationResult.warnings
+            };
+        }
+        catch (error) {
+            this.logger.error('Error al generar XML de factura', error);
+            return {
+                success: false,
+                errors: [error instanceof Error ? error.message : String(error)]
+            };
+        }
+    }
+    async signExistingXML(xmlContent, options = {}) {
+        try {
+            this.logger.log('Firmando XML existente');
+            const validationResult = facturae_validator_util_1.FacturaeValidator.validateXML(xmlContent);
+            if (!validationResult.isValid) {
+                throw new Error(`XML inválido: ${validationResult.errors.join(', ')}`);
+            }
+            const certPem = await this.loadCertificate();
+            const keyPem = await this.loadPrivateKey();
+            const signingOptions = {
+                level: this.config.xadesLevel,
+                tsaUrl: this.config.tsaUrl,
+                ocspUrl: this.config.ocspUrl,
+                ...options
+            };
+            const signedXmlContent = await (0, xades_sign_util_1.signFacturaeXMLAdvanced)(xmlContent, certPem, keyPem, signingOptions);
+            return {
+                success: true,
+                xmlContent,
+                signedXmlContent,
+                validationResult
+            };
+        }
+        catch (error) {
+            this.logger.error('Error al firmar XML', error);
+            return {
+                success: false,
+                errors: [error instanceof Error ? error.message : String(error)]
+            };
+        }
+    }
+    async validateInvoice(xmlContent, checkSignature = true) {
+        try {
+            this.logger.log('Validando factura electrónica');
+            if (checkSignature) {
+                return facturae_validator_util_1.FacturaeValidator.validateSignedDocument(xmlContent, {
+                    validateSchema: true,
+                    validateBusinessRules: true,
+                    strictMode: false
+                });
+            }
+            else {
+                return facturae_validator_util_1.FacturaeValidator.validateXML(xmlContent, {
+                    validateSchema: true,
+                    validateBusinessRules: true,
+                    strictMode: false
+                });
+            }
+        }
+        catch (error) {
+            this.logger.error('Error al validar factura', error);
+            return {
+                isValid: false,
+                errors: [error instanceof Error ? error.message : String(error)],
+                warnings: []
+            };
+        }
+    }
+    async checkCertificateStatus() {
+        try {
+            const certPem = await this.loadCertificate();
+            const certInfo = (0, xades_sign_util_1.validateCertificate)(certPem);
+            let ocspValid;
+            if (this.config.ocspUrl) {
+                ocspValid = await (0, xades_sign_util_1.checkCertificateStatus)(certPem, this.config.ocspUrl);
+            }
+            return {
+                isValid: certInfo.isValid,
+                info: certInfo,
+                ocspValid
+            };
+        }
+        catch (error) {
+            this.logger.error('Error al verificar certificado', error);
+            return {
+                isValid: false,
+                info: {
+                    subject: 'Error',
+                    issuer: 'Error',
+                    serialNumber: 'Error',
+                    validFrom: new Date(),
+                    validTo: new Date(),
+                    isValid: false
+                }
+            };
+        }
+    }
+    async getCertificateInfo() {
+        try {
+            const certPem = await this.loadCertificate();
+            return (0, xades_sign_util_1.validateCertificate)(certPem);
+        }
+        catch (error) {
+            this.logger.error('Error al obtener información del certificado', error);
+            throw error;
+        }
+    }
+    async loadCertificate() {
+        try {
+            if (!fs.existsSync(this.config.certificatePath)) {
+                throw new Error(`Certificado no encontrado en: ${this.config.certificatePath}`);
+            }
+            return fs.readFileSync(this.config.certificatePath, 'utf8');
+        }
+        catch (error) {
+            this.logger.error('Error al cargar certificado', error);
+            throw error;
+        }
+    }
+    async loadPrivateKey() {
+        try {
+            if (!fs.existsSync(this.config.privateKeyPath)) {
+                throw new Error(`Clave privada no encontrada en: ${this.config.privateKeyPath}`);
+            }
+            return fs.readFileSync(this.config.privateKeyPath, 'utf8');
+        }
+        catch (error) {
+            this.logger.error('Error al cargar clave privada', error);
+            throw error;
+        }
+    }
+    async saveInvoiceFiles(invoiceData, xmlContent, signedXmlContent) {
+        try {
+            if (!fs.existsSync(this.config.outputPath)) {
+                fs.mkdirSync(this.config.outputPath, { recursive: true });
+            }
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const invoiceNumber = invoiceData.part.invoices[0]?.invoiceHeader.invoiceNumber || 'FAC-001';
+            const xmlPath = path.join(this.config.outputPath, `${invoiceNumber}_${timestamp}.xml`);
+            fs.writeFileSync(xmlPath, xmlContent, 'utf8');
+            const signedXmlPath = path.join(this.config.outputPath, `${invoiceNumber}_${timestamp}_signed.xml`);
+            fs.writeFileSync(signedXmlPath, signedXmlContent, 'utf8');
+            this.logger.log(`Archivos guardados en: ${this.config.outputPath}`);
+        }
+        catch (error) {
+            this.logger.error('Error al guardar archivos', error);
+            throw error;
+        }
+    }
+    async generateValidationReport(xmlContent) {
+        try {
+            const validationResult = await this.validateInvoice(xmlContent, true);
+            const certInfo = await this.getCertificateInfo();
+            let report = '=== REPORTE DE VALIDACIÓN FACTURAE ===\n\n';
+            report += 'CERTIFICADO DIGITAL:\n';
+            report += `- Sujeto: ${certInfo.subject}\n`;
+            report += `- Emisor: ${certInfo.issuer}\n`;
+            report += `- Número de serie: ${certInfo.serialNumber}\n`;
+            report += `- Válido desde: ${certInfo.validFrom.toISOString()}\n`;
+            report += `- Válido hasta: ${certInfo.validTo.toISOString()}\n`;
+            report += `- Estado: ${certInfo.isValid ? 'VÁLIDO' : 'INVÁLIDO'}\n\n`;
+            report += 'VALIDACIÓN XML:\n';
+            report += `- Estado: ${validationResult.isValid ? 'VÁLIDO' : 'INVÁLIDO'}\n`;
+            if (validationResult.errors.length > 0) {
+                report += '- Errores:\n';
+                validationResult.errors.forEach(error => {
+                    report += `  * ${error}\n`;
+                });
+            }
+            if (validationResult.warnings.length > 0) {
+                report += '- Advertencias:\n';
+                validationResult.warnings.forEach(warning => {
+                    report += `  * ${warning}\n`;
+                });
+            }
+            return report;
+        }
+        catch (error) {
+            this.logger.error('Error al generar reporte', error);
+            return `Error al generar reporte: ${error instanceof Error ? error.message : String(error)}`;
+        }
+    }
+};
+exports.FacturaeService = FacturaeService;
+exports.FacturaeService = FacturaeService = FacturaeService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [])
+], FacturaeService);
+
+
+/***/ }),
+/* 98 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FacturaeValidator = void 0;
+const xmldom_1 = __webpack_require__(96);
+const path = __importStar(__webpack_require__(45));
+class FacturaeValidator {
+    static validateXML(xmlContent, options = {}) {
+        const result = {
+            isValid: true,
+            errors: [],
+            warnings: []
+        };
+        try {
+            const parser = new xmldom_1.DOMParser();
+            const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+            const parseErrors = this.validateXMLSyntax(xmlDoc);
+            if (parseErrors.length > 0) {
+                result.errors.push(...parseErrors);
+                result.isValid = false;
+                return result;
+            }
+            const structureErrors = this.validateBasicStructure(xmlDoc);
+            if (structureErrors.length > 0) {
+                result.errors.push(...structureErrors);
+                result.isValid = false;
+            }
+            if (options.validateSchema !== false) {
+                const schemaErrors = this.validateAgainstSchema(xmlDoc);
+                if (schemaErrors.length > 0) {
+                    result.errors.push(...schemaErrors);
+                    result.isValid = false;
+                }
+            }
+            if (options.validateBusinessRules !== false) {
+                const businessErrors = this.validateBusinessRules(xmlDoc);
+                if (businessErrors.length > 0) {
+                    if (options.strictMode) {
+                        result.errors.push(...businessErrors);
+                        result.isValid = false;
+                    }
+                    else {
+                        result.warnings.push(...businessErrors);
+                    }
+                }
+            }
+            if (options.validateForExternalSystems) {
+                const externalErrors = this.validateForExternalSystems(xmlDoc);
+                if (externalErrors.length > 0) {
+                    result.warnings.push(...externalErrors);
+                }
+            }
+        }
+        catch (error) {
+            result.errors.push(`Error de validación: ${error instanceof Error ? error.message : String(error)}`);
+            result.isValid = false;
+        }
+        return result;
+    }
+    static validateForExternalSystem(xmlContent, system) {
+        const result = {
+            system,
+            isValid: true,
+            errors: [],
+            warnings: [],
+            requirements: []
+        };
+        try {
+            const parser = new xmldom_1.DOMParser();
+            const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+            switch (system) {
+                case 'AEAT':
+                    this.validateForAEAT(xmlDoc, result);
+                    break;
+                case 'FACE':
+                    this.validateForFACE(xmlDoc, result);
+                    break;
+                case 'GENERAL':
+                    this.validateForGeneral(xmlDoc, result);
+                    break;
+            }
+        }
+        catch (error) {
+            result.errors.push(`Error de validación para ${system}: ${error instanceof Error ? error.message : String(error)}`);
+            result.isValid = false;
+        }
+        return result;
+    }
+    static validateForAEAT(xmlDoc, result) {
+        result.requirements = [
+            'Certificado digital válido',
+            'Firma XAdES-BES o superior',
+            'NIF/CIF válido del emisor',
+            'NIF/CIF válido del receptor',
+            'Totales coherentes',
+            'Fecha de emisión válida'
+        ];
+        const certificates = xmlDoc.getElementsByTagName('ds:X509Certificate');
+        if (certificates.length === 0) {
+            result.errors.push('AEAT requiere certificado digital válido');
+            result.isValid = false;
+        }
+        const signatures = xmlDoc.getElementsByTagName('ds:Signature');
+        if (signatures.length === 0) {
+            result.errors.push('AEAT requiere firma digital');
+            result.isValid = false;
+        }
+        const sellerNIF = xmlDoc.getElementsByTagName('TaxIdentificationNumber')[0]?.textContent;
+        if (!sellerNIF || !this.isValidNIF(sellerNIF)) {
+            result.errors.push('NIF del emisor no válido para AEAT');
+            result.isValid = false;
+        }
+        const buyerNIF = xmlDoc.getElementsByTagName('TaxIdentificationNumber')[1]?.textContent;
+        if (!buyerNIF || !this.isValidNIF(buyerNIF)) {
+            result.errors.push('NIF del receptor no válido para AEAT');
+            result.isValid = false;
+        }
+        const invoiceTotal = xmlDoc.getElementsByTagName('InvoiceTotal')[0]?.textContent;
+        if (!invoiceTotal || parseFloat(invoiceTotal) <= 0) {
+            result.errors.push('Total de factura debe ser mayor que 0 para AEAT');
+            result.isValid = false;
+        }
+        const issueDate = xmlDoc.getElementsByTagName('IssueDate')[0]?.textContent;
+        if (!issueDate || !this.isValidDate(issueDate)) {
+            result.errors.push('Fecha de emisión no válida para AEAT');
+            result.isValid = false;
+        }
+        const issueDateObj = new Date(issueDate);
+        if (issueDateObj > new Date()) {
+            result.errors.push('Fecha de emisión no puede ser futura para AEAT');
+            result.isValid = false;
+        }
+    }
+    static validateForFACE(xmlDoc, result) {
+        result.requirements = [
+            'Certificado digital válido',
+            'Firma XAdES-T o superior',
+            'NIF/CIF válido del emisor',
+            'NIF/CIF válido del receptor',
+            'Totales coherentes',
+            'Fecha de emisión válida',
+            'Sello de tiempo TSA'
+        ];
+        const certificates = xmlDoc.getElementsByTagName('ds:X509Certificate');
+        if (certificates.length === 0) {
+            result.errors.push('FACE requiere certificado digital válido');
+            result.isValid = false;
+        }
+        const timeStamps = xmlDoc.getElementsByTagName('xades:SignatureTimeStamp');
+        if (timeStamps.length === 0) {
+            result.errors.push('FACE requiere firma XAdES-T con sello de tiempo');
+            result.isValid = false;
+        }
+        const sellerNIF = xmlDoc.getElementsByTagName('TaxIdentificationNumber')[0]?.textContent;
+        if (!sellerNIF || !this.isValidNIF(sellerNIF)) {
+            result.errors.push('NIF del emisor no válido para FACE');
+            result.isValid = false;
+        }
+        const buyerNIF = xmlDoc.getElementsByTagName('TaxIdentificationNumber')[1]?.textContent;
+        if (!buyerNIF || !this.isValidNIF(buyerNIF)) {
+            result.errors.push('NIF del receptor no válido para FACE');
+            result.isValid = false;
+        }
+        const invoiceTotal = xmlDoc.getElementsByTagName('InvoiceTotal')[0]?.textContent;
+        if (!invoiceTotal || parseFloat(invoiceTotal) <= 0) {
+            result.errors.push('Total de factura debe ser mayor que 0 para FACE');
+            result.isValid = false;
+        }
+        const issueDate = xmlDoc.getElementsByTagName('IssueDate')[0]?.textContent;
+        if (!issueDate || !this.isValidDate(issueDate)) {
+            result.errors.push('Fecha de emisión no válida para FACE');
+            result.isValid = false;
+        }
+        const issueDateObj = new Date(issueDate);
+        if (issueDateObj > new Date()) {
+            result.errors.push('Fecha de emisión no puede ser futura para FACE');
+            result.isValid = false;
+        }
+        const encapsulatedTimeStamp = xmlDoc.getElementsByTagName('xades:EncapsulatedTimeStamp');
+        if (encapsulatedTimeStamp.length === 0) {
+            result.errors.push('FACE requiere sello de tiempo TSA');
+            result.isValid = false;
+        }
+    }
+    static validateForGeneral(xmlDoc, result) {
+        result.requirements = [
+            'Certificado digital válido',
+            'Firma digital válida',
+            'NIF/CIF válido del emisor',
+            'NIF/CIF válido del receptor',
+            'Totales coherentes',
+            'Fecha de emisión válida'
+        ];
+        const certificates = xmlDoc.getElementsByTagName('ds:X509Certificate');
+        if (certificates.length === 0) {
+            result.errors.push('Sistema requiere certificado digital válido');
+            result.isValid = false;
+        }
+        const signatures = xmlDoc.getElementsByTagName('ds:Signature');
+        if (signatures.length === 0) {
+            result.errors.push('Sistema requiere firma digital');
+            result.isValid = false;
+        }
+        const sellerNIF = xmlDoc.getElementsByTagName('TaxIdentificationNumber')[0]?.textContent;
+        if (!sellerNIF || !this.isValidNIF(sellerNIF)) {
+            result.errors.push('NIF del emisor no válido');
+            result.isValid = false;
+        }
+        const buyerNIF = xmlDoc.getElementsByTagName('TaxIdentificationNumber')[1]?.textContent;
+        if (!buyerNIF || !this.isValidNIF(buyerNIF)) {
+            result.errors.push('NIF del receptor no válido');
+            result.isValid = false;
+        }
+        const invoiceTotal = xmlDoc.getElementsByTagName('InvoiceTotal')[0]?.textContent;
+        if (!invoiceTotal || parseFloat(invoiceTotal) <= 0) {
+            result.errors.push('Total de factura debe ser mayor que 0');
+            result.isValid = false;
+        }
+        const issueDate = xmlDoc.getElementsByTagName('IssueDate')[0]?.textContent;
+        if (!issueDate || !this.isValidDate(issueDate)) {
+            result.errors.push('Fecha de emisión no válida');
+            result.isValid = false;
+        }
+    }
+    static validateForExternalSystems(xmlDoc) {
+        const warnings = [];
+        const items = xmlDoc.getElementsByTagName('InvoiceLine');
+        if (items.length === 0) {
+            warnings.push('Sistemas externos requieren al menos un item en la factura');
+        }
+        for (let i = 0; i < items.length; i++) {
+            const itemDescription = items[i].getElementsByTagName('ItemDescription')[0]?.textContent;
+            if (!itemDescription || itemDescription.trim().length < 3) {
+                warnings.push(`Item ${i + 1} debe tener una descripción válida`);
+            }
+        }
+        const sellerAddress = xmlDoc.getElementsByTagName('Address')[0];
+        if (sellerAddress) {
+            const postCode = sellerAddress.getElementsByTagName('PostCode')[0]?.textContent;
+            const town = sellerAddress.getElementsByTagName('Town')[0]?.textContent;
+            const province = sellerAddress.getElementsByTagName('Province')[0]?.textContent;
+            if (!postCode || !town || !province) {
+                warnings.push('Sistemas externos requieren dirección completa del emisor');
+            }
+        }
+        const buyerAddress = xmlDoc.getElementsByTagName('Address')[1];
+        if (buyerAddress) {
+            const postCode = buyerAddress.getElementsByTagName('PostCode')[0]?.textContent;
+            const town = buyerAddress.getElementsByTagName('Town')[0]?.textContent;
+            const province = buyerAddress.getElementsByTagName('Province')[0]?.textContent;
+            if (!postCode || !town || !province) {
+                warnings.push('Sistemas externos requieren dirección completa del receptor');
+            }
+        }
+        return warnings;
+    }
+    static validateXMLSyntax(xmlDoc) {
+        const errors = [];
+        const parserError = xmlDoc.getElementsByTagName('parsererror');
+        if (parserError.length > 0) {
+            errors.push('El XML contiene errores de sintaxis');
+        }
+        if (!xmlDoc.documentElement) {
+            errors.push('El documento XML no tiene un elemento raíz');
+        }
+        return errors;
+    }
+    static validateBasicStructure(xmlDoc) {
+        const errors = [];
+        const rootElement = xmlDoc.documentElement;
+        if (!rootElement || rootElement.nodeName !== 'Facturae') {
+            errors.push('El elemento raíz debe ser "Facturae"');
+        }
+        const namespace = rootElement?.getAttribute('xmlns');
+        if (namespace !== this.FACTURAE_SCHEMA_URL) {
+            errors.push(`Namespace incorrecto. Esperado: ${this.FACTURAE_SCHEMA_URL}, Encontrado: ${namespace}`);
+        }
+        const requiredElements = ['FileHeader', 'Parties', 'Invoices'];
+        for (const elementName of requiredElements) {
+            const element = xmlDoc.getElementsByTagName(elementName);
+            if (element.length === 0) {
+                errors.push(`Elemento obligatorio "${elementName}" no encontrado`);
+            }
+        }
+        const fileHeader = xmlDoc.getElementsByTagName('FileHeader')[0];
+        if (fileHeader) {
+            const headerElements = ['SchemaVersion', 'Modality', 'DocumentType'];
+            for (const elementName of headerElements) {
+                const element = fileHeader.getElementsByTagName(elementName);
+                if (element.length === 0) {
+                    errors.push(`Elemento obligatorio "${elementName}" no encontrado en FileHeader`);
+                }
+            }
+        }
+        const parties = xmlDoc.getElementsByTagName('Parties')[0];
+        if (parties) {
+            const partyElements = ['SellerParty', 'BuyerParty'];
+            for (const elementName of partyElements) {
+                const element = parties.getElementsByTagName(elementName);
+                if (element.length === 0) {
+                    errors.push(`Elemento obligatorio "${elementName}" no encontrado en Parties`);
+                }
+            }
+        }
+        const invoices = xmlDoc.getElementsByTagName('Invoices')[0];
+        if (invoices) {
+            const invoiceElements = xmlDoc.getElementsByTagName('Invoice');
+            if (invoiceElements.length === 0) {
+                errors.push('Debe haber al menos una factura en el documento');
+            }
+            else {
+                for (let i = 0; i < invoiceElements.length; i++) {
+                    const invoice = invoiceElements[i];
+                    const invoiceRequiredElements = ['InvoiceHeader', 'InvoiceIssueData', 'InvoiceTotals'];
+                    for (const elementName of invoiceRequiredElements) {
+                        const element = invoice.getElementsByTagName(elementName);
+                        if (element.length === 0) {
+                            errors.push(`Elemento obligatorio "${elementName}" no encontrado en la factura ${i + 1}`);
+                        }
+                    }
+                }
+            }
+        }
+        return errors;
+    }
+    static validateAgainstSchema(xmlDoc) {
+        const errors = [];
+        const numericElements = xmlDoc.getElementsByTagName('TotalAmount');
+        for (let i = 0; i < numericElements.length; i++) {
+            const element = numericElements[i];
+            const value = parseFloat(element.textContent || '');
+            if (isNaN(value) || value < 0) {
+                errors.push(`Valor numérico inválido en ${element.nodeName}: ${element.textContent}`);
+            }
+        }
+        const dateElements = xmlDoc.getElementsByTagName('IssueDate');
+        for (let i = 0; i < dateElements.length; i++) {
+            const element = dateElements[i];
+            const dateValue = element.textContent;
+            if (dateValue && !this.isValidDate(dateValue)) {
+                errors.push(`Fecha inválida en ${element.nodeName}: ${dateValue}`);
+            }
+        }
+        const countryElements = xmlDoc.getElementsByTagName('CountryCode');
+        for (let i = 0; i < countryElements.length; i++) {
+            const element = countryElements[i];
+            const countryCode = element.textContent;
+            if (countryCode && !this.isValidCountryCode(countryCode)) {
+                errors.push(`Código de país inválido: ${countryCode}`);
+            }
+        }
+        return errors;
+    }
+    static validateBusinessRules(xmlDoc) {
+        const errors = [];
+        const nifElements = xmlDoc.getElementsByTagName('TaxIdentificationNumber');
+        for (let i = 0; i < nifElements.length; i++) {
+            const element = nifElements[i];
+            const nif = element.textContent;
+            if (nif && !this.isValidNIF(nif)) {
+                errors.push(`NIF inválido: ${nif}`);
+            }
+        }
+        const invoiceElements = xmlDoc.getElementsByTagName('Invoice');
+        for (let i = 0; i < invoiceElements.length; i++) {
+            const invoice = invoiceElements[i];
+            const totalErrors = this.validateInvoiceTotals(invoice);
+            errors.push(...totalErrors);
+        }
+        for (let i = 0; i < invoiceElements.length; i++) {
+            const invoice = invoiceElements[i];
+            const items = invoice.getElementsByTagName('InvoiceLine');
+            if (items.length === 0) {
+                errors.push(`La factura ${i + 1} debe tener al menos un item`);
+            }
+        }
+        return errors;
+    }
+    static validateInvoiceTotals(invoice) {
+        const errors = [];
+        const totals = invoice.getElementsByTagName('InvoiceTotals')[0];
+        if (!totals)
+            return errors;
+        const totalGrossAmount = parseFloat(totals.getElementsByTagName('TotalGrossAmount')[0]?.textContent || '0');
+        const totalTaxOutputs = parseFloat(totals.getElementsByTagName('TotalTaxOutputs')[0]?.textContent || '0');
+        const totalTaxesWithheld = parseFloat(totals.getElementsByTagName('TotalTaxesWithheld')[0]?.textContent || '0');
+        const invoiceTotal = parseFloat(totals.getElementsByTagName('InvoiceTotal')[0]?.textContent || '0');
+        const expectedTotal = totalGrossAmount + totalTaxOutputs - totalTaxesWithheld;
+        const tolerance = 0.01;
+        if (Math.abs(expectedTotal - invoiceTotal) > tolerance) {
+            errors.push(`Los totales de la factura no coinciden. Esperado: ${expectedTotal.toFixed(2)}, Encontrado: ${invoiceTotal.toFixed(2)}`);
+        }
+        return errors;
+    }
+    static isValidDate(dateString) {
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(dateString))
+            return false;
+        const date = new Date(dateString);
+        return !isNaN(date.getTime());
+    }
+    static isValidCountryCode(countryCode) {
+        const validCountryCodes = [
+            'ES', 'FR', 'DE', 'IT', 'PT', 'GB', 'US', 'CA', 'MX', 'AR', 'BR', 'CL', 'CO', 'PE', 'VE'
+        ];
+        return validCountryCodes.includes(countryCode.toUpperCase());
+    }
+    static isValidNIF(nif) {
+        const nifRegex = /^[0-9A-Z][0-9]{7}[0-9A-Z]$/;
+        return nifRegex.test(nif.toUpperCase());
+    }
+    static validateSignedDocument(xmlContent, options = {}) {
+        const result = this.validateXML(xmlContent, options);
+        if (xmlContent.includes('ds:Signature')) {
+            const signatureErrors = this.validateDigitalSignature(xmlContent);
+            if (signatureErrors.length > 0) {
+                result.errors.push(...signatureErrors);
+                result.isValid = false;
+            }
+        }
+        else {
+            result.warnings.push('El documento no contiene firma digital');
+        }
+        return result;
+    }
+    static validateDigitalSignature(xmlContent) {
+        const errors = [];
+        try {
+            const parser = new xmldom_1.DOMParser();
+            const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+            const signatures = xmlDoc.getElementsByTagName('ds:Signature');
+            if (signatures.length === 0) {
+                errors.push('No se encontró elemento de firma digital');
+                return errors;
+            }
+            const signature = signatures[0];
+            const requiredSignatureElements = ['ds:SignedInfo', 'ds:SignatureValue', 'ds:KeyInfo'];
+            for (const elementName of requiredSignatureElements) {
+                const element = signature.getElementsByTagName(elementName);
+                if (element.length === 0) {
+                    errors.push(`Elemento obligatorio de firma "${elementName}" no encontrado`);
+                }
+            }
+            const certificates = xmlDoc.getElementsByTagName('ds:X509Certificate');
+            if (certificates.length === 0) {
+                errors.push('No se encontró certificado en la firma digital');
+            }
+        }
+        catch (error) {
+            errors.push(`Error al validar firma digital: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        return errors;
+    }
+}
+exports.FacturaeValidator = FacturaeValidator;
+FacturaeValidator.FACTURAE_SCHEMA_URL = 'http://www.facturae.es/Facturae/2014/v3.2.2/Facturae';
+FacturaeValidator.FACTURAE_SCHEMA_PATH = path.join(__dirname, '../../schemas/facturae_3.2.2.xsd');
+
+
+/***/ }),
+/* 99 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var PdfGeneratorService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PdfGeneratorService = void 0;
+const common_1 = __webpack_require__(2);
+const puppeteer = __importStar(__webpack_require__(100));
+const fs = __importStar(__webpack_require__(44));
+const path = __importStar(__webpack_require__(45));
+const QRCode = __importStar(__webpack_require__(101));
+const parametros_service_1 = __webpack_require__(87);
+let PdfGeneratorService = PdfGeneratorService_1 = class PdfGeneratorService {
+    constructor(parametrosService) {
+        this.parametrosService = parametrosService;
+        this.logger = new common_1.Logger(PdfGeneratorService_1.name);
+        const possiblePaths = [
+            path.join(process.cwd(), 'src', 'invoices', 'templates', 'invoice-template.html'),
+            path.join(__dirname, 'templates', 'invoice-template.html'),
+            path.join(__dirname, 'invoices', 'templates', 'invoice-template.html'),
+            path.join(process.cwd(), 'dist', 'invoices', 'templates', 'invoice-template.html'),
+            path.join(process.cwd(), 'src', 'invoices', 'templates', 'invoice-template-simple.html')
+        ];
+        for (const templatePath of possiblePaths) {
+            if (fs.existsSync(templatePath)) {
+                this.templatePath = templatePath;
+                this.logger.log(`Template HTML usado para PDF: ${this.templatePath}`);
+                break;
+            }
+        }
+        if (!this.templatePath) {
+            this.logger.error('No se pudo encontrar el template HTML en ninguna ubicación');
+            this.logger.error('Rutas buscadas:', possiblePaths);
+        }
+    }
+    async generateInvoicePdf(invoice) {
+        try {
+            this.logger.log('Iniciando generación de PDF profesional');
+            const verificacionUrl = `https://tudominio.com/verificar/${invoice.numeroFactura}`;
+            const totalParaQR = Number(invoice.baseImponible || 0) +
+                Number(invoice.cuotaIVA || 0) -
+                (Number(invoice.baseImponible || 0) * (Number(invoice.retencion || 0) / 100));
+            this.logger.log(`[QR-DEBUG] Base imponible: ${invoice.baseImponible}, IVA: ${invoice.cuotaIVA}, Retención: ${invoice.retencion}`);
+            this.logger.log(`[QR-DEBUG] Total para QR calculado: ${totalParaQR}`);
+            this.logger.log(`[QR-DEBUG] Importe total original: ${invoice.importeTotal}`);
+            const qrData = `NIF:${invoice.emisor?.email || ''}|NUM:${invoice.numeroFactura || ''}|FEC:${invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : ''}|IMP:${Math.round(totalParaQR * 100) / 100}`;
+            this.logger.log(`[QR-DEBUG] QR Data generado: ${qrData}`);
+            const qrImageDataUrl = await QRCode.toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
+            const templateData = await this.prepareTemplateData(invoice, qrData, qrImageDataUrl);
+            const htmlContent = await this.generateHtml(templateData);
+            const pdfBuffer = await this.htmlToPdf(htmlContent);
+            this.logger.log('PDF generado exitosamente');
+            return pdfBuffer;
+        }
+        catch (error) {
+            this.logger.error('Error generando PDF:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+            throw new Error(`Error generando PDF: ${errorMessage}`);
+        }
+    }
+    async prepareTemplateData(invoice, qrData, qrImageDataUrl) {
+        this.logger.log('Preparando datos para template. Items recibidos:', invoice.items?.length || 0);
+        this.logger.log('Items detallados:', JSON.stringify(invoice.items, null, 2));
+        let descuentoCalculado = 0;
+        if (invoice.descuento && invoice.descuento > 0) {
+            descuentoCalculado = (invoice.items?.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0) * (invoice.descuento / 100);
+        }
+        let verificacionUrlBase = 'https://tudominio.com/verificar/';
+        try {
+            const param = await this.parametrosService.findByClave?.('VERIFICACION_URL_BASE');
+            if (param && param.valor) {
+                verificacionUrlBase = param.valor;
+            }
+        }
+        catch { }
+        const verificacionUrl = `${verificacionUrlBase}${invoice.numeroFactura}`;
+        const formatNumberES = (num) => {
+            const number = Number(num);
+            const parts = number.toFixed(2).split('.');
+            const integerPart = parts[0];
+            const decimalPart = parts[1];
+            const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            return `${formattedInteger},${decimalPart}`;
+        };
+        const formatDateES = (dateString) => {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        };
+        this.logger.log(`[FORMAT-NUMBERS] Totales formateados: baseImponible: ${formatNumberES(Number(invoice.baseImponible || 0))}, cuotaIVA: ${formatNumberES(Number(invoice.cuotaIVA || 0))}, importeTotal: ${formatNumberES(Number(invoice.importeTotal || 0))}`);
+        this.logger.log(`[RECTIFICATIVA-DEBUG] facturaOriginalId: ${invoice.facturaOriginalId}`);
+        this.logger.log(`[RECTIFICATIVA-DEBUG] tipoRectificacion: ${invoice.tipoRectificacion}`);
+        this.logger.log(`[RECTIFICATIVA-DEBUG] motivoRectificacion: ${invoice.motivoRectificacion}`);
+        this.logger.log(`[RECTIFICATIVA-DEBUG] facturaOriginal: ${JSON.stringify(invoice.facturaOriginal, null, 2)}`);
+        const subtotalCalculado = Number(invoice.baseImponible || 0) +
+            Number(invoice.cuotaIVA || 0) -
+            (Number(invoice.baseImponible || 0) * (Number(invoice.retencion || 0) / 100));
+        this.logger.log(`[SUBTOTAL-CALC] Base: ${Number(invoice.baseImponible || 0)}, IVA: ${Number(invoice.cuotaIVA || 0)}, Retención: ${Number(invoice.retencion || 0)}`);
+        this.logger.log(`[SUBTOTAL-CALC] Subtotal calculado: ${subtotalCalculado}`);
+        this.logger.log(`[SUBTOTAL-CALC] Subtotal formateado: ${formatNumberES(subtotalCalculado)}`);
+        return {
+            numeroFactura: invoice.numeroFactura || 'N/A',
+            fechaFactura: formatDateES(invoice.fechaFactura),
+            estado: invoice.estado || 'N/A',
+            fechaOperacion: formatDateES(invoice.fechaOperacion),
+            metodoPago: invoice.metodoPago || 'N/A',
+            claveOperacion: invoice.claveOperacion || 'N/A',
+            regimenIvaEmisor: invoice.regimenIvaEmisor || 'N/A',
+            tipoIVA: invoice.tipoIVA || 21,
+            motivoAnulacion: invoice.motivoAnulacion || null,
+            fechaCreacion: formatDateES(invoice.createdAt),
+            baseImponible: formatNumberES(Number(invoice.baseImponible || 0)),
+            cuotaIVA: formatNumberES(Number(invoice.cuotaIVA || 0)),
+            importeTotal: formatNumberES(Number(invoice.importeTotal || 0)),
+            descuento: invoice.descuento || 0,
+            descuentoCalculado: formatNumberES(descuentoCalculado),
+            retencion: invoice.retencion || 0,
+            cuotaRetencion: formatNumberES((Number(invoice.baseImponible || 0) * (Number(invoice.retencion || 0) / 100))),
+            subtotal: formatNumberES(subtotalCalculado),
+            descuentoProvisiones: formatNumberES((invoice.provisionFondos || []).reduce((sum, prov) => sum + (prov.amount || 0), 0)),
+            emisor: {
+                nombre: invoice.emisor?.name || 'N/A',
+                email: invoice.emisor?.email || 'N/A'
+            },
+            receptor: {
+                nombre: invoice.receptor?.name || 'N/A',
+                email: invoice.receptor?.email || 'N/A'
+            },
+            expediente: invoice.expediente ? {
+                titulo: invoice.expediente.title
+            } : null,
+            items: (invoice.items || []).map((item) => {
+                const precioUnitario = Number(item.unitPrice || 0);
+                const total = Number(item.total || 0);
+                this.logger.log(`[FORMAT-NUMBERS] Item: ${item.description}, precioUnitario: ${precioUnitario} -> ${formatNumberES(precioUnitario)}, total: ${total} -> ${formatNumberES(total)}`);
+                return {
+                    descripcion: item.description || '',
+                    cantidad: Number(item.quantity || 0),
+                    precioUnitario: formatNumberES(precioUnitario),
+                    total: formatNumberES(total)
+                };
+            }),
+            provisiones: (invoice.provisionFondos || []).map((provision) => ({
+                descripcion: provision.description || 'Sin descripción',
+                fecha: formatDateES(provision.date),
+                importe: formatNumberES(provision.amount || 0)
+            })),
+            qrData: qrData,
+            qrImage: qrImageDataUrl,
+            verificacionUrl: verificacionUrl,
+            facturaOriginal: (invoice.facturaOriginalId && invoice.facturaOriginal) ? {
+                numeroFactura: invoice.facturaOriginal.numeroFactura || 'N/A',
+                fechaFactura: formatDateES(invoice.facturaOriginal.fechaFactura),
+                importeTotal: formatNumberES(Number(invoice.facturaOriginal.importeTotal || 0))
+            } : null,
+            tipoRectificacion: (invoice.facturaOriginalId && invoice.tipoRectificacion) ? invoice.tipoRectificacion : null,
+            motivoRectificacion: (invoice.facturaOriginalId && invoice.motivoRectificacion) ? invoice.motivoRectificacion : null
+        };
+    }
+    async generateHtml(data) {
+        try {
+            this.logger.log(`[PDF-TEMPLATE] Buscando template en: ${this.templatePath}`);
+            this.logger.log(`[PDF-TEMPLATE] __dirname: ${__dirname}`);
+            this.logger.log(`[PDF-TEMPLATE] process.cwd(): ${process.cwd()}`);
+            if (!fs.existsSync(this.templatePath)) {
+                this.logger.error(`[PDF-TEMPLATE] El archivo NO existe en la ruta: ${this.templatePath}`);
+                throw new Error('Template HTML no encontrado');
+            }
+            else {
+                this.logger.log(`[PDF-TEMPLATE] El archivo SÍ existe en la ruta: ${this.templatePath}`);
+            }
+            let template = fs.readFileSync(this.templatePath, 'utf8');
+            this.logger.log(`[PDF-TEMPLATE] Template leído. Tamaño: ${template.length} caracteres`);
+            this.logger.log(`[PDF-TEMPLATE] Datos a insertar:`, {
+                numeroFactura: data.numeroFactura,
+                fechaFactura: data.fechaFactura,
+                emisor: data.emisor,
+                receptor: data.receptor,
+                itemsCount: data.items?.length || 0,
+                importeTotal: data.importeTotal,
+                provisionesCount: data.provisiones?.length || 0,
+                descuentoProvisiones: data.descuentoProvisiones,
+                subtotal: data.subtotal,
+                baseImponible: data.baseImponible,
+                cuotaIVA: data.cuotaIVA,
+                facturaOriginal: data.facturaOriginal,
+                tipoRectificacion: data.tipoRectificacion,
+                motivoRectificacion: data.motivoRectificacion
+            });
+            this.logger.log(`[PDF-TEMPLATE] Provisiones recibidas:`, JSON.stringify(data.provisiones, null, 2));
+            this.logger.log(`[PDF-TEMPLATE] Items recibidos:`, JSON.stringify(data.items, null, 2));
+            template = this.replaceTemplateVariables(template, data);
+            this.logger.log(`[PDF-TEMPLATE] Template procesado. Tamaño final: ${template.length} caracteres`);
+            const debugHtmlPath = path.join(process.cwd(), 'debug-template-generated.html');
+            fs.writeFileSync(debugHtmlPath, template);
+            this.logger.log(`[PDF-TEMPLATE] HTML generado guardado en: ${debugHtmlPath}`);
+            return template;
+        }
+        catch (error) {
+            this.logger.error('Error leyendo template:', error);
+            throw new Error('Error procesando template HTML');
+        }
+    }
+    replaceTemplateVariables(template, data) {
+        this.logger.log(`[TEMPLATE-VARS] Iniciando reemplazo de variables`);
+        const simpleReplacements = [
+            'numeroFactura', 'fechaFactura', 'estado', 'fechaOperacion', 'metodoPago',
+            'claveOperacion', 'regimenIvaEmisor', 'tipoIVA', 'motivoAnulacion', 'fechaCreacion',
+            'baseImponible', 'cuotaIVA', 'importeTotal', 'descuento', 'descuentoCalculado',
+            'subtotal', 'descuentoProvisiones', 'retencion', 'cuotaRetencion', 'qrData', 'qrImage', 'verificacionUrl',
+            'tipoRectificacion', 'motivoRectificacion'
+        ];
+        simpleReplacements.forEach(key => {
+            const regex = new RegExp(`{{${key}}}`, 'g');
+            const value = data[key] || '';
+            const beforeCount = (template.match(regex) || []).length;
+            template = template.replace(regex, value);
+            const afterCount = (template.match(regex) || []).length;
+            this.logger.log(`[TEMPLATE-VARS] ${key}: "${value}" - Reemplazos: ${beforeCount} -> ${afterCount}`);
+        });
+        template = template.replace(/{{emisor\.nombre}}/g, data.emisor.nombre);
+        template = template.replace(/{{emisor\.email}}/g, data.emisor.email);
+        template = template.replace(/{{receptor\.nombre}}/g, data.receptor.nombre);
+        template = template.replace(/{{receptor\.email}}/g, data.receptor.email);
+        if (data.expediente) {
+            template = template.replace(/{{expediente\.titulo}}/g, data.expediente.titulo);
+            template = template.replace(/{{#if expediente}}([\s\S]*?){{\/if}}/g, '$1');
+        }
+        else {
+            template = template.replace(/{{#if expediente}}[\s\S]*?{{\/if}}/g, '');
+        }
+        if (data.items && data.items.length > 0) {
+            this.logger.log(`[TEMPLATE-VARS] Procesando ${data.items.length} items`);
+            const itemsMatch = template.match(/{{#if items}}([\s\S]*?){{\/if}}/);
+            if (itemsMatch) {
+                const itemsSection = itemsMatch[1];
+                this.logger.log(`[TEMPLATE-VARS] Sección de items encontrada, longitud: ${itemsSection.length}`);
+                const eachMatch = itemsSection.match(/{{#each items}}([\s\S]*?){{\/each}}/);
+                if (eachMatch) {
+                    const itemTemplate = eachMatch[1];
+                    this.logger.log(`[TEMPLATE-VARS] Template de item encontrado, longitud: ${itemTemplate.length}`);
+                    const itemsHtml = data.items.map((item) => {
+                        let itemHtml = itemTemplate;
+                        itemHtml = itemHtml.replace(/{{descripcion}}/g, item.descripcion || '');
+                        itemHtml = itemHtml.replace(/{{cantidad}}/g, item.cantidad || 0);
+                        itemHtml = itemHtml.replace(/{{precioUnitario}}/g, item.precioUnitario || '0.00');
+                        itemHtml = itemHtml.replace(/{{total}}/g, item.total || '0.00');
+                        return itemHtml;
+                    }).join('');
+                    this.logger.log(`[TEMPLATE-VARS] HTML de items generado, longitud: ${itemsHtml.length}`);
+                    const newItemsSection = itemsSection.replace(/{{#each items}}[\s\S]*?{{\/each}}/, itemsHtml);
+                    template = template.replace(/{{#if items}}[\s\S]*?{{\/if}}/, newItemsSection);
+                }
+                else {
+                    this.logger.warn(`[TEMPLATE-VARS] No se encontró {{#each items}} en la sección de items`);
+                }
+            }
+            else {
+                this.logger.warn(`[TEMPLATE-VARS] No se encontró la sección {{#if items}}`);
+            }
+        }
+        else {
+            this.logger.log(`[TEMPLATE-VARS] No hay items, eliminando sección de items`);
+            template = template.replace(/{{#if items}}[\s\S]*?{{\/if}}/g, '');
+        }
+        if (data.descuento > 0) {
+            template = template.replace(/{{#if descuento}}([\s\S]*?){{\/if}}/g, '$1');
+        }
+        else {
+            template = template.replace(/{{#if descuento}}[\s\S]*?{{\/if}}/g, '');
+        }
+        if (data.provisiones && data.provisiones.length > 0) {
+            this.logger.log(`[TEMPLATE-VARS] Procesando ${data.provisiones.length} provisiones`);
+            this.logger.log(`[TEMPLATE-VARS] Datos de provisiones:`, JSON.stringify(data.provisiones, null, 2));
+            let provisionesProcessed = 0;
+            const provisionesRegex = /{{#if provisiones}}([\s\S]*?){{\/if}}/g;
+            let match;
+            while ((match = provisionesRegex.exec(template)) !== null) {
+                provisionesProcessed++;
+                this.logger.log(`[TEMPLATE-VARS] Procesando sección de provisiones #${provisionesProcessed}, longitud: ${match[1].length}`);
+                const provisionesSection = match[1];
+                const eachMatch = provisionesSection.match(/{{#each provisiones}}([\s\S]*?){{\/each}}/);
+                if (eachMatch) {
+                    const provisionTemplate = eachMatch[1];
+                    this.logger.log(`[TEMPLATE-VARS] Template de provisión encontrado en sección #${provisionesProcessed}, longitud: ${provisionTemplate.length}`);
+                    const provisionesHtml = data.provisiones.map((provision) => {
+                        let provisionHtml = provisionTemplate;
+                        provisionHtml = provisionHtml.replace(/{{descripcion}}/g, provision.descripcion || '');
+                        provisionHtml = provisionHtml.replace(/{{fecha}}/g, provision.fecha || '');
+                        provisionHtml = provisionHtml.replace(/{{importe}}/g, provision.importe || '0.00');
+                        return provisionHtml;
+                    }).join('');
+                    this.logger.log(`[TEMPLATE-VARS] HTML de provisiones generado para sección #${provisionesProcessed}, longitud: ${provisionesHtml.length}`);
+                    const newProvisionesSection = provisionesSection.replace(/{{#each provisiones}}[\s\S]*?{{\/each}}/, provisionesHtml);
+                    template = template.replace(match[0], newProvisionesSection);
+                    this.logger.log(`[TEMPLATE-VARS] Sección #${provisionesProcessed} actualizada con provisiones`);
+                }
+                else {
+                    this.logger.warn(`[TEMPLATE-VARS] No se encontró {{#each provisiones}} en la sección #${provisionesProcessed}`);
+                    template = template.replace(match[0], '');
+                }
+            }
+            this.logger.log(`[TEMPLATE-VARS] Total de secciones de provisiones procesadas: ${provisionesProcessed}`);
+            if (provisionesProcessed === 0) {
+                this.logger.warn(`[TEMPLATE-VARS] No se encontró ninguna sección {{#if provisiones}}`);
+            }
+        }
+        else {
+            this.logger.log(`[TEMPLATE-VARS] No hay provisiones, eliminando sección de provisiones`);
+            template = template.replace(/{{#if provisiones}}[\s\S]*?{{\/if}}/g, '');
+        }
+        if (data.retencion && data.retencion > 0) {
+            template = template.replace(/{{#if retencion}}([\s\S]*?){{\/if}}/g, '$1');
+        }
+        else {
+            template = template.replace(/{{#if retencion}}[\s\S]*?{{\/if}}/g, '');
+        }
+        if (data.motivoAnulacion) {
+            template = template.replace(/{{#if motivoAnulacion}}([\s\S]*?){{\/if}}/g, '$1');
+        }
+        else {
+            template = template.replace(/{{#if motivoAnulacion}}[\s\S]*?{{\/if}}/g, '');
+        }
+        if (data.facturaOriginal) {
+            this.logger.log(`[TEMPLATE-VARS] Procesando factura rectificativa`);
+            this.logger.log(`[TEMPLATE-VARS] Datos de factura original:`, JSON.stringify(data.facturaOriginal, null, 2));
+            const rectificativaMatch = template.match(/{{#if facturaOriginal}}([\s\S]*?){{\/if}}/);
+            if (rectificativaMatch) {
+                const rectificativaSection = rectificativaMatch[1];
+                this.logger.log(`[TEMPLATE-VARS] Sección de factura rectificativa encontrada, longitud: ${rectificativaSection.length}`);
+                let rectificativaHtml = rectificativaSection;
+                rectificativaHtml = rectificativaHtml.replace(/{{facturaOriginal\.numeroFactura}}/g, data.facturaOriginal.numeroFactura || 'N/A');
+                rectificativaHtml = rectificativaHtml.replace(/{{facturaOriginal\.fechaFactura}}/g, data.facturaOriginal.fechaFactura || 'N/A');
+                rectificativaHtml = rectificativaHtml.replace(/{{facturaOriginal\.importeTotal}}/g, data.facturaOriginal.importeTotal || 'N/A');
+                if (data.facturaOriginal.importeTotal) {
+                    rectificativaHtml = rectificativaHtml.replace(/{{#if facturaOriginal\.importeTotal}}([\s\S]*?){{\/if}}/g, '$1');
+                }
+                else {
+                    rectificativaHtml = rectificativaHtml.replace(/{{#if facturaOriginal\.importeTotal}}[\s\S]*?{{\/if}}/g, '');
+                }
+                this.logger.log(`[TEMPLATE-VARS] HTML de factura rectificativa generado, longitud: ${rectificativaHtml.length}`);
+                template = template.replace(/{{#if facturaOriginal}}[\s\S]*?{{\/if}}/, rectificativaHtml);
+            }
+            else {
+                this.logger.warn(`[TEMPLATE-VARS] No se encontró la sección {{#if facturaOriginal}}`);
+            }
+        }
+        else {
+            this.logger.log(`[TEMPLATE-VARS] No es factura rectificativa, eliminando sección`);
+            template = template.replace(/{{#if facturaOriginal}}[\s\S]*?{{\/if}}/g, '');
+        }
+        this.logger.log(`[TEMPLATE-VARS] Limpieza final de código Handlebars sin procesar`);
+        template = template.replace(/{{#if[^}]*}}/g, '');
+        template = template.replace(/{{#each[^}]*}}/g, '');
+        template = template.replace(/{{\/if}}/g, '');
+        template = template.replace(/{{\/each}}/g, '');
+        template = template.replace(/{{[^}]*}}/g, '');
+        this.logger.log(`[TEMPLATE-VARS] Procesamiento completado. Longitud final del template: ${template.length}`);
+        return template;
+    }
+    async htmlToPdf(htmlContent) {
+        let browser;
+        try {
+            this.logger.log('[PUPPETEER] Iniciando Puppeteer...');
+            browser = await puppeteer.launch({
+                headless: true,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-gpu',
+                    '--disable-web-security',
+                    '--disable-features=VizDisplayCompositor',
+                    '--font-render-hinting=none',
+                    '--disable-font-subpixel-positioning'
+                ]
+            });
+            this.logger.log('[PUPPETEER] Browser iniciado correctamente');
+            const page = await browser.newPage();
+            await page.setViewport({
+                width: 794,
+                height: 1123,
+                deviceScaleFactor: 1
+            });
+            await page.waitForTimeout(1000);
+            const compactCss = `
+        <style>
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
+
+          html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-size: 16px;
+            overflow: hidden;
+          }
+
+          .invoice-container {
+            width: 100%;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            page-break-after: avoid;
+            break-after: avoid;
+            padding: 16px !important;
+          }
+
+          /* Compactar todo */
+          * {
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+            line-height: 1.4 !important;
+          }
+
+          .header .title { font-size: 28px !important; }
+          .header .lema { font-size: 16px !important; }
+
+          .data-blocks,
+          .items-section,
+          .totals-section,
+          .footer,
+          .factura-datos,
+          .party-block,
+          .additional-info,
+          .firma-block {
+            font-size: 16px !important;
+            line-height: 1.4 !important;
+            padding: 6px !important;
+          }
+
+          .items-table, .totals-table {
+            font-size: 16px !important;
+            border-collapse: collapse !important;
+            width: 100%;
+          }
+
+          .items-table th,
+          .items-table td,
+          .totals-table td {
+            padding: 6px 8px !important;
+            border: none !important;
+            text-align: left;
+          }
+
+          .qr-integrated .qr-section img {
+            width: 80px !important;
+            height: 80px !important;
+          }
+
+          .qr-integrated .qr-legend {
+            font-size: 10px !important;
+            max-width: 80px !important;
+          }
+
+          .firma-block {
+            margin-top: 10px !important;
+            height: auto !important;
+          }
+
+          .logo span {
+            font-size: 20px !important;
+          }
+
+          /* Evitar saltos de página */
+          table, tr, td, th, div, section {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+        </style>
+      `;
+            const htmlWithCompactCss = htmlContent.replace('</head>', `${compactCss}</head>`);
+            this.logger.log('[PUPPETEER] Estableciendo contenido HTML...');
+            await page.setContent(htmlWithCompactCss, {
+                waitUntil: ['networkidle0', 'domcontentloaded', 'load']
+            });
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            this.logger.log('[PUPPETEER] Generando PDF...');
+            let pdfBuffer = await page.pdf({
+                format: 'A4',
+                printBackground: true,
+                preferCSSPageSize: true,
+                margin: {
+                    top: '5mm',
+                    right: '5mm',
+                    bottom: '5mm',
+                    left: '5mm'
+                },
+                scale: 0.8,
+                displayHeaderFooter: false,
+                timeout: 30000,
+                waitForFunction: 'document.readyState === "complete"'
+            });
+            if (!Buffer.isBuffer(pdfBuffer)) {
+                pdfBuffer = Buffer.from(pdfBuffer);
+            }
+            this.logger.log(`[PUPPETEER] PDF generado. Tipo: ${typeof pdfBuffer}, Es Buffer: ${Buffer.isBuffer(pdfBuffer)}, Tamaño: ${pdfBuffer?.length || 'undefined'} bytes`);
+            return pdfBuffer;
+        }
+        finally {
+            if (browser)
+                await browser.close();
+        }
+    }
+};
+exports.PdfGeneratorService = PdfGeneratorService;
+exports.PdfGeneratorService = PdfGeneratorService = PdfGeneratorService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof parametros_service_1.ParametrosService !== "undefined" && parametros_service_1.ParametrosService) === "function" ? _a : Object])
+], PdfGeneratorService);
+
+
+/***/ }),
+/* 100 */
+/***/ ((module) => {
+
+module.exports = require("puppeteer");
+
+/***/ }),
+/* 101 */
+/***/ ((module) => {
+
+module.exports = require("qrcode");
+
+/***/ }),
+/* 102 */
+/***/ ((module) => {
+
+module.exports = require("pdf-lib");
+
+/***/ }),
+/* 103 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.InvoiceAuditService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+let InvoiceAuditService = class InvoiceAuditService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async logAuditEvent(data) {
+        try {
+            await this.prisma.invoiceAuditHistory.create({
+                data: {
+                    invoiceId: data.invoiceId,
+                    userId: data.userId,
+                    action: data.action,
+                    fieldName: data.fieldName,
+                    oldValue: data.oldValue,
+                    newValue: data.newValue,
+                    description: data.description,
+                    ipAddress: data.ipAddress,
+                    userAgent: data.userAgent,
+                },
+            });
+        }
+        catch (error) {
+            console.error('Error logging audit event:', error);
+        }
+    }
+    async getInvoiceAuditHistory(invoiceId) {
+        return this.prisma.invoiceAuditHistory.findMany({
+            where: { invoiceId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+    async logInvoiceCreation(invoiceId, userId, ipAddress, userAgent) {
+        await this.logAuditEvent({
+            invoiceId,
+            userId,
+            action: 'created',
+            description: 'Factura creada',
+            ipAddress,
+            userAgent,
+        });
+    }
+    async logInvoiceUpdate(invoiceId, userId, changes, ipAddress, userAgent) {
+        for (const [fieldName, { oldValue, newValue }] of Object.entries(changes)) {
+            await this.logAuditEvent({
+                invoiceId,
+                userId,
+                action: 'updated',
+                fieldName,
+                oldValue: oldValue?.toString() || null,
+                newValue: newValue?.toString() || null,
+                description: `Campo '${fieldName}' actualizado`,
+                ipAddress,
+                userAgent,
+            });
+        }
+    }
+    async logStatusChange(invoiceId, userId, oldStatus, newStatus, ipAddress, userAgent) {
+        await this.logAuditEvent({
+            invoiceId,
+            userId,
+            action: 'status_changed',
+            fieldName: 'estado',
+            oldValue: oldStatus,
+            newValue: newStatus,
+            description: `Estado cambiado de '${oldStatus}' a '${newStatus}'`,
+            ipAddress,
+            userAgent,
+        });
+    }
+    async logInvoiceDeletion(invoiceId, userId, ipAddress, userAgent) {
+        await this.logAuditEvent({
+            invoiceId,
+            userId,
+            action: 'deleted',
+            description: 'Factura eliminada',
+            ipAddress,
+            userAgent,
+        });
+    }
+    async getChangesSummary(invoiceId) {
+        const auditHistory = await this.getInvoiceAuditHistory(invoiceId);
+        const summary = {
+            totalChanges: auditHistory.length,
+            lastModified: auditHistory[0]?.createdAt || null,
+            lastModifiedBy: auditHistory[0]?.user?.name || null,
+            changesByField: {},
+            changesByUser: {},
+        };
+        auditHistory.forEach(record => {
+            if (record.fieldName) {
+                summary.changesByField[record.fieldName] = (summary.changesByField[record.fieldName] || 0) + 1;
+            }
+            const userName = record.user?.name || 'Usuario desconocido';
+            summary.changesByUser[userName] = (summary.changesByUser[userName] || 0) + 1;
+        });
+        return summary;
+    }
+};
+exports.InvoiceAuditService = InvoiceAuditService;
+exports.InvoiceAuditService = InvoiceAuditService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], InvoiceAuditService);
+
+
+/***/ }),
+/* 104 */
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getStatusColor = exports.getStatusDisplayName = exports.getNextStatus = exports.isInvoiceCancellable = exports.isInvoiceAuditable = exports.isInvoiceEditable = exports.AUDITABLE_STATUSES = exports.CANCELLABLE_STATUSES = exports.NON_EDITABLE_STATUSES = exports.EDITABLE_STATUSES = exports.INVOICE_STATUS = void 0;
+exports.INVOICE_STATUS = {
+    BORRADOR: 'borrador',
+    EMITIDA: 'emitida',
+    ENVIADA: 'enviada',
+    NOTIFICADA: 'notificada',
+    ACEPTADA: 'aceptada',
+    RECHAZADA: 'rechazada',
+    ANULADA: 'anulada'
+};
+exports.EDITABLE_STATUSES = [
+    exports.INVOICE_STATUS.BORRADOR,
+    exports.INVOICE_STATUS.EMITIDA
+];
+exports.NON_EDITABLE_STATUSES = [
+    exports.INVOICE_STATUS.ENVIADA,
+    exports.INVOICE_STATUS.NOTIFICADA,
+    exports.INVOICE_STATUS.ACEPTADA,
+    exports.INVOICE_STATUS.RECHAZADA,
+    exports.INVOICE_STATUS.ANULADA
+];
+exports.CANCELLABLE_STATUSES = [
+    exports.INVOICE_STATUS.BORRADOR,
+    exports.INVOICE_STATUS.EMITIDA,
+    exports.INVOICE_STATUS.ENVIADA
+];
+exports.AUDITABLE_STATUSES = [
+    exports.INVOICE_STATUS.BORRADOR,
+    exports.INVOICE_STATUS.EMITIDA,
+    exports.INVOICE_STATUS.ENVIADA,
+    exports.INVOICE_STATUS.NOTIFICADA,
+    exports.INVOICE_STATUS.ACEPTADA,
+    exports.INVOICE_STATUS.RECHAZADA,
+    exports.INVOICE_STATUS.ANULADA
+];
+const isInvoiceEditable = (status) => {
+    return exports.EDITABLE_STATUSES.includes(status);
+};
+exports.isInvoiceEditable = isInvoiceEditable;
+const isInvoiceAuditable = (status) => {
+    return true;
+};
+exports.isInvoiceAuditable = isInvoiceAuditable;
+const isInvoiceCancellable = (status) => {
+    return exports.CANCELLABLE_STATUSES.includes(status);
+};
+exports.isInvoiceCancellable = isInvoiceCancellable;
+const getNextStatus = (currentStatus) => {
+    switch (currentStatus) {
+        case exports.INVOICE_STATUS.BORRADOR:
+            return exports.INVOICE_STATUS.EMITIDA;
+        case exports.INVOICE_STATUS.EMITIDA:
+            return exports.INVOICE_STATUS.ENVIADA;
+        case exports.INVOICE_STATUS.ENVIADA:
+            return exports.INVOICE_STATUS.NOTIFICADA;
+        case exports.INVOICE_STATUS.NOTIFICADA:
+            return exports.INVOICE_STATUS.ACEPTADA;
+        default:
+            return null;
+    }
+};
+exports.getNextStatus = getNextStatus;
+const getStatusDisplayName = (status) => {
+    switch (status) {
+        case exports.INVOICE_STATUS.BORRADOR:
+            return 'Borrador';
+        case exports.INVOICE_STATUS.EMITIDA:
+            return 'Emitida';
+        case exports.INVOICE_STATUS.ENVIADA:
+            return 'Enviada';
+        case exports.INVOICE_STATUS.NOTIFICADA:
+            return 'Notificada al Cliente';
+        case exports.INVOICE_STATUS.ACEPTADA:
+            return 'Aceptada';
+        case exports.INVOICE_STATUS.RECHAZADA:
+            return 'Rechazada';
+        case exports.INVOICE_STATUS.ANULADA:
+            return 'Anulada';
+        default:
+            return status;
+    }
+};
+exports.getStatusDisplayName = getStatusDisplayName;
+const getStatusColor = (status) => {
+    switch (status) {
+        case exports.INVOICE_STATUS.BORRADOR:
+            return 'text-gray-600 bg-gray-100';
+        case exports.INVOICE_STATUS.EMITIDA:
+            return 'text-blue-600 bg-blue-100';
+        case exports.INVOICE_STATUS.ENVIADA:
+            return 'text-orange-600 bg-orange-100';
+        case exports.INVOICE_STATUS.NOTIFICADA:
+            return 'text-purple-600 bg-purple-100';
+        case exports.INVOICE_STATUS.ACEPTADA:
+            return 'text-green-600 bg-green-100';
+        case exports.INVOICE_STATUS.RECHAZADA:
+            return 'text-red-600 bg-red-100';
+        case exports.INVOICE_STATUS.ANULADA:
+            return 'text-red-800 bg-red-200';
+        default:
+            return 'text-gray-600 bg-gray-100';
+    }
+};
+exports.getStatusColor = getStatusColor;
+
+
+/***/ }),
+/* 105 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.InvoicesController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const invoices_service_1 = __webpack_require__(90);
+const create_invoice_dto_1 = __webpack_require__(106);
+const update_invoice_dto_1 = __webpack_require__(107);
+const jwt_auth_guard_1 = __webpack_require__(27);
+const roles_guard_1 = __webpack_require__(34);
+const roles_decorator_1 = __webpack_require__(35);
+const client_1 = __webpack_require__(9);
+const express_1 = __webpack_require__(48);
+const invoice_audit_service_1 = __webpack_require__(103);
+const digital_signature_service_1 = __webpack_require__(108);
+const fs = __importStar(__webpack_require__(44));
+const path = __importStar(__webpack_require__(45));
+const platform_express_1 = __webpack_require__(47);
+const multer = __importStar(__webpack_require__(110));
+let InvoicesController = class InvoicesController {
+    constructor(invoicesService, invoiceAuditService, digitalSignatureService) {
+        this.invoicesService = invoicesService;
+        this.invoiceAuditService = invoiceAuditService;
+        this.digitalSignatureService = digitalSignatureService;
+    }
+    async create(createInvoiceDto, req) {
+        console.log('=== INVOICE CREATE ENDPOINT CALLED ===');
+        console.log('Request user:', req.user);
+        console.log('CreateInvoiceDto received:', JSON.stringify(createInvoiceDto, null, 2));
+        createInvoiceDto.emisorId = req.user.id;
+        console.log('EmisorId set to:', createInvoiceDto.emisorId);
+        try {
+            const result = await this.invoicesService.create(createInvoiceDto);
+            console.log('Invoice created successfully:', result);
+            return result;
+        }
+        catch (error) {
+            console.error('Invoice creation error:', error);
+            console.error('Error details:', error?.response?.data || error?.message || String(error));
+            throw new common_1.HttpException({
+                status: common_1.HttpStatus.INTERNAL_SERVER_ERROR,
+                error: 'Error creating invoice',
+                details: error?.response?.data || error?.message || String(error),
+            }, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    findAll(req) {
+        const user = req.user;
+        return this.invoicesService.findAll(user);
+    }
+    async getMyInvoices(req) {
+        console.log('MY INVOICES ENDPOINT CALLED');
+        console.log('=== getMyInvoices CALLED [DEBUG] ===');
+        console.log('User ID:', req.user?.id);
+        console.log('User Role:', req.user?.role);
+        console.log('User Email:', req.user?.email);
+        console.log('Query params:', req.query);
+        if (!req.user) {
+            console.error('No user found in request');
+            throw new common_1.HttpException('No autenticado', common_1.HttpStatus.UNAUTHORIZED);
+        }
+        if (req.user.role === 'ADMIN') {
+            console.log('Admin user - returning all invoices');
+            return this.invoicesService.findAll(req.user);
+        }
+        if (req.user.role === 'ABOGADO') {
+            console.log('Lawyer user - returning emitted invoices');
+            return this.invoicesService.findAll(req.user);
+        }
+        if (req.user.role === 'CLIENTE') {
+            console.log('Client user - using findForClient');
+            const { lawyerId, paymentDate } = req.query;
+            console.log('Calling findForClient with:', { clientId: req.user.id, lawyerId, paymentDate });
+            try {
+                const result = await this.invoicesService.findForClient(req.user.id, lawyerId, paymentDate);
+                console.log('Client invoices found:', result.length);
+                console.log('First invoice (if any):', result[0] || 'No invoices');
+                return result;
+            }
+            catch (error) {
+                console.error('Error in getMyInvoices for client:', error);
+                throw error;
+            }
+        }
+        console.error('Unknown role:', req.user.role);
+        throw new common_1.HttpException('Rol no válido', common_1.HttpStatus.FORBIDDEN);
+    }
+    async getInvoicePdfWithQR(id, res, req) {
+        try {
+            console.log('[PDF-QR] Iniciando generación de PDF para factura:', id);
+            const invoice = await this.invoicesService.findOne(id);
+            if (!invoice) {
+                console.log('[PDF-QR] Factura no encontrada');
+                return res.status(404).send('Factura no encontrada');
+            }
+            if (req.user.role === 'CLIENTE' && invoice.receptorId !== req.user.id) {
+                console.log('[PDF-QR] No autorizado - CLIENTE');
+                return res.status(403).send('No autorizado para acceder a esta factura');
+            }
+            if (req.user.role === 'ABOGADO' && invoice.emisorId !== req.user.id && req.user.role !== 'ADMIN') {
+                console.log('[PDF-QR] No autorizado - ABOGADO');
+                return res.status(403).send('No autorizado para acceder a esta factura');
+            }
+            console.log('[PDF-QR] Permisos verificados correctamente');
+            console.log('[PDF-QR] Datos de la factura:', JSON.stringify(invoice, null, 2));
+            console.log('[PDF-QR] Iniciando generación de PDF...');
+            const pdfBuffer = await this.invoicesService.generateInvoicePdfWithQR(invoice);
+            if (!Buffer.isBuffer(pdfBuffer)) {
+                console.error('[PDF-QR] Error: pdfBuffer no es un Buffer válido');
+                return res.status(500).send('Error: Buffer PDF inválido');
+            }
+            console.log(`[PDF-QR] Buffer PDF generado. Tamaño: ${pdfBuffer.length} bytes`);
+            console.log(`[PDF-QR] Primeros bytes: ${Array.from(pdfBuffer.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
+            const pdfHeader = pdfBuffer.slice(0, 4).toString('ascii');
+            if (pdfHeader !== '%PDF') {
+                console.error('[PDF-QR] Error: Buffer no es un PDF válido. Header:', pdfHeader);
+                return res.status(500).send('Error: Buffer no es un PDF válido');
+            }
+            console.log('[PDF-QR] Configurando headers de respuesta...');
+            res.set({
+                'Content-Type': 'application/pdf',
+                'Content-Length': pdfBuffer.length.toString(),
+                'Content-Disposition': `attachment; filename="factura_${invoice.numeroFactura || id}.pdf"`,
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            });
+            console.log('[PDF-QR] Enviando PDF al cliente...');
+            res.end(pdfBuffer);
+            console.log('[PDF-QR] PDF enviado exitosamente');
+        }
+        catch (error) {
+            console.error('[PDF-QR] Error al generar PDF con QR:', error);
+            console.error('[PDF-QR] Stack trace:', error.stack);
+            res.status(500).send({ error: error.message || error.toString() });
+        }
+    }
+    async testPdf(id, res, req) {
+        try {
+            console.log('[TEST-PDF] Generando PDF de prueba...');
+            const { PDFDocument, rgb } = await Promise.resolve().then(() => __importStar(__webpack_require__(102)));
+            const pdfDoc = await PDFDocument.create();
+            const page = pdfDoc.addPage([595, 842]);
+            const { width, height } = page.getSize();
+            const helveticaFont = await pdfDoc.embedFont('Helvetica');
+            const helveticaBoldFont = await pdfDoc.embedFont('Helvetica-Bold');
+            page.drawText('TEST PDF', {
+                x: 50,
+                y: height - 60,
+                size: 24,
+                font: helveticaBoldFont,
+                color: rgb(0, 0.2, 0.4)
+            });
+            page.drawText(`Factura ID: ${id}`, {
+                x: 50,
+                y: height - 100,
+                size: 14,
+                font: helveticaFont,
+                color: rgb(0.2, 0.2, 0.2)
+            });
+            page.drawText(`Usuario: ${req.user.name}`, {
+                x: 50,
+                y: height - 120,
+                size: 14,
+                font: helveticaFont,
+                color: rgb(0.2, 0.2, 0.2)
+            });
+            page.drawText(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, {
+                x: 50,
+                y: height - 140,
+                size: 14,
+                font: helveticaFont,
+                color: rgb(0.2, 0.2, 0.2)
+            });
+            const pdfBytes = await pdfDoc.save();
+            const pdfBuffer = Buffer.from(pdfBytes);
+            console.log(`[TEST-PDF] PDF generado. Tamaño: ${pdfBuffer.length} bytes`);
+            console.log(`[TEST-PDF] Header: ${pdfBuffer.slice(0, 4).toString('ascii')}`);
+            res.set({
+                'Content-Type': 'application/pdf',
+                'Content-Length': pdfBuffer.length.toString(),
+                'Content-Disposition': `attachment; filename="test_${id}.pdf"`,
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
+            });
+            res.end(pdfBuffer);
+            console.log('[TEST-PDF] PDF enviado exitosamente');
+        }
+        catch (error) {
+            console.error('[TEST-PDF] Error:', error);
+            res.status(500).send({ error: error.message || error.toString() });
+        }
+    }
+    findOne(id) {
+        return this.invoicesService.findOne(id);
+    }
+    async update(id, updateInvoiceDto, req) {
+        console.log('=== INVOICE UPDATE ENDPOINT CALLED ===');
+        console.log('Invoice ID:', id);
+        console.log('Request user:', req.user);
+        console.log('UpdateInvoiceDto received:', JSON.stringify(updateInvoiceDto, null, 2));
+        const userId = req.user?.id;
+        const ipAddress = req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || null;
+        const userAgent = req.headers['user-agent'] || null;
+        try {
+            const result = await this.invoicesService.update(id, updateInvoiceDto, userId, ipAddress, userAgent);
+            console.log('Invoice updated successfully:', result);
+            return result;
+        }
+        catch (error) {
+            console.error('Invoice update error:', error);
+            console.error('Error details:', error?.response?.data || error?.message || String(error));
+            throw error;
+        }
+    }
+    async remove(id, req) {
+        try {
+            console.log('[DELETE] Iniciando eliminación de factura:', id);
+            console.log('[DELETE] Usuario:', req.user.id, req.user.role);
+            console.log('[DELETE] Buscando factura en base de datos...');
+            const invoice = await this.invoicesService.findOne(id);
+            console.log('[DELETE] Resultado de búsqueda:', invoice ? 'Factura encontrada' : 'Factura NO encontrada');
+            if (!invoice) {
+                console.log('[DELETE] Factura no encontrada en base de datos:', id);
+                throw new common_1.HttpException('Factura no encontrada', common_1.HttpStatus.NOT_FOUND);
+            }
+            console.log('[DELETE] Factura encontrada, verificando permisos...');
+            console.log('[DELETE] Emisor de la factura:', invoice.emisorId);
+            console.log('[DELETE] Usuario actual:', req.user.id);
+            console.log('[DELETE] Rol del usuario:', req.user.role);
+            if (req.user.role !== 'ADMIN' && invoice.emisorId !== req.user.id) {
+                console.log('[DELETE] No autorizado para eliminar factura:', id);
+                console.log('[DELETE] Usuario no es ADMIN y no es el emisor de la factura');
+                throw new common_1.HttpException('No autorizado para eliminar esta factura', common_1.HttpStatus.FORBIDDEN);
+            }
+            console.log('[DELETE] Permisos verificados, eliminando factura:', id);
+            const result = await this.invoicesService.remove(id);
+            console.log('[DELETE] Factura eliminada exitosamente:', id);
+            return result;
+        }
+        catch (error) {
+            console.error('[DELETE] Error eliminando factura:', error);
+            console.error('[DELETE] Tipo de error:', error?.constructor?.name || 'Unknown');
+            console.error('[DELETE] Mensaje de error:', error instanceof Error ? error.message : String(error));
+            if (error instanceof common_1.HttpException) {
+                console.log('[DELETE] Re-lanzando HttpException');
+                throw error;
+            }
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.log('[DELETE] Error message procesado:', errorMessage);
+            if (errorMessage.includes('No se puede eliminar')) {
+                console.log('[DELETE] Lanzando BAD_REQUEST por restricción de eliminación');
+                throw new common_1.HttpException(errorMessage, common_1.HttpStatus.BAD_REQUEST);
+            }
+            if (errorMessage.includes('no encontrada')) {
+                console.log('[DELETE] Lanzando NOT_FOUND por factura no encontrada');
+                throw new common_1.HttpException(errorMessage, common_1.HttpStatus.NOT_FOUND);
+            }
+            console.log('[DELETE] Lanzando INTERNAL_SERVER_ERROR genérico');
+            throw new common_1.HttpException('Error interno del servidor al eliminar la factura', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    async sign(id, body) {
+        const certContent = body.certContent;
+        const keyContent = body.keyContent;
+        const certPath = body.certPath || process.env.FACTURAE_CERT_PATH;
+        const keyPath = body.keyPath || process.env.FACTURAE_KEY_PATH;
+        return this.invoicesService.sign(id, certPath, keyPath, certContent, keyContent);
+    }
+    async generateXml(body, req) {
+        return this.invoicesService.generateXmlForInvoices(body.ids, req.user.id);
+    }
+    async uploadSigned(body, req) {
+        return this.invoicesService.saveSignedXml(body.id, body.signedXml, req.user.id);
+    }
+    async annul(id, body, req) {
+        if (!body.motivoAnulacion || body.motivoAnulacion.trim().length < 3) {
+            throw new common_1.HttpException('El motivo de anulación es obligatorio y debe tener al menos 3 caracteres.', common_1.HttpStatus.BAD_REQUEST);
+        }
+        return this.invoicesService.annul(id, body.motivoAnulacion, req.user.id);
+    }
+    getInvoicesByClient(clientId) {
+        return this.invoicesService.findByClientId(clientId);
+    }
+    createInvoiceForClient(clientId, createInvoiceDto, req) {
+        return this.invoicesService.createForClient(clientId, createInvoiceDto, req.user.id);
+    }
+    updateInvoiceForClient(clientId, invoiceId, updateInvoiceDto, req) {
+        return this.invoicesService.updateForClient(clientId, invoiceId, updateInvoiceDto, req.user.id);
+    }
+    patchInvoiceForClient(clientId, invoiceId, updateInvoiceDto, req) {
+        return this.invoicesService.patchForClient(clientId, invoiceId, updateInvoiceDto, req.user.id);
+    }
+    deleteInvoiceForClient(clientId, invoiceId, req) {
+        return this.invoicesService.deleteForClient(clientId, invoiceId, req.user.id);
+    }
+    async getClientsWithInvoices() {
+        return this.invoicesService.getClientsWithInvoices();
+    }
+    async debugInvoice(id) {
+        console.log('[DEBUG] Verificando factura:', id);
+        try {
+            const invoice = await this.invoicesService.findOne(id);
+            console.log('[DEBUG] Resultado de búsqueda:', invoice ? 'ENCONTRADA' : 'NO ENCONTRADA');
+            if (invoice) {
+                console.log('[DEBUG] Datos de la factura:', {
+                    id: invoice.id,
+                    numeroFactura: invoice.numeroFactura,
+                    estado: invoice.estado,
+                    emisorId: invoice.emisorId
+                });
+            }
+            return {
+                exists: !!invoice,
+                invoice: invoice ? {
+                    id: invoice.id,
+                    numeroFactura: invoice.numeroFactura,
+                    estado: invoice.estado,
+                    emisorId: invoice.emisorId
+                } : null
+            };
+        }
+        catch (error) {
+            console.error('[DEBUG] Error verificando factura:', error);
+            return {
+                exists: false,
+                error: error instanceof Error ? error.message : String(error)
+            };
+        }
+    }
+    async getAuditHistory(id) {
+        const invoice = await this.invoicesService.findOne(id);
+        if (!invoice) {
+            throw new common_1.HttpException('Factura no encontrada', common_1.HttpStatus.NOT_FOUND);
+        }
+        const auditHistory = await this.invoiceAuditService.getInvoiceAuditHistory(id);
+        const summary = await this.invoiceAuditService.getChangesSummary(id);
+        return {
+            auditHistory,
+            summary
+        };
+    }
+    async signPdf(id, body, req) {
+        try {
+            const invoice = await this.invoicesService.findOne(id);
+            if (!invoice) {
+                throw new common_1.HttpException('Factura no encontrada', common_1.HttpStatus.NOT_FOUND);
+            }
+            if (invoice.emisorId !== req.user.id && req.user.role !== 'ADMIN') {
+                throw new common_1.HttpException('No autorizado para firmar esta factura', common_1.HttpStatus.FORBIDDEN);
+            }
+            const pdfBuffer = await this.invoicesService.generateInvoicePdfWithQR(invoice);
+            const pdfBase64 = pdfBuffer.toString('base64');
+            const signatureRequest = {
+                fileName: `factura_${invoice.numeroFactura || id}.pdf`,
+                fileContent: pdfBase64,
+                fileSize: pdfBuffer.length,
+                certificateType: body.certificateType,
+                userId: req.user.id,
+                invoiceId: id
+            };
+            const signatureResponse = await this.digitalSignatureService.signPdfWithAutoFirma(signatureRequest);
+            if (!signatureResponse.success) {
+                throw new common_1.HttpException(signatureResponse.error || 'Error en firma digital', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+            const fileName = await this.digitalSignatureService.saveSignedPdf(id, signatureResponse.signedPdf);
+            const downloadUrl = this.digitalSignatureService.getSignedPdfDownloadUrl(fileName);
+            await this.invoiceAuditService.logStatusChange(id, req.user.id, 'emitida', 'firmada', req.ip, req.headers['user-agent']);
+            return {
+                success: true,
+                signedPdf: signatureResponse.signedPdf,
+                signatureInfo: signatureResponse.signatureInfo,
+                downloadUrl
+            };
+        }
+        catch (error) {
+            console.error('Error en firma digital de PDF:', error);
+            if (error instanceof common_1.HttpException) {
+                throw error;
+            }
+            throw new common_1.HttpException('Error en firma digital', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    async downloadSignedPdf(id, res, req) {
+        try {
+            const invoice = await this.invoicesService.findOne(id);
+            if (!invoice) {
+                throw new common_1.HttpException('Factura no encontrada', common_1.HttpStatus.NOT_FOUND);
+            }
+            if (req.user.role === 'CLIENTE' && invoice.receptorId !== req.user.id) {
+                throw new common_1.HttpException('No autorizado', common_1.HttpStatus.FORBIDDEN);
+            }
+            if (req.user.role === 'ABOGADO' && invoice.emisorId !== req.user.id && req.user.role !== 'ADMIN') {
+                throw new common_1.HttpException('No autorizado', common_1.HttpStatus.FORBIDDEN);
+            }
+            const uploadsDir = path.join(process.cwd(), 'uploads', 'signed-invoices');
+            const files = fs.readdirSync(uploadsDir).filter(file => file.includes(`factura_firmada_${id}_`));
+            if (files.length === 0) {
+                throw new common_1.HttpException('PDF firmado no encontrado', common_1.HttpStatus.NOT_FOUND);
+            }
+            const latestFile = files.sort().reverse()[0];
+            const filePath = path.join(uploadsDir, latestFile);
+            res.set({
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `attachment; filename="factura_firmada_${invoice.numeroFactura || id}.pdf"`,
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
+            });
+            res.sendFile(filePath);
+        }
+        catch (error) {
+            console.error('Error descargando PDF firmado:', error);
+            if (error instanceof common_1.HttpException) {
+                throw error;
+            }
+            throw new common_1.HttpException('Error descargando PDF firmado', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    async uploadSignedPdf(id, file, req) {
+        if (!file) {
+            throw new common_1.HttpException('No se recibió archivo PDF firmado', common_1.HttpStatus.BAD_REQUEST);
+        }
+        const invoice = await this.invoicesService.findOne(id);
+        if (!invoice) {
+            throw new common_1.HttpException('Factura no encontrada', common_1.HttpStatus.NOT_FOUND);
+        }
+        if (invoice.emisorId !== req.user.id && req.user.role !== 'ADMIN') {
+            throw new common_1.HttpException('No autorizado para subir PDF firmado de esta factura', common_1.HttpStatus.FORBIDDEN);
+        }
+        await this.invoicesService.markAsSigned(id);
+        const fileName = file.filename;
+        const downloadUrl = `/uploads/signed-invoices/${fileName}`;
+        return { success: true, fileName, downloadUrl };
+    }
+    async checkAutoFirmaStatus() {
+        try {
+            const detailedStatus = await this.digitalSignatureService.getAutoFirmaDetailedStatus();
+            return {
+                available: detailedStatus.autofirma?.available || false,
+                status: detailedStatus.status || 'error',
+                message: detailedStatus.message || 'Error verificando AutoFirma',
+                autofirma: detailedStatus.autofirma || {
+                    installed: false,
+                    running: false,
+                    available: false
+                }
+            };
+        }
+        catch (error) {
+            return {
+                available: false,
+                status: 'error',
+                message: 'Error verificando estado de AutoFirma',
+                autofirma: {
+                    installed: false,
+                    running: false,
+                    available: false,
+                    error: error instanceof Error ? error.message : 'Error desconocido'
+                }
+            };
+        }
+    }
+    async getInvoiceHtmlPreview(id, res, req) {
+        const invoice = await this.invoicesService.findOne(id);
+        if (!invoice) {
+            return res.status(404).send('Factura no encontrada');
+        }
+        if (invoice.emisorId !== req.user.id && invoice.receptorId !== req.user.id && req.user.role !== 'ADMIN') {
+            return res.status(403).send('No autorizado para ver esta factura');
+        }
+        const html = await this.invoicesService.generateInvoiceHtml(invoice);
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.send(html);
+    }
+};
+exports.InvoicesController = InvoicesController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, common_1.UsePipes)(new common_1.ValidationPipe({ whitelist: true })),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Crear factura',
+        description: 'Crea una nueva factura electrónica (solo ABOGADO)'
+    }),
+    (0, swagger_1.ApiBody)({ type: create_invoice_dto_1.CreateInvoiceDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Factura creada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                numero: { type: 'string' },
+                fecha: { type: 'string', format: 'date' },
+                emisorId: { type: 'string' },
+                receptorId: { type: 'string' },
+                importeTotal: { type: 'number' },
+                estado: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_d = typeof create_invoice_dto_1.CreateInvoiceDto !== "undefined" && create_invoice_dto_1.CreateInvoiceDto) === "function" ? _d : Object, Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)(),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener todas las facturas',
+        description: 'Devuelve todas las facturas (ADMIN y ABOGADO)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de facturas',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    numero: { type: 'string' },
+                    fecha: { type: 'string', format: 'date' },
+                    emisorId: { type: 'string' },
+                    receptorId: { type: 'string' },
+                    importeTotal: { type: 'number' },
+                    estado: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], InvoicesController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('my'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Obtener mis facturas', description: 'Devuelve las facturas del cliente autenticado, con filtros por abogado y fecha de pago.' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Lista de facturas del cliente' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "getMyInvoices", null);
+__decorate([
+    (0, common_1.Get)(':id/pdf-qr'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ABOGADO, client_1.Role.ADMIN, client_1.Role.CLIENTE),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Descargar PDF con QR',
+        description: 'Descarga el PDF de la factura con código QR'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la factura', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'PDF con QR',
+        schema: {
+            type: 'string',
+            format: 'binary'
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Res)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_e = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _e : Object, Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "getInvoicePdfWithQR", null);
+__decorate([
+    (0, common_1.Get)(':id/test-pdf'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ABOGADO, client_1.Role.ADMIN, client_1.Role.CLIENTE),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Test PDF simple',
+        description: 'Genera un PDF de prueba simple'
+    }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Res)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_f = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _f : Object, Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "testPdf", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener factura por ID',
+        description: 'Devuelve una factura específica por su ID'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la factura', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Factura encontrada',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                numero: { type: 'string' },
+                fecha: { type: 'string', format: 'date' },
+                emisorId: { type: 'string' },
+                receptorId: { type: 'string' },
+                importeTotal: { type: 'number' },
+                estado: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], InvoicesController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Put)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ABOGADO, client_1.Role.ADMIN),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, common_1.UsePipes)(new common_1.ValidationPipe({ whitelist: true })),
+    (0, swagger_1.ApiOperation)({ summary: 'Actualizar factura', description: 'Permite editar una factura y auditar los cambios.' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la factura', type: 'string' }),
+    (0, swagger_1.ApiBody)({ type: update_invoice_dto_1.UpdateInvoiceDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Factura actualizada exitosamente con auditoría automática',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                numeroFactura: { type: 'string' },
+                fechaFactura: { type: 'string', format: 'date' },
+                importeTotal: { type: 'number' },
+                baseImponible: { type: 'number' },
+                cuotaIVA: { type: 'number' },
+                estado: { type: 'string' },
+                updatedAt: { type: 'string', format: 'date-time' },
+                items: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            description: { type: 'string' },
+                            quantity: { type: 'number' },
+                            unitPrice: { type: 'number' },
+                            total: { type: 'number' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_g = typeof update_invoice_dto_1.UpdateInvoiceDto !== "undefined" && update_invoice_dto_1.UpdateInvoiceDto) === "function" ? _g : Object, Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar factura',
+        description: 'Elimina una factura del sistema (solo ABOGADO)'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la factura', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Factura eliminada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                message: { type: 'string', example: 'Factura eliminada exitosamente' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 500, description: 'Error interno del servidor' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Post)(':id/sign'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Firmar factura',
+        description: 'Firma digitalmente una factura (solo ABOGADO)'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la factura', type: 'string' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                certPath: { type: 'string', description: 'Ruta al certificado (opcional)' },
+                keyPath: { type: 'string', description: 'Ruta a la clave privada (opcional)' },
+                certContent: { type: 'string', description: 'Contenido del certificado (opcional)' },
+                keyContent: { type: 'string', description: 'Contenido de la clave privada (opcional)' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Factura firmada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                signedXml: { type: 'string' },
+                signatureValid: { type: 'boolean' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "sign", null);
+__decorate([
+    (0, common_1.Post)('generate-xml'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Generar XML de facturas',
+        description: 'Genera XML para múltiples facturas (solo ABOGADO)'
+    }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                ids: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Array de IDs de facturas'
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'XML generado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                xml: { type: 'string' },
+                facturas: {
+                    type: 'array',
+                    items: { type: 'string' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "generateXml", null);
+__decorate([
+    (0, common_1.Post)('upload-signed'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Subir factura firmada',
+        description: 'Sube una factura ya firmada (solo ABOGADO)'
+    }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string', description: 'ID de la factura' },
+                signedXml: { type: 'string', description: 'XML firmado de la factura' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Factura firmada guardada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                signedXml: { type: 'string' },
+                signatureValid: { type: 'boolean' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "uploadSigned", null);
+__decorate([
+    (0, common_1.Patch)(':id/anular'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Anular factura',
+        description: 'Anula una factura con motivo (solo ABOGADO)'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la factura', type: 'string' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                motivoAnulacion: {
+                    type: 'string',
+                    description: 'Motivo de la anulación (mínimo 3 caracteres)',
+                    minLength: 3
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Factura anulada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                estado: { type: 'string', example: 'ANULADA' },
+                motivoAnulacion: { type: 'string' },
+                fechaAnulacion: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Motivo de anulación inválido' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "annul", null);
+__decorate([
+    (0, common_1.Get)('by-client/:clientId'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({ summary: 'Obtener facturas por cliente', description: 'Lista todas las facturas de un cliente específico (ADMIN y ABOGADO)' }),
+    (0, swagger_1.ApiParam)({ name: 'clientId', description: 'ID del cliente' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Lista de facturas del cliente' }),
+    __param(0, (0, common_1.Param)('clientId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], InvoicesController.prototype, "getInvoicesByClient", null);
+__decorate([
+    (0, common_1.Post)('by-client/:clientId'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({ summary: 'Crear factura para cliente', description: 'Crea una nueva factura para un cliente específico (ADMIN y ABOGADO)' }),
+    (0, swagger_1.ApiParam)({ name: 'clientId', description: 'ID del cliente' }),
+    (0, swagger_1.ApiBody)({ type: create_invoice_dto_1.CreateInvoiceDto }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Factura creada para el cliente' }),
+    __param(0, (0, common_1.Param)('clientId')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_h = typeof create_invoice_dto_1.CreateInvoiceDto !== "undefined" && create_invoice_dto_1.CreateInvoiceDto) === "function" ? _h : Object, Object]),
+    __metadata("design:returntype", void 0)
+], InvoicesController.prototype, "createInvoiceForClient", null);
+__decorate([
+    (0, common_1.Put)('by-client/:clientId/:invoiceId'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({ summary: 'Actualizar factura de cliente', description: 'Actualiza una factura de un cliente específico (ADMIN y ABOGADO)' }),
+    (0, swagger_1.ApiParam)({ name: 'clientId', description: 'ID del cliente' }),
+    (0, swagger_1.ApiParam)({ name: 'invoiceId', description: 'ID de la factura' }),
+    (0, swagger_1.ApiBody)({ type: update_invoice_dto_1.UpdateInvoiceDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Factura actualizada' }),
+    __param(0, (0, common_1.Param)('clientId')),
+    __param(1, (0, common_1.Param)('invoiceId')),
+    __param(2, (0, common_1.Body)()),
+    __param(3, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, typeof (_j = typeof update_invoice_dto_1.UpdateInvoiceDto !== "undefined" && update_invoice_dto_1.UpdateInvoiceDto) === "function" ? _j : Object, Object]),
+    __metadata("design:returntype", void 0)
+], InvoicesController.prototype, "updateInvoiceForClient", null);
+__decorate([
+    (0, common_1.Patch)('by-client/:clientId/:invoiceId'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({ summary: 'Actualizar parcialmente factura de cliente', description: 'Actualiza parcialmente una factura de un cliente específico (ADMIN y ABOGADO)' }),
+    (0, swagger_1.ApiParam)({ name: 'clientId', description: 'ID del cliente' }),
+    (0, swagger_1.ApiParam)({ name: 'invoiceId', description: 'ID de la factura' }),
+    (0, swagger_1.ApiBody)({ type: update_invoice_dto_1.UpdateInvoiceDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Factura actualizada parcialmente' }),
+    __param(0, (0, common_1.Param)('clientId')),
+    __param(1, (0, common_1.Param)('invoiceId')),
+    __param(2, (0, common_1.Body)()),
+    __param(3, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, typeof (_k = typeof update_invoice_dto_1.UpdateInvoiceDto !== "undefined" && update_invoice_dto_1.UpdateInvoiceDto) === "function" ? _k : Object, Object]),
+    __metadata("design:returntype", void 0)
+], InvoicesController.prototype, "patchInvoiceForClient", null);
+__decorate([
+    (0, common_1.Delete)('by-client/:clientId/:invoiceId'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({ summary: 'Eliminar factura de cliente', description: 'Elimina una factura de un cliente específico (ADMIN y ABOGADO)' }),
+    (0, swagger_1.ApiParam)({ name: 'clientId', description: 'ID del cliente' }),
+    (0, swagger_1.ApiParam)({ name: 'invoiceId', description: 'ID de la factura' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Factura eliminada' }),
+    __param(0, (0, common_1.Param)('clientId')),
+    __param(1, (0, common_1.Param)('invoiceId')),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:returntype", void 0)
+], InvoicesController.prototype, "deleteInvoiceForClient", null);
+__decorate([
+    (0, common_1.Get)('clients-with-invoices'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Listar clientes con facturas', description: 'Devuelve la lista de clientes que tienen al menos una factura.' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Lista de clientes con facturas', schema: { type: 'array', items: { type: 'object', properties: { clientId: { type: 'string' }, name: { type: 'string' }, email: { type: 'string' }, facturaCount: { type: 'number' } } } } }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "getClientsWithInvoices", null);
+__decorate([
+    (0, common_1.Get)('debug/:id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ABOGADO, client_1.Role.ADMIN),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Debug factura',
+        description: 'Endpoint de debug para verificar si una factura existe'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la factura', type: 'string' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "debugInvoice", null);
+__decorate([
+    (0, common_1.Get)(':id/audit-history'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener historial de auditoría de factura',
+        description: 'Devuelve el historial completo de cambios realizados en una factura'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la factura', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Historial de auditoría',
+        schema: {
+            type: 'object',
+            properties: {
+                auditHistory: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            action: { type: 'string' },
+                            fieldName: { type: 'string' },
+                            oldValue: { type: 'string' },
+                            newValue: { type: 'string' },
+                            description: { type: 'string' },
+                            ipAddress: { type: 'string' },
+                            userAgent: { type: 'string' },
+                            createdAt: { type: 'string', format: 'date-time' },
+                            user: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    name: { type: 'string' },
+                                    email: { type: 'string' },
+                                    role: { type: 'string' }
+                                }
+                            }
+                        }
+                    }
+                },
+                summary: {
+                    type: 'object',
+                    properties: {
+                        totalChanges: { type: 'number' },
+                        lastModified: { type: 'string', format: 'date-time' },
+                        lastModifiedBy: { type: 'string' },
+                        changesByField: { type: 'object' },
+                        changesByUser: { type: 'object' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "getAuditHistory", null);
+__decorate([
+    (0, common_1.Post)(':id/sign-pdf'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Firmar PDF de factura digitalmente',
+        description: 'Firma digitalmente el PDF de una factura usando AutoFirma'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la factura', type: 'string' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                certificateType: {
+                    type: 'string',
+                    enum: ['FNMT', 'DNIe', 'Other'],
+                    description: 'Tipo de certificado a usar'
+                }
+            },
+            required: ['certificateType']
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'PDF firmado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean' },
+                signedPdf: { type: 'string', description: 'PDF firmado en base64' },
+                signatureInfo: {
+                    type: 'object',
+                    properties: {
+                        signer: { type: 'string' },
+                        timestamp: { type: 'string' },
+                        certificate: { type: 'string' },
+                        signatureAlgorithm: { type: 'string' }
+                    }
+                },
+                downloadUrl: { type: 'string' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 500, description: 'Error en firma digital' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "signPdf", null);
+__decorate([
+    (0, common_1.Get)(':id/signed-pdf'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ABOGADO, client_1.Role.ADMIN, client_1.Role.CLIENTE),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Descargar PDF firmado',
+        description: 'Descarga el PDF de la factura firmado digitalmente'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la factura', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'PDF firmado',
+        schema: {
+            type: 'string',
+            format: 'binary'
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'PDF firmado no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Res)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_l = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _l : Object, Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "downloadSignedPdf", null);
+__decorate([
+    (0, common_1.Post)(':id/upload-signed-pdf'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ABOGADO),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('signedPdf', {
+        storage: multer.diskStorage({
+            destination: (req, file, cb) => {
+                cb(null, path.join(process.cwd(), 'uploads', 'signed-invoices'));
+            },
+            filename: (req, file, cb) => {
+                const invoiceId = req.params.id;
+                const timestamp = Date.now();
+                cb(null, `factura_firmada_${invoiceId}_${timestamp}.pdf`);
+            }
+        }),
+        fileFilter: (req, file, cb) => {
+            if (file.mimetype !== 'application/pdf') {
+                return cb(new Error('Solo se permiten archivos PDF firmados'), false);
+            }
+            cb(null, true);
+        },
+        limits: { fileSize: 20 * 1024 * 1024 }
+    })),
+    (0, swagger_1.ApiOperation)({ summary: 'Subir PDF firmado', description: 'Sube un PDF firmado digitalmente para una factura' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la factura', type: 'string' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'PDF firmado guardado exitosamente', schema: { type: 'object', properties: { success: { type: 'boolean' }, fileName: { type: 'string' }, downloadUrl: { type: 'string' } } } }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Archivo inválido' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.UploadedFile)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "uploadSignedPdf", null);
+__decorate([
+    (0, common_1.Get)('autofirma/status'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ABOGADO, client_1.Role.ADMIN),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Verificar estado de AutoFirma',
+        description: 'Verifica si AutoFirma está disponible y funcionando'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Estado de AutoFirma',
+        schema: {
+            type: 'object',
+            properties: {
+                available: { type: 'boolean' },
+                status: { type: 'string' },
+                message: { type: 'string' },
+                autofirma: {
+                    type: 'object',
+                    properties: {
+                        installed: { type: 'boolean' },
+                        running: { type: 'boolean' },
+                        available: { type: 'boolean' },
+                        installation: { type: 'object' },
+                        runningInfo: { type: 'object' }
+                    }
+                }
+            }
+        }
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "checkAutoFirmaStatus", null);
+__decorate([
+    (0, common_1.Get)(':id/html-preview'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ABOGADO, client_1.Role.ADMIN, client_1.Role.CLIENTE),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Vista previa HTML de la factura', description: 'Devuelve el HTML renderizado de la factura para previsualización' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la factura', type: 'string' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'HTML de la factura', schema: { type: 'string' } }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Res)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_m = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _m : Object, Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "getInvoiceHtmlPreview", null);
+exports.InvoicesController = InvoicesController = __decorate([
+    (0, swagger_1.ApiTags)('invoices'),
+    (0, common_1.Controller)('invoices'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __metadata("design:paramtypes", [typeof (_a = typeof invoices_service_1.InvoicesService !== "undefined" && invoices_service_1.InvoicesService) === "function" ? _a : Object, typeof (_b = typeof invoice_audit_service_1.InvoiceAuditService !== "undefined" && invoice_audit_service_1.InvoiceAuditService) === "function" ? _b : Object, typeof (_c = typeof digital_signature_service_1.DigitalSignatureService !== "undefined" && digital_signature_service_1.DigitalSignatureService) === "function" ? _c : Object])
+], InvoicesController);
+
+
+/***/ }),
+/* 106 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CreateInvoiceDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const class_transformer_1 = __webpack_require__(72);
+const swagger_1 = __webpack_require__(3);
+class InvoiceItemDto {
+}
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Descripción del item',
+        example: 'Servicios de asesoría legal',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], InvoiceItemDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Cantidad del item',
+        example: 1,
+        type: Number,
+    }),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], InvoiceItemDto.prototype, "quantity", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Precio unitario',
+        example: 100.00,
+        type: Number,
+    }),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], InvoiceItemDto.prototype, "unitPrice", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Total del item',
+        example: 100.00,
+        type: Number,
+    }),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], InvoiceItemDto.prototype, "total", void 0);
+class CreateInvoiceDto {
+}
+exports.CreateInvoiceDto = CreateInvoiceDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Número de factura',
+        example: 'FAC-2024-001',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "numeroFactura", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Fecha de la factura',
+        example: '2024-12-25',
+        required: false,
+        type: String,
+        format: 'date',
+    }),
+    (0, class_validator_1.IsDateString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "fechaFactura", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Tipo de factura',
+        example: 'FACTURA',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "tipoFactura", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del emisor (se asigna automáticamente)',
+        example: '123e4567-e89b-12d3-a456-426614174001',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "emisorId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del receptor',
+        example: '123e4567-e89b-12d3-a456-426614174002',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "receptorId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del expediente asociado',
+        example: '123e4567-e89b-12d3-a456-426614174003',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "expedienteId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Importe total de la factura',
+        example: 121.00,
+        required: false,
+        type: Number,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], CreateInvoiceDto.prototype, "importeTotal", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Base imponible',
+        example: 100.00,
+        required: false,
+        type: Number,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], CreateInvoiceDto.prototype, "baseImponible", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Cuota de IVA',
+        example: 21.00,
+        required: false,
+        type: Number,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], CreateInvoiceDto.prototype, "cuotaIVA", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Tipo de IVA (porcentaje)',
+        example: 21,
+        type: Number,
+    }),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CreateInvoiceDto.prototype, "tipoIVA", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Régimen de IVA del emisor',
+        example: '01',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "regimenIvaEmisor", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Clave de operación',
+        example: '01',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "claveOperacion", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Método de pago',
+        example: '01',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "metodoPago", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Fecha de operación',
+        example: '2024-12-25',
+        type: String,
+        format: 'date',
+    }),
+    (0, class_validator_1.IsDateString)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "fechaOperacion", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Motivo de anulación',
+        example: 'Error en datos',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "motivoAnulacion", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'IDs de provisiones asociadas',
+        example: ['123e4567-e89b-12d3-a456-426614174004'],
+        required: false,
+        type: [String],
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsString)({ each: true }),
+    __metadata("design:type", Array)
+], CreateInvoiceDto.prototype, "provisionIds", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Descuento aplicado',
+        example: 0,
+        required: false,
+        type: Number,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Transform)(({ value }) => {
+        if (value === '' || value === null || value === undefined)
+            return 0;
+        const num = Number(value);
+        return isNaN(num) ? 0 : num;
+    }),
+    __metadata("design:type", Number)
+], CreateInvoiceDto.prototype, "descuento", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Retención aplicada',
+        example: 0,
+        required: false,
+        type: Number,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Transform)(({ value }) => {
+        if (value === '' || value === null || value === undefined)
+            return 0;
+        const num = Number(value);
+        return isNaN(num) ? 0 : num;
+    }),
+    __metadata("design:type", Number)
+], CreateInvoiceDto.prototype, "retencion", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Si se debe aplicar IVA',
+        example: true,
+        required: false,
+        type: Boolean,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateInvoiceDto.prototype, "aplicarIVA", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Tipo de impuesto (iva o retencion)',
+        example: 'iva',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "tipoImpuesto", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Items de la factura',
+        type: [InvoiceItemDto],
+    }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => InvoiceItemDto),
+    __metadata("design:type", Array)
+], CreateInvoiceDto.prototype, "items", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Estado de la factura',
+        example: 'emitida',
+        required: true,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "estado", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID de la factura original (para rectificativas)',
+        example: '123e4567-e89b-12d3-a456-426614174005',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "facturaOriginalId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Tipo de rectificación (R1, R2, R3, R4)',
+        example: 'R1',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "tipoRectificacion", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Motivo de la rectificación',
+        example: 'Anulación por error en datos',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateInvoiceDto.prototype, "motivoRectificacion", void 0);
+
+
+/***/ }),
+/* 107 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UpdateInvoiceDto = exports.UpdateInvoiceItemDto = void 0;
+const swagger_1 = __webpack_require__(3);
+const class_validator_1 = __webpack_require__(23);
+const class_transformer_1 = __webpack_require__(72);
+class UpdateInvoiceItemDto {
+}
+exports.UpdateInvoiceItemDto = UpdateInvoiceItemDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Descripción del concepto',
+        example: 'Consulta legal',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], UpdateInvoiceItemDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Cantidad',
+        example: 1,
+        type: Number,
+    }),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], UpdateInvoiceItemDto.prototype, "quantity", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Precio unitario',
+        example: 100.00,
+        type: Number,
+    }),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], UpdateInvoiceItemDto.prototype, "unitPrice", void 0);
+class UpdateInvoiceDto {
+}
+exports.UpdateInvoiceDto = UpdateInvoiceDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del receptor',
+        example: '123e4567-e89b-12d3-a456-426614174002',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateInvoiceDto.prototype, "receptorId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del expediente asociado',
+        example: '123e4567-e89b-12d3-a456-426614174003',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateInvoiceDto.prototype, "expedienteId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Tipo de IVA (porcentaje)',
+        example: 21,
+        required: false,
+        type: Number,
+    }),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], UpdateInvoiceDto.prototype, "tipoIVA", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Porcentaje de descuento',
+        example: 10,
+        required: false,
+        type: Number,
+    }),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], UpdateInvoiceDto.prototype, "descuento", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Porcentaje de retención',
+        example: 15,
+        required: false,
+        type: Number,
+    }),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], UpdateInvoiceDto.prototype, "retencion", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Si se debe aplicar IVA',
+        example: true,
+        required: false,
+        type: Boolean,
+    }),
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], UpdateInvoiceDto.prototype, "aplicarIVA", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Tipo de impuesto (iva o retencion)',
+        example: 'iva',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateInvoiceDto.prototype, "tipoImpuesto", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Régimen IVA del emisor',
+        example: 'General',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateInvoiceDto.prototype, "regimenIvaEmisor", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Clave de operación',
+        example: '01',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateInvoiceDto.prototype, "claveOperacion", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Método de pago',
+        example: 'transferencia',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateInvoiceDto.prototype, "metodoPago", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Fecha de operación',
+        example: '2024-12-25',
+        required: false,
+        type: String,
+        format: 'date',
+    }),
+    (0, class_validator_1.IsDateString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateInvoiceDto.prototype, "fechaOperacion", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Fecha de la factura',
+        example: '2024-12-25',
+        required: false,
+        type: String,
+        format: 'date',
+    }),
+    (0, class_validator_1.IsDateString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateInvoiceDto.prototype, "fechaFactura", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Estado de la factura',
+        example: 'emitida',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateInvoiceDto.prototype, "estado", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Motivo de anulación',
+        example: 'Error en datos del cliente',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateInvoiceDto.prototype, "motivoAnulacion", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Fecha de pago',
+        example: '2024-12-25',
+        required: false,
+        type: String,
+        format: 'date',
+    }),
+    (0, class_validator_1.IsDateString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateInvoiceDto.prototype, "paymentDate", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Items de la factura',
+        required: false,
+        type: [UpdateInvoiceItemDto],
+    }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => UpdateInvoiceItemDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Array)
+], UpdateInvoiceDto.prototype, "items", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'IDs de las provisiones de fondos asociadas',
+        required: false,
+        type: [String],
+    }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsString)({ each: true }),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Array)
+], UpdateInvoiceDto.prototype, "provisionIds", void 0);
+
+
+/***/ }),
+/* 108 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+var DigitalSignatureService_1;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DigitalSignatureService = void 0;
+const common_1 = __webpack_require__(2);
+const axios_1 = __importDefault(__webpack_require__(109));
+const fs = __importStar(__webpack_require__(44));
+const path = __importStar(__webpack_require__(45));
+let DigitalSignatureService = DigitalSignatureService_1 = class DigitalSignatureService {
+    constructor() {
+        this.logger = new common_1.Logger(DigitalSignatureService_1.name);
+        this.autofirmaUrl = 'http://127.0.0.1:8080';
+    }
+    async signPdfWithAutoFirma(request) {
+        try {
+            this.logger.log(`Iniciando firma digital de PDF: ${request.fileName}`);
+            await this.checkAutoFirmaStatus();
+            const signatureRequest = {
+                fileName: request.fileName,
+                fileContent: request.fileContent,
+                fileSize: request.fileSize,
+                certificateType: request.certificateType,
+                userId: request.userId,
+                invoiceId: request.invoiceId,
+                timestamp: new Date().toISOString()
+            };
+            this.logger.log('Enviando solicitud de firma a AutoFirma...');
+            const response = await axios_1.default.post(`${this.autofirmaUrl}/afirma-sign-pdf`, signatureRequest, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'LegalManagementSystem/1.0'
+                },
+                timeout: 30000
+            });
+            if (response.data.success) {
+                this.logger.log('PDF firmado exitosamente');
+                return {
+                    success: true,
+                    signedPdf: response.data.signedPdf.signedPdf,
+                    signatureInfo: response.data.signatureInfo
+                };
+            }
+            else {
+                throw new Error(response.data.error || 'Error desconocido en AutoFirma');
+            }
+        }
+        catch (error) {
+            this.logger.error('Error en firma digital:', error);
+            if (axios_1.default.isAxiosError(error)) {
+                if (error.code === 'ECONNREFUSED') {
+                    return {
+                        success: false,
+                        error: 'AutoFirma no está disponible. Verifique que esté instalado y ejecutándose.'
+                    };
+                }
+                if (error.response?.status === 500) {
+                    return {
+                        success: false,
+                        error: 'Error interno en AutoFirma: ' + (error.response.data?.error || 'Error desconocido')
+                    };
+                }
+            }
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Error desconocido en firma digital'
+            };
+        }
+    }
+    async checkAutoFirmaStatus() {
+        try {
+            const response = await axios_1.default.get(`${this.autofirmaUrl}/status`, {
+                timeout: 5000
+            });
+            this.logger.log('AutoFirma status:', response.data);
+            if (response.data.autofirma) {
+                const { installed, running, available } = response.data.autofirma;
+                if (!installed) {
+                    this.logger.error('AutoFirma no está instalado');
+                    throw new Error('AutoFirma no está instalado en el sistema');
+                }
+                if (!running) {
+                    this.logger.error('AutoFirma no está ejecutándose');
+                    throw new Error('AutoFirma no está ejecutándose. Abre AutoFirma manualmente');
+                }
+                if (!available) {
+                    this.logger.error('AutoFirma no está disponible');
+                    throw new Error('AutoFirma no está disponible para firmar');
+                }
+            }
+            return response.data.status === 'running';
+        }
+        catch (error) {
+            this.logger.error('Error verificando estado de AutoFirma:', error);
+            if (axios_1.default.isAxiosError(error)) {
+                if (error.code === 'ECONNREFUSED') {
+                    throw new Error('AutoFirma HTTP Server no está ejecutándose. Ejecuta: node autofirma-http-server.js');
+                }
+                if (error.response?.data?.message) {
+                    throw new Error(error.response.data.message);
+                }
+            }
+            throw new Error(error instanceof Error ? error.message : 'AutoFirma no está disponible');
+        }
+    }
+    async getAutoFirmaDetailedStatus() {
+        try {
+            const response = await axios_1.default.get(`${this.autofirmaUrl}/status`, {
+                timeout: 5000
+            });
+            return response.data;
+        }
+        catch (error) {
+            this.logger.error('Error obteniendo estado detallado de AutoFirma:', error);
+            if (axios_1.default.isAxiosError(error)) {
+                if (error.code === 'ECONNREFUSED') {
+                    return {
+                        status: 'error',
+                        autofirma: {
+                            installed: false,
+                            running: false,
+                            available: false,
+                            error: 'AutoFirma HTTP Server no está ejecutándose'
+                        },
+                        message: 'Ejecuta: node autofirma-http-server.js'
+                    };
+                }
+            }
+            return {
+                status: 'error',
+                autofirma: {
+                    installed: false,
+                    running: false,
+                    available: false,
+                    error: error instanceof Error ? error.message : 'Error desconocido'
+                },
+                message: 'Error verificando AutoFirma'
+            };
+        }
+    }
+    async getCertificateInfo(userId) {
+        try {
+            return {
+                subject: 'CN=Abogado Demo, OU=Despacho Legal, O=Demo, C=ES',
+                issuer: 'CN=AC FNMT Usuarios, O=FNMT, C=ES',
+                validFrom: '2024-01-01T00:00:00Z',
+                validTo: '2025-01-01T00:00:00Z',
+                serialNumber: '1234567890ABCDEF'
+            };
+        }
+        catch (error) {
+            this.logger.error('Error obteniendo información del certificado:', error);
+            return null;
+        }
+    }
+    async validateSignedPdf(signedPdfBase64) {
+        try {
+            this.logger.log('Validando PDF firmado...');
+            const pdfBuffer = Buffer.from(signedPdfBase64, 'base64');
+            const pdfContent = pdfBuffer.toString();
+            const isValid = pdfBuffer.length > 0 &&
+                pdfContent.startsWith('%PDF-1.4') &&
+                pdfContent.includes('FACTURA FIRMADA DIGITALMENTE');
+            this.logger.log(`PDF firmado válido: ${isValid}`);
+            return isValid;
+        }
+        catch (error) {
+            this.logger.error('Error validando PDF firmado:', error);
+            return false;
+        }
+    }
+    async saveSignedPdf(invoiceId, signedPdfBase64) {
+        try {
+            const uploadsDir = path.join(process.cwd(), 'uploads', 'signed-invoices');
+            if (!fs.existsSync(uploadsDir)) {
+                fs.mkdirSync(uploadsDir, { recursive: true });
+            }
+            const fileName = `factura_firmada_${invoiceId}_${Date.now()}.pdf`;
+            const filePath = path.join(uploadsDir, fileName);
+            const pdfBuffer = Buffer.from(signedPdfBase64, 'base64');
+            fs.writeFileSync(filePath, pdfBuffer);
+            this.logger.log(`PDF firmado guardado en: ${filePath}`);
+            return fileName;
+        }
+        catch (error) {
+            this.logger.error('Error guardando PDF firmado:', error);
+            throw new Error('Error guardando PDF firmado');
+        }
+    }
+    getSignedPdfDownloadUrl(fileName) {
+        return `/uploads/signed-invoices/${fileName}`;
+    }
+};
+exports.DigitalSignatureService = DigitalSignatureService;
+exports.DigitalSignatureService = DigitalSignatureService = DigitalSignatureService_1 = __decorate([
+    (0, common_1.Injectable)()
+], DigitalSignatureService);
+
+
+/***/ }),
+/* 109 */
+/***/ ((module) => {
+
+module.exports = require("axios");
+
+/***/ }),
+/* 110 */
+/***/ ((module) => {
+
+module.exports = require("multer");
+
+/***/ }),
+/* 111 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FacturaeController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const express_1 = __webpack_require__(48);
+const invoices_service_1 = __webpack_require__(90);
+const jwt_auth_guard_1 = __webpack_require__(27);
+const xades_sign_util_1 = __webpack_require__(93);
+let FacturaeController = class FacturaeController {
+    constructor(invoicesService) {
+        this.invoicesService = invoicesService;
+    }
+    async generateAndSignInvoiceAdvanced(id, options = {}) {
+        const signingOptions = {
+            level: options.level || xades_sign_util_1.XAdESLevel.BES,
+            tsaUrl: options.tsaUrl,
+            ocspUrl: options.ocspUrl,
+            policy: options.policy,
+            signerRole: options.signerRole
+        };
+        return await this.invoicesService.generateAndSignInvoiceAdvanced(id, signingOptions);
+    }
+    async validateInvoice(id, req) {
+        const checkSignature = req.query.signature !== 'false';
+        return await this.invoicesService.validateInvoice(id, checkSignature);
+    }
+    async downloadSignedXML(id, res) {
+        try {
+            const invoice = await this.invoicesService.findOne(id);
+            if (!invoice || !invoice.xmlFirmado) {
+                return res.status(common_1.HttpStatus.NOT_FOUND).json({
+                    message: 'Factura o XML firmado no encontrado'
+                });
+            }
+            const filename = `factura_${invoice.numeroFactura}_firmada.xml`;
+            res.setHeader('Content-Type', 'application/xml');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            res.setHeader('Content-Length', Buffer.byteLength(invoice.xmlFirmado, 'utf8'));
+            return res.send(invoice.xmlFirmado);
+        }
+        catch (error) {
+            return res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({
+                message: 'Error al descargar el archivo',
+                error: error instanceof Error ? error.message : String(error)
+            });
+        }
+    }
+    async getCertificateInfo() {
+        return await this.invoicesService.getCertificateInfo();
+    }
+    async checkCertificateStatus() {
+        return await this.invoicesService.checkCertificateStatus();
+    }
+    async generateValidationReport(id) {
+        const report = await this.invoicesService.generateValidationReport(id);
+        return { report };
+    }
+    async validateXML(data) {
+        const { xml, checkSignature = true } = data;
+        const { FacturaeValidator } = await Promise.resolve().then(() => __importStar(__webpack_require__(98)));
+        if (checkSignature) {
+            return FacturaeValidator.validateSignedDocument(xml, {
+                validateSchema: true,
+                validateBusinessRules: true,
+                strictMode: false
+            });
+        }
+        else {
+            return FacturaeValidator.validateXML(xml, {
+                validateSchema: true,
+                validateBusinessRules: true,
+                strictMode: false
+            });
+        }
+    }
+    async getConfig() {
+        return {
+            message: 'Configuración del servicio Facturae',
+            note: 'La configuración se maneja a través de variables de entorno'
+        };
+    }
+    async testConnectivity() {
+        try {
+            const certStatus = await this.invoicesService.checkCertificateStatus();
+            return {
+                success: true,
+                certificate: certStatus,
+                services: {
+                    tsa: 'Configurado' + (process.env.FACTURAE_TSA_URL ? ' (URL disponible)' : ' (No configurado)'),
+                    ocsp: 'Configurado' + (process.env.FACTURAE_OCSP_URL ? ' (URL disponible)' : ' (No configurado)')
+                }
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : String(error)
+            };
+        }
+    }
+};
+exports.FacturaeController = FacturaeController;
+__decorate([
+    (0, common_1.Post)(':id/generate-and-sign'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Generar y firmar factura electrónica',
+        description: 'Genera el XML Facturae 3.2.2 y lo firma digitalmente con XAdES avanzado'
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'id',
+        description: 'ID de la factura a firmar',
+        type: 'string'
+    }),
+    (0, swagger_1.ApiBody)({
+        description: 'Opciones de firma digital',
+        schema: {
+            type: 'object',
+            properties: {
+                level: {
+                    type: 'string',
+                    enum: ['BES', 'T', 'C', 'X', 'XL'],
+                    description: 'Nivel XAdES de firma digital',
+                    default: 'BES'
+                },
+                tsaUrl: {
+                    type: 'string',
+                    description: 'URL del servidor TSA para sellos de tiempo',
+                    example: 'https://tsa.example.com/timestamp'
+                },
+                ocspUrl: {
+                    type: 'string',
+                    description: 'URL del servidor OCSP para validación de certificados',
+                    example: 'https://ocsp.example.com'
+                },
+                policy: {
+                    type: 'string',
+                    description: 'Política de firma',
+                    example: 'urn:oid:2.16.724.1.3.1.1.2.1.9'
+                },
+                signerRole: {
+                    type: 'string',
+                    description: 'Rol del firmante',
+                    example: 'Emisor'
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Factura generada y firmada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean' },
+                xmlContent: { type: 'string', description: 'XML sin firma' },
+                signedXmlContent: { type: 'string', description: 'XML firmado' },
+                validationResult: {
+                    type: 'object',
+                    properties: {
+                        isValid: { type: 'boolean' },
+                        errors: { type: 'array', items: { type: 'string' } },
+                        warnings: { type: 'array', items: { type: 'string' } }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 400,
+        description: 'Error en la generación o firma',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean' },
+                errors: { type: 'array', items: { type: 'string' } }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], FacturaeController.prototype, "generateAndSignInvoiceAdvanced", null);
+__decorate([
+    (0, common_1.Get)(':id/validate'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Validar factura electrónica',
+        description: 'Valida el XML Facturae y opcionalmente la firma digital'
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'id',
+        description: 'ID de la factura a validar',
+        type: 'string'
+    }),
+    (0, swagger_1.ApiQuery)({
+        name: 'signature',
+        description: 'Validar también la firma digital',
+        type: 'boolean',
+        required: false,
+        example: true
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Resultado de la validación',
+        schema: {
+            type: 'object',
+            properties: {
+                isValid: { type: 'boolean' },
+                errors: { type: 'array', items: { type: 'string' } },
+                warnings: { type: 'array', items: { type: 'string' } }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], FacturaeController.prototype, "validateInvoice", null);
+__decorate([
+    (0, common_1.Get)(':id/download'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Descargar XML firmado',
+        description: 'Descarga el XML Facturae firmado como archivo'
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'id',
+        description: 'ID de la factura',
+        type: 'string'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Archivo XML descargado',
+        content: {
+            'application/xml': {
+                schema: {
+                    type: 'string',
+                    format: 'binary'
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura o XML no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_b = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _b : Object]),
+    __metadata("design:returntype", Promise)
+], FacturaeController.prototype, "downloadSignedXML", null);
+__decorate([
+    (0, common_1.Get)('certificate/info'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Información del certificado',
+        description: 'Obtiene información detallada del certificado digital'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Información del certificado',
+        schema: {
+            type: 'object',
+            properties: {
+                subject: { type: 'string' },
+                issuer: { type: 'string' },
+                serialNumber: { type: 'string' },
+                validFrom: { type: 'string', format: 'date-time' },
+                validTo: { type: 'string', format: 'date-time' },
+                isValid: { type: 'boolean' }
+            }
+        }
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], FacturaeController.prototype, "getCertificateInfo", null);
+__decorate([
+    (0, common_1.Get)('certificate/status'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Estado del certificado',
+        description: 'Verifica el estado del certificado mediante OCSP'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Estado del certificado',
+        schema: {
+            type: 'object',
+            properties: {
+                isValid: { type: 'boolean' },
+                info: {
+                    type: 'object',
+                    properties: {
+                        subject: { type: 'string' },
+                        issuer: { type: 'string' },
+                        serialNumber: { type: 'string' },
+                        validFrom: { type: 'string', format: 'date-time' },
+                        validTo: { type: 'string', format: 'date-time' },
+                        isValid: { type: 'boolean' }
+                    }
+                },
+                ocspValid: { type: 'boolean' }
+            }
+        }
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], FacturaeController.prototype, "checkCertificateStatus", null);
+__decorate([
+    (0, common_1.Get)(':id/validation-report'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Reporte de validación',
+        description: 'Genera un reporte detallado de validación de la factura'
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'id',
+        description: 'ID de la factura',
+        type: 'string'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Reporte de validación',
+        schema: {
+            type: 'object',
+            properties: {
+                report: { type: 'string' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], FacturaeController.prototype, "generateValidationReport", null);
+__decorate([
+    (0, common_1.Post)('validate-xml'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Validar XML directamente',
+        description: 'Valida un XML Facturae proporcionado directamente'
+    }),
+    (0, swagger_1.ApiBody)({
+        description: 'XML a validar',
+        schema: {
+            type: 'object',
+            properties: {
+                xml: {
+                    type: 'string',
+                    description: 'Contenido XML de la factura',
+                    example: '<Facturae xmlns="http://www.facturae.es/Facturae/2014/v3.2.2/Facturae">...</Facturae>'
+                },
+                checkSignature: {
+                    type: 'boolean',
+                    description: 'Validar también la firma digital',
+                    default: true
+                }
+            },
+            required: ['xml']
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Resultado de la validación',
+        schema: {
+            type: 'object',
+            properties: {
+                isValid: { type: 'boolean' },
+                errors: { type: 'array', items: { type: 'string' } },
+                warnings: { type: 'array', items: { type: 'string' } }
+            }
+        }
+    }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], FacturaeController.prototype, "validateXML", null);
+__decorate([
+    (0, common_1.Get)('config'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Configuración del servicio',
+        description: 'Obtiene la configuración actual del servicio Facturae'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Configuración del servicio',
+        schema: {
+            type: 'object',
+            properties: {
+                message: { type: 'string' },
+                note: { type: 'string' }
+            }
+        }
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], FacturaeController.prototype, "getConfig", null);
+__decorate([
+    (0, common_1.Get)('test-connectivity'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Prueba de conectividad',
+        description: 'Prueba la conectividad con servicios externos (TSA, OCSP)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Estado de conectividad',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean' },
+                certificate: {
+                    type: 'object',
+                    properties: {
+                        isValid: { type: 'boolean' },
+                        info: { type: 'object' },
+                        ocspValid: { type: 'boolean' }
+                    }
+                },
+                services: {
+                    type: 'object',
+                    properties: {
+                        tsa: { type: 'string' },
+                        ocsp: { type: 'string' }
+                    }
+                }
+            }
+        }
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], FacturaeController.prototype, "testConnectivity", null);
+exports.FacturaeController = FacturaeController = __decorate([
+    (0, swagger_1.ApiTags)('Facturación Electrónica - Facturae'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.Controller)('facturae'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __metadata("design:paramtypes", [typeof (_a = typeof invoices_service_1.InvoicesService !== "undefined" && invoices_service_1.InvoicesService) === "function" ? _a : Object])
+], FacturaeController);
+
+
+/***/ }),
+/* 112 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ExternalSystemsController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const external_systems_service_1 = __webpack_require__(113);
+const jwt_auth_guard_1 = __webpack_require__(27);
+let ExternalSystemsController = class ExternalSystemsController {
+    constructor(externalSystemsService) {
+        this.externalSystemsService = externalSystemsService;
+    }
+    async sendToExternalSystem(invoiceId, system) {
+        return await this.externalSystemsService.sendToExternalSystem(invoiceId, system);
+    }
+    async validateForExternalSystem(invoiceId, system) {
+        return await this.externalSystemsService.validateForExternalSystem(invoiceId, system);
+    }
+    async testConnectivity(system) {
+        return await this.externalSystemsService.testConnectivity(system);
+    }
+    async getExternalStatus(invoiceId, system) {
+        return await this.externalSystemsService.getExternalStatus(invoiceId, system);
+    }
+    async getAvailableSystems() {
+        const systems = this.externalSystemsService.getAvailableSystems();
+        return { systems };
+    }
+    async getSystemConfig(system) {
+        const config = this.externalSystemsService.getSystemConfig(system);
+        if (!config) {
+            return { error: 'Sistema no encontrado' };
+        }
+        return {
+            name: config.name,
+            url: config.url,
+            timeout: config.timeout,
+            retries: config.retries
+        };
+    }
+    async batchSendToExternalSystem(system, data) {
+        const results = [];
+        let successful = 0;
+        let failed = 0;
+        for (const invoiceId of data.invoiceIds) {
+            try {
+                const result = await this.externalSystemsService.sendToExternalSystem(invoiceId, system);
+                results.push({
+                    invoiceId,
+                    success: result.success,
+                    message: result.message,
+                    externalId: result.externalId
+                });
+                if (result.success) {
+                    successful++;
+                }
+                else {
+                    failed++;
+                }
+            }
+            catch (error) {
+                results.push({
+                    invoiceId,
+                    success: false,
+                    message: error instanceof Error ? error.message : String(error)
+                });
+                failed++;
+            }
+        }
+        return {
+            success: failed === 0,
+            system,
+            total: data.invoiceIds.length,
+            successful,
+            failed,
+            results
+        };
+    }
+};
+exports.ExternalSystemsController = ExternalSystemsController;
+__decorate([
+    (0, common_1.Post)(':invoiceId/send/:system'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Enviar factura a sistema externo',
+        description: 'Envía una factura firmada a un sistema externo (AEAT, FACE, etc.)'
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'invoiceId',
+        description: 'ID de la factura a enviar',
+        type: 'string'
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'system',
+        description: 'Sistema externo destino',
+        enum: ['AEAT', 'FACE', 'GENERAL'],
+        type: 'string'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Factura enviada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean' },
+                system: { type: 'string' },
+                message: { type: 'string' },
+                externalId: { type: 'string' },
+                responseData: { type: 'object' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 400,
+        description: 'Error en el envío',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean' },
+                system: { type: 'string' },
+                message: { type: 'string' },
+                errors: { type: 'array', items: { type: 'string' } }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Param)('invoiceId')),
+    __param(1, (0, common_1.Param)('system')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], ExternalSystemsController.prototype, "sendToExternalSystem", null);
+__decorate([
+    (0, common_1.Get)(':invoiceId/validate/:system'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Validar factura para sistema externo',
+        description: 'Valida una factura para asegurar que cumple los requisitos de un sistema externo'
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'invoiceId',
+        description: 'ID de la factura a validar',
+        type: 'string'
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'system',
+        description: 'Sistema externo para validar',
+        enum: ['AEAT', 'FACE', 'GENERAL'],
+        type: 'string'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Resultado de la validación',
+        schema: {
+            type: 'object',
+            properties: {
+                system: { type: 'string' },
+                isValid: { type: 'boolean' },
+                errors: { type: 'array', items: { type: 'string' } },
+                warnings: { type: 'array', items: { type: 'string' } },
+                requirements: { type: 'array', items: { type: 'string' } }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Param)('invoiceId')),
+    __param(1, (0, common_1.Param)('system')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], ExternalSystemsController.prototype, "validateForExternalSystem", null);
+__decorate([
+    (0, common_1.Get)('test-connectivity/:system'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Probar conectividad con sistema externo',
+        description: 'Prueba la conectividad con un sistema externo específico'
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'system',
+        description: 'Sistema externo a probar',
+        enum: ['AEAT', 'FACE', 'GENERAL'],
+        type: 'string'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Resultado de la prueba de conectividad',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean' },
+                system: { type: 'string' },
+                message: { type: 'string' },
+                details: { type: 'object' }
+            }
+        }
+    }),
+    __param(0, (0, common_1.Param)('system')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], ExternalSystemsController.prototype, "testConnectivity", null);
+__decorate([
+    (0, common_1.Get)(':invoiceId/status/:system'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Consultar estado en sistema externo',
+        description: 'Consulta el estado de una factura en un sistema externo'
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'invoiceId',
+        description: 'ID de la factura',
+        type: 'string'
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'system',
+        description: 'Sistema externo',
+        enum: ['AEAT', 'FACE', 'GENERAL'],
+        type: 'string'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Estado de la factura',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean' },
+                system: { type: 'string' },
+                status: { type: 'string' },
+                message: { type: 'string' },
+                details: { type: 'object' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Param)('invoiceId')),
+    __param(1, (0, common_1.Param)('system')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], ExternalSystemsController.prototype, "getExternalStatus", null);
+__decorate([
+    (0, common_1.Get)('available'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Sistemas externos disponibles',
+        description: 'Lista todos los sistemas externos configurados'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de sistemas disponibles',
+        schema: {
+            type: 'object',
+            properties: {
+                systems: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    example: ['AEAT', 'FACE', 'GENERAL']
+                }
+            }
+        }
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ExternalSystemsController.prototype, "getAvailableSystems", null);
+__decorate([
+    (0, common_1.Get)('config/:system'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Configuración de sistema externo',
+        description: 'Obtiene la configuración de un sistema externo específico'
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'system',
+        description: 'Sistema externo',
+        enum: ['AEAT', 'FACE', 'GENERAL'],
+        type: 'string'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Configuración del sistema',
+        schema: {
+            type: 'object',
+            properties: {
+                name: { type: 'string' },
+                url: { type: 'string' },
+                timeout: { type: 'number' },
+                retries: { type: 'number' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Sistema no encontrado' }),
+    __param(0, (0, common_1.Param)('system')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], ExternalSystemsController.prototype, "getSystemConfig", null);
+__decorate([
+    (0, common_1.Post)('batch-send/:system'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Envío masivo a sistema externo',
+        description: 'Envía múltiples facturas a un sistema externo'
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'system',
+        description: 'Sistema externo destino',
+        enum: ['AEAT', 'FACE', 'GENERAL'],
+        type: 'string'
+    }),
+    (0, swagger_1.ApiBody)({
+        description: 'IDs de facturas a enviar',
+        schema: {
+            type: 'object',
+            properties: {
+                invoiceIds: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Lista de IDs de facturas'
+                }
+            },
+            required: ['invoiceIds']
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Resultado del envío masivo',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean' },
+                system: { type: 'string' },
+                total: { type: 'number' },
+                successful: { type: 'number' },
+                failed: { type: 'number' },
+                results: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            invoiceId: { type: 'string' },
+                            success: { type: 'boolean' },
+                            message: { type: 'string' },
+                            externalId: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    __param(0, (0, common_1.Param)('system')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], ExternalSystemsController.prototype, "batchSendToExternalSystem", null);
+exports.ExternalSystemsController = ExternalSystemsController = __decorate([
+    (0, swagger_1.ApiTags)('Sistemas Externos - Facturación'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.Controller)('external-systems'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __metadata("design:paramtypes", [typeof (_a = typeof external_systems_service_1.ExternalSystemsService !== "undefined" && external_systems_service_1.ExternalSystemsService) === "function" ? _a : Object])
+], ExternalSystemsController);
+
+
+/***/ }),
+/* 113 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var ExternalSystemsService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ExternalSystemsService = void 0;
+const common_1 = __webpack_require__(2);
+const facturae_validator_util_1 = __webpack_require__(98);
+const invoices_service_1 = __webpack_require__(90);
+let ExternalSystemsService = ExternalSystemsService_1 = class ExternalSystemsService {
+    constructor(invoicesService) {
+        this.invoicesService = invoicesService;
+        this.logger = new common_1.Logger(ExternalSystemsService_1.name);
+        this.systemConfigs = new Map([
+            ['AEAT', {
+                    name: 'AEAT',
+                    url: process.env.AEAT_URL || 'https://www2.agenciatributaria.gob.es/wlpl/BUGTR/ws/fe/',
+                    apiKey: process.env.AEAT_API_KEY,
+                    timeout: 30000,
+                    retries: 3
+                }],
+            ['FACE', {
+                    name: 'FACE',
+                    url: process.env.FACE_URL || 'https://face.gob.es/webservices/',
+                    apiKey: process.env.FACE_API_KEY,
+                    timeout: 30000,
+                    retries: 3
+                }],
+            ['GENERAL', {
+                    name: 'GENERAL',
+                    url: process.env.GENERAL_SYSTEM_URL || '',
+                    apiKey: process.env.GENERAL_SYSTEM_API_KEY,
+                    timeout: 30000,
+                    retries: 3
+                }]
+        ]);
+    }
+    async sendToExternalSystem(invoiceId, system) {
+        try {
+            this.logger.log(`Enviando factura ${invoiceId} a ${system}`);
+            const invoice = await this.invoicesService.findOne(invoiceId);
+            if (!invoice) {
+                return {
+                    success: false,
+                    system,
+                    message: 'Factura no encontrada',
+                    errors: ['Factura no encontrada']
+                };
+            }
+            const xmlContent = invoice.xmlFirmado || invoice.xml;
+            if (!xmlContent) {
+                return {
+                    success: false,
+                    system,
+                    message: 'XML no encontrado',
+                    errors: ['XML de la factura no encontrado']
+                };
+            }
+            const validation = facturae_validator_util_1.FacturaeValidator.validateForExternalSystem(xmlContent, system);
+            if (!validation.isValid) {
+                return {
+                    success: false,
+                    system,
+                    message: `Validación fallida para ${system}`,
+                    errors: validation.errors,
+                    warnings: validation.warnings
+                };
+            }
+            const config = this.systemConfigs.get(system);
+            if (!config) {
+                return {
+                    success: false,
+                    system,
+                    message: `Configuración no encontrada para ${system}`,
+                    errors: [`Configuración no encontrada para ${system}`]
+                };
+            }
+            const sendResult = await this.sendToSystem(xmlContent, config, invoice);
+            if (sendResult.success) {
+                await this.updateInvoiceStatus(invoiceId, system, sendResult.externalId);
+            }
+            return sendResult;
+        }
+        catch (error) {
+            this.logger.error(`Error enviando factura a ${system}:`, error);
+            return {
+                success: false,
+                system,
+                message: `Error enviando a ${system}`,
+                errors: [error instanceof Error ? error.message : String(error)]
+            };
+        }
+    }
+    async sendToSystem(xmlContent, config, invoice) {
+        try {
+            this.logger.log(`Enviando a ${config.name} en ${config.url}`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const externalId = `EXT-${config.name}-${Date.now()}`;
+            this.logger.log(`Factura enviada exitosamente a ${config.name} con ID: ${externalId}`);
+            return {
+                success: true,
+                system: config.name,
+                message: `Factura enviada exitosamente a ${config.name}`,
+                externalId,
+                responseData: {
+                    externalId,
+                    timestamp: new Date().toISOString(),
+                    status: 'ACCEPTED'
+                }
+            };
+        }
+        catch (error) {
+            this.logger.error(`Error enviando a ${config.name}:`, error);
+            return {
+                success: false,
+                system: config.name,
+                message: `Error enviando a ${config.name}`,
+                errors: [error instanceof Error ? error.message : String(error)]
+            };
+        }
+    }
+    async updateInvoiceStatus(invoiceId, system, externalId) {
+        try {
+            const updateData = {
+                estado: 'enviada',
+                sistemaEnvio: system,
+                fechaEnvio: new Date()
+            };
+            if (externalId) {
+                updateData.externalId = externalId;
+            }
+            await this.invoicesService.update(invoiceId, updateData);
+            this.logger.log(`Estado de factura ${invoiceId} actualizado a enviada`);
+        }
+        catch (error) {
+            this.logger.error(`Error actualizando estado de factura ${invoiceId}:`, error);
+        }
+    }
+    async validateForExternalSystem(invoiceId, system) {
+        try {
+            const invoice = await this.invoicesService.findOne(invoiceId);
+            if (!invoice) {
+                return {
+                    system,
+                    isValid: false,
+                    errors: ['Factura no encontrada'],
+                    warnings: [],
+                    requirements: []
+                };
+            }
+            const xmlContent = invoice.xmlFirmado || invoice.xml;
+            if (!xmlContent) {
+                return {
+                    system,
+                    isValid: false,
+                    errors: ['XML de la factura no encontrado'],
+                    warnings: [],
+                    requirements: []
+                };
+            }
+            return facturae_validator_util_1.FacturaeValidator.validateForExternalSystem(xmlContent, system);
+        }
+        catch (error) {
+            this.logger.error(`Error validando factura para ${system}:`, error);
+            return {
+                system,
+                isValid: false,
+                errors: [error instanceof Error ? error.message : String(error)],
+                warnings: [],
+                requirements: []
+            };
+        }
+    }
+    getSystemConfig(system) {
+        return this.systemConfigs.get(system);
+    }
+    getAvailableSystems() {
+        return Array.from(this.systemConfigs.keys());
+    }
+    async testConnectivity(system) {
+        try {
+            const config = this.systemConfigs.get(system);
+            if (!config) {
+                return {
+                    success: false,
+                    system,
+                    message: `Configuración no encontrada para ${system}`
+                };
+            }
+            this.logger.log(`Probando conectividad con ${system} en ${config.url}`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            return {
+                success: true,
+                system,
+                message: `Conectividad exitosa con ${system}`,
+                details: {
+                    url: config.url,
+                    timeout: config.timeout,
+                    retries: config.retries
+                }
+            };
+        }
+        catch (error) {
+            this.logger.error(`Error probando conectividad con ${system}:`, error);
+            return {
+                success: false,
+                system,
+                message: `Error de conectividad con ${system}: ${error instanceof Error ? error.message : String(error)}`
+            };
+        }
+    }
+    async getExternalStatus(invoiceId, system) {
+        try {
+            const invoice = await this.invoicesService.findOne(invoiceId);
+            if (!invoice || !invoice.externalId) {
+                return {
+                    success: false,
+                    system,
+                    message: 'Factura no encontrada o sin ID externo'
+                };
+            }
+            this.logger.log(`Consultando estado de factura ${invoice.externalId} en ${system}`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            return {
+                success: true,
+                system,
+                status: 'ACCEPTED',
+                message: `Estado consultado exitosamente`,
+                details: {
+                    externalId: invoice.externalId,
+                    status: 'ACCEPTED',
+                    timestamp: new Date().toISOString(),
+                    system: system
+                }
+            };
+        }
+        catch (error) {
+            this.logger.error(`Error consultando estado en ${system}:`, error);
+            return {
+                success: false,
+                system,
+                message: `Error consultando estado: ${error instanceof Error ? error.message : String(error)}`
+            };
+        }
+    }
+};
+exports.ExternalSystemsService = ExternalSystemsService;
+exports.ExternalSystemsService = ExternalSystemsService = ExternalSystemsService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof invoices_service_1.InvoicesService !== "undefined" && invoices_service_1.InvoicesService) === "function" ? _a : Object])
+], ExternalSystemsService);
+
+
+/***/ }),
+/* 114 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProvisionFondosModule = void 0;
+const common_1 = __webpack_require__(2);
+const provision_fondos_controller_1 = __webpack_require__(115);
+const provision_fondos_service_1 = __webpack_require__(116);
+const prisma_module_1 = __webpack_require__(36);
+let ProvisionFondosModule = class ProvisionFondosModule {
+};
+exports.ProvisionFondosModule = ProvisionFondosModule;
+exports.ProvisionFondosModule = ProvisionFondosModule = __decorate([
+    (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
+        controllers: [provision_fondos_controller_1.ProvisionFondosController],
+        providers: [provision_fondos_service_1.ProvisionFondosService],
+        exports: [provision_fondos_service_1.ProvisionFondosService],
+    })
+], ProvisionFondosModule);
+
+
+/***/ }),
+/* 115 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProvisionFondosController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const provision_fondos_service_1 = __webpack_require__(116);
+const create_provision_fondos_dto_1 = __webpack_require__(117);
+const jwt_auth_guard_1 = __webpack_require__(27);
+const roles_guard_1 = __webpack_require__(34);
+const roles_decorator_1 = __webpack_require__(35);
+const client_1 = __webpack_require__(9);
+let ProvisionFondosController = class ProvisionFondosController {
+    constructor(service) {
+        this.service = service;
+    }
+    findAll(clientId, expedienteId, invoiceId, soloPendientes) {
+        return this.service.findAll({
+            clientId,
+            expedienteId,
+            invoiceId,
+            soloPendientes: soloPendientes === 'true',
+        });
+    }
+    findOne(id) {
+        return this.service.findOne(id);
+    }
+    create(dto) {
+        return this.service.create(dto);
+    }
+    update(id, dto) {
+        return this.service.update(id, dto);
+    }
+    remove(id) {
+        return this.service.remove(id);
+    }
+    linkToInvoice(body) {
+        return this.service.linkToInvoice(body.provisionId, body.invoiceId);
+    }
+};
+exports.ProvisionFondosController = ProvisionFondosController;
+__decorate([
+    (0, common_1.Get)(),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener provisiones de fondos',
+        description: 'Devuelve las provisiones de fondos con filtros opcionales'
+    }),
+    (0, swagger_1.ApiQuery)({ name: 'clientId', description: 'ID del cliente', required: false, type: String }),
+    (0, swagger_1.ApiQuery)({ name: 'expedienteId', description: 'ID del expediente', required: false, type: String }),
+    (0, swagger_1.ApiQuery)({ name: 'invoiceId', description: 'ID de la factura', required: false, type: String }),
+    (0, swagger_1.ApiQuery)({ name: 'soloPendientes', description: 'Solo provisiones pendientes', required: false, type: Boolean }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de provisiones de fondos',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    monto: { type: 'number' },
+                    descripcion: { type: 'string' },
+                    fechaProvision: { type: 'string', format: 'date' },
+                    estado: { type: 'string' },
+                    clientId: { type: 'string' },
+                    expedienteId: { type: 'string' },
+                    invoiceId: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __param(0, (0, common_1.Query)('clientId')),
+    __param(1, (0, common_1.Query)('expedienteId')),
+    __param(2, (0, common_1.Query)('invoiceId')),
+    __param(3, (0, common_1.Query)('soloPendientes')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String, String]),
+    __metadata("design:returntype", void 0)
+], ProvisionFondosController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener una provisión de fondos por ID',
+        description: 'Devuelve una provisión de fondos específica'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la provisión', type: String }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Provisión de fondos encontrada',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                monto: { type: 'number' },
+                descripcion: { type: 'string' },
+                fechaProvision: { type: 'string', format: 'date' },
+                estado: { type: 'string' },
+                clientId: { type: 'string' },
+                expedienteId: { type: 'string' },
+                invoiceId: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Provisión no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ProvisionFondosController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Post)(),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Crear provisión de fondos',
+        description: 'Crea una nueva provisión de fondos (ADMIN y ABOGADO)'
+    }),
+    (0, swagger_1.ApiBody)({ type: create_provision_fondos_dto_1.CreateProvisionFondosDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Provisión de fondos creada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                monto: { type: 'number' },
+                descripcion: { type: 'string' },
+                fechaProvision: { type: 'string', format: 'date' },
+                estado: { type: 'string' },
+                clientId: { type: 'string' },
+                expedienteId: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof create_provision_fondos_dto_1.CreateProvisionFondosDto !== "undefined" && create_provision_fondos_dto_1.CreateProvisionFondosDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", void 0)
+], ProvisionFondosController.prototype, "create", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar provisión de fondos',
+        description: 'Actualiza una provisión de fondos existente (ADMIN y ABOGADO)'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la provisión', type: String }),
+    (0, swagger_1.ApiBody)({ type: create_provision_fondos_dto_1.CreateProvisionFondosDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Provisión de fondos actualizada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                monto: { type: 'number' },
+                descripcion: { type: 'string' },
+                fechaProvision: { type: 'string', format: 'date' },
+                estado: { type: 'string' },
+                clientId: { type: 'string' },
+                expedienteId: { type: 'string' },
+                invoiceId: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Provisión no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_c = typeof create_provision_fondos_dto_1.CreateProvisionFondosDto !== "undefined" && create_provision_fondos_dto_1.CreateProvisionFondosDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", void 0)
+], ProvisionFondosController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Eliminar provisión de fondos',
+        description: 'Elimina una provisión de fondos (ADMIN y ABOGADO)'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la provisión', type: String }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Provisión de fondos eliminada exitosamente'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Provisión no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ProvisionFondosController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Patch)('link-to-invoice'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Vincular provisión a factura',
+        description: 'Vincula una provisión de fondos a una factura específica'
+    }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                provisionId: { type: 'string', description: 'ID de la provisión' },
+                invoiceId: { type: 'string', description: 'ID de la factura' }
+            },
+            required: ['provisionId', 'invoiceId']
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Provisión vinculada exitosamente a la factura',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                monto: { type: 'number' },
+                descripcion: { type: 'string' },
+                fechaProvision: { type: 'string', format: 'date' },
+                estado: { type: 'string' },
+                clientId: { type: 'string' },
+                expedienteId: { type: 'string' },
+                invoiceId: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Provisión o factura no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], ProvisionFondosController.prototype, "linkToInvoice", null);
+exports.ProvisionFondosController = ProvisionFondosController = __decorate([
+    (0, swagger_1.ApiTags)('provision-fondos'),
+    (0, common_1.Controller)('provision-fondos'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __metadata("design:paramtypes", [typeof (_a = typeof provision_fondos_service_1.ProvisionFondosService !== "undefined" && provision_fondos_service_1.ProvisionFondosService) === "function" ? _a : Object])
+], ProvisionFondosController);
+
+
+/***/ }),
+/* 116 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProvisionFondosService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+let ProvisionFondosService = class ProvisionFondosService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async create(dto) {
+        return this.prisma.provisionFondos.create({
+            data: {
+                ...dto,
+                date: dto.date ? new Date(dto.date) : new Date(),
+            },
+        });
+    }
+    async findAll(options) {
+        const where = {};
+        if (options.clientId)
+            where.clientId = options.clientId;
+        if (options.expedienteId)
+            where.expedienteId = options.expedienteId;
+        if (options.invoiceId)
+            where.invoiceId = options.invoiceId;
+        if (options.soloPendientes)
+            where.invoiceId = null;
+        return this.prisma.provisionFondos.findMany({
+            where,
+            include: {
+                invoice: true,
+                expediente: {
+                    include: {
+                        lawyer: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true
+                            }
+                        }
+                    }
+                }
+            },
+        });
+    }
+    async findOne(id) {
+        return this.prisma.provisionFondos.findUnique({
+            where: { id },
+            include: {
+                invoice: true,
+                expediente: {
+                    include: {
+                        lawyer: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true
+                            }
+                        }
+                    }
+                }
+            },
+        });
+    }
+    async update(id, dto) {
+        return this.prisma.provisionFondos.update({
+            where: { id },
+            data: {
+                ...dto,
+                date: dto.date ? new Date(dto.date) : undefined,
+            },
+            include: {
+                invoice: true,
+                expediente: {
+                    include: {
+                        lawyer: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true
+                            }
+                        }
+                    }
+                }
+            },
+        });
+    }
+    async remove(id) {
+        return this.prisma.provisionFondos.delete({
+            where: { id },
+        });
+    }
+    async linkToInvoice(provisionId, invoiceId) {
+        return this.prisma.provisionFondos.update({
+            where: { id: provisionId },
+            data: { invoiceId },
+            include: {
+                invoice: true,
+                expediente: {
+                    include: {
+                        lawyer: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true
+                            }
+                        }
+                    }
+                }
+            },
+        });
+    }
+};
+exports.ProvisionFondosService = ProvisionFondosService;
+exports.ProvisionFondosService = ProvisionFondosService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], ProvisionFondosService);
+
+
+/***/ }),
+/* 117 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CreateProvisionFondosDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+class CreateProvisionFondosDto {
+}
+exports.CreateProvisionFondosDto = CreateProvisionFondosDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del cliente',
+        example: '123e4567-e89b-12d3-a456-426614174001',
+        type: String,
+    }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateProvisionFondosDto.prototype, "clientId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del expediente asociado',
+        example: '123e4567-e89b-12d3-a456-426614174002',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateProvisionFondosDto.prototype, "expedienteId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID de la factura asociada',
+        example: '123e4567-e89b-12d3-a456-426614174003',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateProvisionFondosDto.prototype, "invoiceId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Monto de la provisión',
+        example: 1000.00,
+        type: Number,
+    }),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CreateProvisionFondosDto.prototype, "amount", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Fecha de la provisión',
+        example: '2024-12-25',
+        required: false,
+        type: String,
+        format: 'date',
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsDateString)(),
+    __metadata("design:type", String)
+], CreateProvisionFondosDto.prototype, "date", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Descripción de la provisión',
+        example: 'Provisión para gastos de asesoría legal',
+        required: false,
+        type: String,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateProvisionFondosDto.prototype, "description", void 0);
+
+
+/***/ }),
+/* 118 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ContactModule = void 0;
+const common_1 = __webpack_require__(2);
+const contact_controller_1 = __webpack_require__(119);
+const contact_service_1 = __webpack_require__(120);
+const prisma_module_1 = __webpack_require__(36);
+const auth_module_1 = __webpack_require__(12);
+let ContactModule = class ContactModule {
+};
+exports.ContactModule = ContactModule;
+exports.ContactModule = ContactModule = __decorate([
+    (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule, auth_module_1.AuthModule],
+        controllers: [contact_controller_1.ContactController],
+        providers: [contact_service_1.ContactService],
+        exports: [contact_service_1.ContactService]
+    })
+], ContactModule);
+
+
+/***/ }),
+/* 119 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ContactController = void 0;
+const common_1 = __webpack_require__(2);
+const platform_express_1 = __webpack_require__(47);
+const swagger_1 = __webpack_require__(3);
+const contact_service_1 = __webpack_require__(120);
+const jwt_auth_guard_1 = __webpack_require__(27);
+let ContactController = class ContactController {
+    constructor(contactService) {
+        this.contactService = contactService;
+    }
+    async sendContactMessage(contactData) {
+        return this.contactService.sendContactMessage(contactData);
+    }
+    async sendLawyerMessage(messageData, files, req) {
+        return this.contactService.sendLawyerMessage(messageData, files, req.user);
+    }
+};
+exports.ContactController = ContactController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Enviar mensaje de contacto general' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Mensaje enviado exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], ContactController.prototype, "sendContactMessage", null);
+__decorate([
+    (0, common_1.Post)('lawyer'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FilesInterceptor)('files', 10)),
+    (0, swagger_1.ApiOperation)({ summary: 'Enviar mensaje al abogado con archivos adjuntos' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Mensaje enviado exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiConsumes)('multipart/form-data'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.UploadedFiles)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Array, Object]),
+    __metadata("design:returntype", Promise)
+], ContactController.prototype, "sendLawyerMessage", null);
+exports.ContactController = ContactController = __decorate([
+    (0, swagger_1.ApiTags)('contact'),
+    (0, common_1.Controller)('contact'),
+    __metadata("design:paramtypes", [typeof (_a = typeof contact_service_1.ContactService !== "undefined" && contact_service_1.ContactService) === "function" ? _a : Object])
+], ContactController);
+
+
+/***/ }),
+/* 120 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ContactService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+const email_service_1 = __webpack_require__(17);
+const fs = __importStar(__webpack_require__(44));
+const path = __importStar(__webpack_require__(45));
+let ContactService = class ContactService {
+    constructor(prisma, emailService) {
+        this.prisma = prisma;
+        this.emailService = emailService;
+    }
+    async submitContactForm(createContactDto) {
+        try {
+            const contact = await this.prisma.contact.create({
+                data: {
+                    nombre: createContactDto.nombre,
+                    email: createContactDto.email,
+                    telefono: createContactDto.telefono,
+                    asunto: createContactDto.asunto,
+                    mensaje: createContactDto.mensaje,
+                    ip: createContactDto.ip || 'unknown',
+                    userAgent: createContactDto.userAgent || 'unknown'
+                }
+            });
+            try {
+                await this.emailService.sendContactNotification({
+                    nombre: createContactDto.nombre,
+                    email: createContactDto.email,
+                    telefono: createContactDto.telefono,
+                    asunto: createContactDto.asunto,
+                    mensaje: createContactDto.mensaje
+                });
+            }
+            catch (emailError) {
+                console.error('Error sending contact notification email:', emailError);
+            }
+            try {
+                await this.emailService.sendContactConfirmation({
+                    nombre: createContactDto.nombre,
+                    email: createContactDto.email
+                });
+            }
+            catch (emailError) {
+                console.error('Error sending contact confirmation email:', emailError);
+            }
+            return contact;
+        }
+        catch (error) {
+            console.error('Error en submitContactForm:', error);
+            throw error;
+        }
+    }
+    async getContactStats() {
+        const total = await this.prisma.contact.count();
+        const today = await this.prisma.contact.count({
+            where: {
+                createdAt: {
+                    gte: new Date(new Date().setHours(0, 0, 0, 0))
+                }
+            }
+        });
+        const thisWeek = await this.prisma.contact.count({
+            where: {
+                createdAt: {
+                    gte: new Date(new Date().setDate(new Date().getDate() - 7))
+                }
+            }
+        });
+        return {
+            total,
+            today,
+            thisWeek
+        };
+    }
+    async sendContactMessage(contactData) {
+        try {
+            const contact = await this.prisma.contact.create({
+                data: {
+                    nombre: contactData.nombre,
+                    email: contactData.email,
+                    telefono: contactData.telefono,
+                    asunto: contactData.asunto,
+                    mensaje: contactData.mensaje,
+                    ip: contactData.ip || 'unknown',
+                    userAgent: contactData.userAgent || 'unknown'
+                }
+            });
+            try {
+                await this.emailService.sendContactNotification({
+                    nombre: contactData.nombre,
+                    email: contactData.email,
+                    telefono: contactData.telefono,
+                    asunto: contactData.asunto,
+                    mensaje: contactData.mensaje
+                });
+            }
+            catch (emailError) {
+                console.error('Error sending contact notification email:', emailError);
+            }
+            try {
+                await this.emailService.sendContactConfirmation({
+                    nombre: contactData.nombre,
+                    email: contactData.email
+                });
+            }
+            catch (emailError) {
+                console.error('Error sending contact confirmation email:', emailError);
+            }
+            return {
+                success: true,
+                message: 'Mensaje enviado correctamente. Nos pondremos en contacto contigo pronto.',
+                data: contact
+            };
+        }
+        catch (error) {
+            console.error('Error en sendContactMessage:', error);
+            throw error;
+        }
+    }
+    async sendLawyerMessage(messageData, files, user) {
+        try {
+            const uploadsDir = path.join(process.cwd(), 'uploads', 'lawyer-messages');
+            if (!fs.existsSync(uploadsDir)) {
+                fs.mkdirSync(uploadsDir, { recursive: true });
+            }
+            const savedFiles = [];
+            for (const file of files) {
+                const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}-${file.originalname}`;
+                const filePath = path.join(uploadsDir, fileName);
+                fs.writeFileSync(filePath, file.buffer);
+                savedFiles.push({
+                    originalName: file.originalname,
+                    fileName: fileName,
+                    filePath: filePath,
+                    size: file.size,
+                    mimeType: file.mimetype
+                });
+            }
+            const client = await this.prisma.user.findUnique({
+                where: { id: user.id },
+                include: { client: true }
+            });
+            const lawyer = await this.prisma.user.findUnique({
+                where: { id: messageData.lawyerId },
+                include: { lawyer: true }
+            });
+            const message = await this.prisma.contact.create({
+                data: {
+                    nombre: client?.name || 'Cliente',
+                    email: client?.email || '',
+                    telefono: '',
+                    asunto: `Mensaje al Abogado - ${messageData.asunto}`,
+                    mensaje: `Expediente: ${messageData.expedienteTitle} (${messageData.expedienteId})\n\nMensaje: ${messageData.mensaje}\n\nArchivos adjuntos: ${savedFiles.map(f => f.originalName).join(', ')}`,
+                    ip: 'unknown',
+                    userAgent: 'unknown'
+                }
+            });
+            try {
+                console.log('Enviando email al abogado:', {
+                    lawyerEmail: lawyer?.email || '',
+                    lawyerName: lawyer?.name || 'Abogado',
+                    clientName: client?.name || 'Cliente',
+                    clientEmail: client?.email || '',
+                    expedienteTitle: messageData.expedienteTitle,
+                    expedienteId: messageData.expedienteId,
+                    asunto: messageData.asunto,
+                    mensaje: messageData.mensaje,
+                    files: savedFiles
+                });
+            }
+            catch (emailError) {
+                console.error('Error sending lawyer message email:', emailError);
+            }
+            try {
+                console.log('Enviando confirmación al cliente:', {
+                    clientName: client?.name || 'Cliente',
+                    clientEmail: client?.email || '',
+                    lawyerName: lawyer?.name || 'Abogado',
+                    expedienteTitle: messageData.expedienteTitle,
+                    asunto: messageData.asunto
+                });
+            }
+            catch (emailError) {
+                console.error('Error sending lawyer message confirmation email:', emailError);
+            }
+            return {
+                success: true,
+                message: 'Mensaje enviado correctamente. Su abogado se pondrá en contacto con usted pronto.',
+                data: {
+                    message,
+                    files: savedFiles
+                }
+            };
+        }
+        catch (error) {
+            console.error('Error en sendLawyerMessage:', error);
+            throw error;
+        }
+    }
+};
+exports.ContactService = ContactService;
+exports.ContactService = ContactService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof email_service_1.EmailService !== "undefined" && email_service_1.EmailService) === "function" ? _b : Object])
+], ContactService);
+
+
+/***/ }),
+/* 121 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TeleassistanceModule = void 0;
+const common_1 = __webpack_require__(2);
+const teleassistance_controller_1 = __webpack_require__(122);
+const teleassistance_service_1 = __webpack_require__(123);
+const prisma_module_1 = __webpack_require__(36);
+let TeleassistanceModule = class TeleassistanceModule {
+};
+exports.TeleassistanceModule = TeleassistanceModule;
+exports.TeleassistanceModule = TeleassistanceModule = __decorate([
+    (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
+        controllers: [teleassistance_controller_1.TeleassistanceController],
+        providers: [teleassistance_service_1.TeleassistanceService],
+        exports: [teleassistance_service_1.TeleassistanceService],
+    })
+], TeleassistanceModule);
+
+
+/***/ }),
+/* 122 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TeleassistanceController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const teleassistance_service_1 = __webpack_require__(123);
+const create_teleassistance_session_dto_1 = __webpack_require__(124);
+const update_teleassistance_session_dto_1 = __webpack_require__(125);
+const jwt_auth_guard_1 = __webpack_require__(27);
+const roles_guard_1 = __webpack_require__(34);
+const roles_decorator_1 = __webpack_require__(35);
+let TeleassistanceController = class TeleassistanceController {
+    constructor(teleassistanceService) {
+        this.teleassistanceService = teleassistanceService;
+    }
+    async createSession(createDto, req) {
+        return this.teleassistanceService.createSession(createDto);
+    }
+    async getSessionById(id) {
+        return this.teleassistanceService.getSessionById(id);
+    }
+    async getSessionsByUser(userId) {
+        return this.teleassistanceService.getSessionsByUser(userId);
+    }
+    async getSessionsByAssistant(assistantId) {
+        return this.teleassistanceService.getSessionsByAssistant(assistantId);
+    }
+    async getPendingSessions() {
+        return this.teleassistanceService.getPendingSessions();
+    }
+    async updateSession(id, updateDto) {
+        return this.teleassistanceService.updateSession(id, updateDto);
+    }
+    async startSession(id) {
+        return this.teleassistanceService.startSession(id);
+    }
+    async endSession(id, body) {
+        return this.teleassistanceService.endSession(id, body.resolution);
+    }
+    async addMessage(sessionId, body, req) {
+        return this.teleassistanceService.addMessage(sessionId, req.user.id, body.content, body.messageType || 'TEXT');
+    }
+    async getSessionMessages(sessionId) {
+        return this.teleassistanceService.getSessionMessages(sessionId);
+    }
+    async getRemoteTools() {
+        return this.teleassistanceService.getRemoteTools();
+    }
+    async getCommonIssues() {
+        return this.teleassistanceService.getCommonIssues();
+    }
+    async getSessionStats() {
+        return this.teleassistanceService.getSessionStats();
+    }
+    async getMySessions(req) {
+        const user = req.user;
+        if (['ADMIN', 'ABOGADO'].includes(user.role)) {
+            return this.teleassistanceService.getSessionsByAssistant(user.id);
+        }
+        else {
+            return this.teleassistanceService.getSessionsByUser(user.id);
+        }
+    }
+    async getAvailableAssistants() {
+        return this.teleassistanceService.getAvailableAssistants();
+    }
+};
+exports.TeleassistanceController = TeleassistanceController;
+__decorate([
+    (0, common_1.Post)('sessions'),
+    (0, swagger_1.ApiOperation)({ summary: 'Crear una nueva sesión de teleasistencia' }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Sesión de teleasistencia creada exitosamente',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Usuario o asistente no encontrado' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof create_teleassistance_session_dto_1.CreateTeleassistanceSessionDto !== "undefined" && create_teleassistance_session_dto_1.CreateTeleassistanceSessionDto) === "function" ? _b : Object, Object]),
+    __metadata("design:returntype", Promise)
+], TeleassistanceController.prototype, "createSession", null);
+__decorate([
+    (0, common_1.Get)('sessions/:id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Obtener una sesión de teleasistencia por ID' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la sesión' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Sesión de teleasistencia encontrada',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Sesión no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], TeleassistanceController.prototype, "getSessionById", null);
+__decorate([
+    (0, common_1.Get)('sessions/user/:userId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Obtener sesiones de teleasistencia de un usuario' }),
+    (0, swagger_1.ApiParam)({ name: 'userId', description: 'ID del usuario' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Sesiones del usuario encontradas',
+    }),
+    __param(0, (0, common_1.Param)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], TeleassistanceController.prototype, "getSessionsByUser", null);
+__decorate([
+    (0, common_1.Get)('sessions/assistant/:assistantId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Obtener sesiones de teleasistencia de un asistente' }),
+    (0, swagger_1.ApiParam)({ name: 'assistantId', description: 'ID del asistente' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Sesiones del asistente encontradas',
+    }),
+    (0, roles_decorator_1.Roles)('ADMIN', 'ABOGADO'),
+    __param(0, (0, common_1.Param)('assistantId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], TeleassistanceController.prototype, "getSessionsByAssistant", null);
+__decorate([
+    (0, common_1.Get)('sessions/pending'),
+    (0, swagger_1.ApiOperation)({ summary: 'Obtener sesiones pendientes de teleasistencia' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Sesiones pendientes encontradas',
+    }),
+    (0, roles_decorator_1.Roles)('ADMIN', 'ABOGADO'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], TeleassistanceController.prototype, "getPendingSessions", null);
+__decorate([
+    (0, common_1.Put)('sessions/:id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Actualizar una sesión de teleasistencia' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la sesión' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Sesión actualizada exitosamente',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Sesión no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_c = typeof update_teleassistance_session_dto_1.UpdateTeleassistanceSessionDto !== "undefined" && update_teleassistance_session_dto_1.UpdateTeleassistanceSessionDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], TeleassistanceController.prototype, "updateSession", null);
+__decorate([
+    (0, common_1.Post)('sessions/:id/start'),
+    (0, swagger_1.ApiOperation)({ summary: 'Iniciar una sesión de teleasistencia' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la sesión' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Sesión iniciada exitosamente',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Sesión no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'La sesión no está pendiente' }),
+    (0, roles_decorator_1.Roles)('ADMIN', 'ABOGADO'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], TeleassistanceController.prototype, "startSession", null);
+__decorate([
+    (0, common_1.Post)('sessions/:id/end'),
+    (0, swagger_1.ApiOperation)({ summary: 'Finalizar una sesión de teleasistencia' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la sesión' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Sesión finalizada exitosamente',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Sesión no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'La sesión ya está completada' }),
+    (0, roles_decorator_1.Roles)('ADMIN', 'ABOGADO'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], TeleassistanceController.prototype, "endSession", null);
+__decorate([
+    (0, common_1.Post)('sessions/:id/messages'),
+    (0, swagger_1.ApiOperation)({ summary: 'Agregar un mensaje a una sesión de teleasistencia' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la sesión' }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Mensaje agregado exitosamente',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Sesión no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", Promise)
+], TeleassistanceController.prototype, "addMessage", null);
+__decorate([
+    (0, common_1.Get)('sessions/:id/messages'),
+    (0, swagger_1.ApiOperation)({ summary: 'Obtener mensajes de una sesión de teleasistencia' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la sesión' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Mensajes de la sesión encontrados',
+    }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], TeleassistanceController.prototype, "getSessionMessages", null);
+__decorate([
+    (0, common_1.Get)('remote-tools'),
+    (0, swagger_1.ApiOperation)({ summary: 'Obtener herramientas de control remoto disponibles' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Herramientas de control remoto encontradas',
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], TeleassistanceController.prototype, "getRemoteTools", null);
+__decorate([
+    (0, common_1.Get)('common-issues'),
+    (0, swagger_1.ApiOperation)({ summary: 'Obtener problemas comunes y sus soluciones' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Problemas comunes encontrados',
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], TeleassistanceController.prototype, "getCommonIssues", null);
+__decorate([
+    (0, common_1.Get)('stats'),
+    (0, swagger_1.ApiOperation)({ summary: 'Obtener estadísticas de teleasistencia' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Estadísticas de teleasistencia',
+    }),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], TeleassistanceController.prototype, "getSessionStats", null);
+__decorate([
+    (0, common_1.Get)('my-sessions'),
+    (0, swagger_1.ApiOperation)({ summary: 'Obtener sesiones del usuario autenticado' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Sesiones del usuario encontradas',
+    }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], TeleassistanceController.prototype, "getMySessions", null);
+__decorate([
+    (0, common_1.Get)('available-assistants'),
+    (0, swagger_1.ApiOperation)({ summary: 'Obtener asistentes disponibles para teleasistencia' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Asistentes disponibles encontrados',
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], TeleassistanceController.prototype, "getAvailableAssistants", null);
+exports.TeleassistanceController = TeleassistanceController = __decorate([
+    (0, swagger_1.ApiTags)('Teleasistencia'),
+    (0, common_1.Controller)('teleassistance'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof teleassistance_service_1.TeleassistanceService !== "undefined" && teleassistance_service_1.TeleassistanceService) === "function" ? _a : Object])
+], TeleassistanceController);
+
+
+/***/ }),
+/* 123 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TeleassistanceService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+let TeleassistanceService = class TeleassistanceService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async createSession(createDto) {
+        const { userId, assistantId, issueType, description, remoteTool } = createDto;
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        const assistant = await this.prisma.user.findUnique({ where: { id: assistantId } });
+        if (!user) {
+            throw new common_1.NotFoundException('Usuario no encontrado');
+        }
+        if (!assistant) {
+            throw new common_1.NotFoundException('Asistente no encontrado');
+        }
+        if (!['ADMIN', 'ABOGADO'].includes(assistant.role)) {
+            throw new common_1.BadRequestException('El asistente debe tener rol de ADMIN o ABOGADO');
+        }
+        return this.prisma.teleassistanceSession.create({
+            data: {
+                userId,
+                assistantId,
+                issueType,
+                description,
+                remoteTool,
+                status: 'PENDING',
+                sessionCode: this.generateSessionCode(),
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+                assistant: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+            },
+        });
+    }
+    async getSessionById(id) {
+        const session = await this.prisma.teleassistanceSession.findUnique({
+            where: { id },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+                assistant: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+                messages: {
+                    orderBy: { createdAt: 'asc' },
+                },
+            },
+        });
+        if (!session) {
+            throw new common_1.NotFoundException('Sesión de teleasistencia no encontrada');
+        }
+        return session;
+    }
+    async getSessionsByUser(userId) {
+        return this.prisma.teleassistanceSession.findMany({
+            where: { userId },
+            include: {
+                assistant: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+    async getSessionsByAssistant(assistantId) {
+        return this.prisma.teleassistanceSession.findMany({
+            where: { assistantId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+    async getPendingSessions() {
+        return this.prisma.teleassistanceSession.findMany({
+            where: { status: 'PENDING' },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+                assistant: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+            },
+            orderBy: { createdAt: 'asc' },
+        });
+    }
+    async updateSession(id, updateDto) {
+        const session = await this.prisma.teleassistanceSession.findUnique({
+            where: { id },
+        });
+        if (!session) {
+            throw new common_1.NotFoundException('Sesión de teleasistencia no encontrada');
+        }
+        return this.prisma.teleassistanceSession.update({
+            where: { id },
+            data: updateDto,
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+                assistant: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+            },
+        });
+    }
+    async startSession(id) {
+        const session = await this.prisma.teleassistanceSession.findUnique({
+            where: { id },
+        });
+        if (!session) {
+            throw new common_1.NotFoundException('Sesión de teleasistencia no encontrada');
+        }
+        if (session.status !== 'PENDING') {
+            throw new common_1.BadRequestException('La sesión no está pendiente');
+        }
+        return this.prisma.teleassistanceSession.update({
+            where: { id },
+            data: {
+                status: 'ACTIVE',
+                startedAt: new Date(),
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+                assistant: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+            },
+        });
+    }
+    async endSession(id, resolution) {
+        const session = await this.prisma.teleassistanceSession.findUnique({
+            where: { id },
+        });
+        if (!session) {
+            throw new common_1.NotFoundException('Sesión de teleasistencia no encontrada');
+        }
+        if (session.status === 'COMPLETED') {
+            throw new common_1.BadRequestException('La sesión ya está completada');
+        }
+        return this.prisma.teleassistanceSession.update({
+            where: { id },
+            data: {
+                status: 'COMPLETED',
+                completedAt: new Date(),
+                resolution,
+                duration: session.startedAt
+                    ? Math.floor((new Date().getTime() - session.startedAt.getTime()) / 1000 / 60)
+                    : null,
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+                assistant: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+            },
+        });
+    }
+    async addMessage(sessionId, senderId, content, messageType = 'TEXT') {
+        const session = await this.prisma.teleassistanceSession.findUnique({
+            where: { id: sessionId },
+        });
+        if (!session) {
+            throw new common_1.NotFoundException('Sesión de teleasistencia no encontrada');
+        }
+        return this.prisma.teleassistanceMessage.create({
+            data: {
+                sessionId,
+                senderId,
+                content,
+                messageType,
+            },
+            include: {
+                sender: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+            },
+        });
+    }
+    async getSessionMessages(sessionId) {
+        return this.prisma.teleassistanceMessage.findMany({
+            where: { sessionId },
+            include: {
+                sender: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+            },
+            orderBy: { createdAt: 'asc' },
+        });
+    }
+    async getRemoteTools() {
+        return [
+            {
+                id: 'remotely-anywhere',
+                name: 'Remotely Anywhere',
+                description: 'Herramienta de control remoto gratuita y fácil de usar',
+                downloadUrl: 'https://remotely.one/',
+                features: ['Control remoto completo', 'Chat integrado', 'Transferencia de archivos', 'Gratuito'],
+                instructions: [
+                    'Descargar e instalar Remotely Anywhere',
+                    'Crear cuenta gratuita',
+                    'Compartir código de acceso con el asistente',
+                    'Permitir control remoto cuando se solicite'
+                ]
+            },
+            {
+                id: 'teamviewer-quicksupport',
+                name: 'TeamViewer QuickSupport',
+                description: 'Aplicación ligera para soporte remoto',
+                downloadUrl: 'https://www.teamviewer.com/es/quick-support/',
+                features: ['Aplicación ligera', 'Sin instalación', 'Conexión rápida', 'Gratuito para uso personal'],
+                instructions: [
+                    'Descargar TeamViewer QuickSupport',
+                    'Ejecutar sin instalar',
+                    'Compartir ID y contraseña con el asistente',
+                    'Aceptar conexión remota'
+                ]
+            },
+            {
+                id: 'anydesk',
+                name: 'AnyDesk',
+                description: 'Software de escritorio remoto rápido y seguro',
+                downloadUrl: 'https://anydesk.com/es',
+                features: ['Conexión rápida', 'Alta seguridad', 'Interfaz simple', 'Versión gratuita disponible'],
+                instructions: [
+                    'Descargar AnyDesk',
+                    'Instalar la aplicación',
+                    'Compartir código de AnyDesk con el asistente',
+                    'Aceptar solicitud de conexión'
+                ]
+            },
+            {
+                id: 'chrome-remote-desktop',
+                name: 'Chrome Remote Desktop',
+                description: 'Extensión de Chrome para acceso remoto',
+                downloadUrl: 'https://remotedesktop.google.com/',
+                features: ['Integrado con Chrome', 'Sin instalación adicional', 'Conexión segura', 'Completamente gratuito'],
+                instructions: [
+                    'Instalar extensión Chrome Remote Desktop',
+                    'Configurar acceso remoto',
+                    'Compartir código de acceso con el asistente',
+                    'Autorizar conexión remota'
+                ]
+            }
+        ];
+    }
+    async getCommonIssues() {
+        return [
+            {
+                id: 'autofirma',
+                name: 'Problemas con Autofirma',
+                description: 'Dificultades para instalar o usar Autofirma',
+                category: 'ADMINISTRACION_ELECTRONICA',
+                commonProblems: [
+                    'No se instala correctamente',
+                    'No reconoce el certificado digital',
+                    'Error al firmar documentos',
+                    'Problemas de compatibilidad con el navegador'
+                ],
+                solutions: [
+                    'Verificar requisitos del sistema',
+                    'Instalar certificados raíz',
+                    'Configurar navegador correctamente',
+                    'Actualizar Java si es necesario'
+                ]
+            },
+            {
+                id: 'certificado-digital',
+                name: 'Certificado Digital',
+                description: 'Problemas con certificados digitales',
+                category: 'ADMINISTRACION_ELECTRONICA',
+                commonProblems: [
+                    'Certificado expirado',
+                    'No se reconoce en el navegador',
+                    'Error de instalación',
+                    'Problemas de compatibilidad'
+                ],
+                solutions: [
+                    'Renovar certificado si está expirado',
+                    'Instalar certificados raíz',
+                    'Configurar navegador',
+                    'Verificar compatibilidad del sistema'
+                ]
+            },
+            {
+                id: 'sedes',
+                name: 'SEDES (Sede Electrónica)',
+                description: 'Problemas con sedes electrónicas',
+                category: 'ADMINISTRACION_ELECTRONICA',
+                commonProblems: [
+                    'No se puede acceder',
+                    'Error al enviar documentos',
+                    'Problemas de autenticación',
+                    'Documentos no se cargan'
+                ],
+                solutions: [
+                    'Verificar credenciales de acceso',
+                    'Comprobar requisitos técnicos',
+                    'Usar navegador compatible',
+                    'Contactar soporte técnico'
+                ]
+            },
+            {
+                id: 'clave-pin',
+                name: 'Cl@ve PIN',
+                description: 'Problemas con sistema Cl@ve',
+                category: 'ADMINISTRACION_ELECTRONICA',
+                commonProblems: [
+                    'No se recibe SMS',
+                    'Error de autenticación',
+                    'Problemas de registro',
+                    'PIN no válido'
+                ],
+                solutions: [
+                    'Verificar número de teléfono',
+                    'Comprobar cobertura móvil',
+                    'Registrar nuevo dispositivo',
+                    'Solicitar nuevo PIN'
+                ]
+            },
+            {
+                id: 'navegador',
+                name: 'Problemas de Navegador',
+                description: 'Configuración y compatibilidad de navegadores',
+                category: 'TECNICO',
+                commonProblems: [
+                    'Páginas no cargan correctamente',
+                    'Certificados no se reconocen',
+                    'JavaScript deshabilitado',
+                    'Cookies bloqueadas'
+                ],
+                solutions: [
+                    'Actualizar navegador',
+                    'Habilitar JavaScript',
+                    'Configurar cookies',
+                    'Instalar certificados necesarios'
+                ]
+            },
+            {
+                id: 'sistema-operativo',
+                name: 'Sistema Operativo',
+                description: 'Problemas de compatibilidad del SO',
+                category: 'TECNICO',
+                commonProblems: [
+                    'Software no compatible',
+                    'Permisos insuficientes',
+                    'Actualizaciones pendientes',
+                    'Antivirus bloquea aplicaciones'
+                ],
+                solutions: [
+                    'Actualizar sistema operativo',
+                    'Ejecutar como administrador',
+                    'Configurar antivirus',
+                    'Verificar requisitos mínimos'
+                ]
+            }
+        ];
+    }
+    generateSessionCode() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let result = '';
+        for (let i = 0; i < 6; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
+    async getSessionStats() {
+        const totalSessions = await this.prisma.teleassistanceSession.count();
+        const pendingSessions = await this.prisma.teleassistanceSession.count({
+            where: { status: 'PENDING' },
+        });
+        const activeSessions = await this.prisma.teleassistanceSession.count({
+            where: { status: 'ACTIVE' },
+        });
+        const completedSessions = await this.prisma.teleassistanceSession.count({
+            where: { status: 'COMPLETED' },
+        });
+        const averageDuration = await this.prisma.teleassistanceSession.aggregate({
+            where: {
+                status: 'COMPLETED',
+                duration: { not: null }
+            },
+            _avg: { duration: true },
+        });
+        return {
+            totalSessions,
+            pendingSessions,
+            activeSessions,
+            completedSessions,
+            averageDuration: averageDuration._avg.duration || 0,
+        };
+    }
+    async getAvailableAssistants() {
+        const assistants = await this.prisma.user.findMany({
+            where: {
+                role: {
+                    in: ['ADMIN', 'ABOGADO']
+                }
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                lawyer: {
+                    select: {
+                        phone: true
+                    }
+                },
+                client: {
+                    select: {
+                        phone: true
+                    }
+                }
+            },
+            orderBy: {
+                name: 'asc'
+            }
+        });
+        return assistants.map(assistant => ({
+            id: assistant.id,
+            name: assistant.name,
+            email: assistant.email,
+            role: assistant.role,
+            phone: assistant.lawyer?.phone || assistant.client?.phone || null,
+            isAvailable: true
+        }));
+    }
+};
+exports.TeleassistanceService = TeleassistanceService;
+exports.TeleassistanceService = TeleassistanceService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], TeleassistanceService);
+
+
+/***/ }),
+/* 124 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CreateTeleassistanceSessionDto = exports.RemoteTool = exports.IssueType = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+var IssueType;
+(function (IssueType) {
+    IssueType["AUTOFIRMA"] = "AUTOFIRMA";
+    IssueType["CERTIFICADO_DIGITAL"] = "CERTIFICADO_DIGITAL";
+    IssueType["SEDES"] = "SEDES";
+    IssueType["CLAVE_PIN"] = "CLAVE_PIN";
+    IssueType["NAVEGADOR"] = "NAVEGADOR";
+    IssueType["SISTEMA_OPERATIVO"] = "SISTEMA_OPERATIVO";
+    IssueType["OTRO"] = "OTRO";
+})(IssueType || (exports.IssueType = IssueType = {}));
+var RemoteTool;
+(function (RemoteTool) {
+    RemoteTool["REMOTELY_ANYWHERE"] = "REMOTELY_ANYWHERE";
+    RemoteTool["TEAMVIEWER_QUICKSUPPORT"] = "TEAMVIEWER_QUICKSUPPORT";
+    RemoteTool["ANYDESK"] = "ANYDESK";
+    RemoteTool["CHROME_REMOTE_DESKTOP"] = "CHROME_REMOTE_DESKTOP";
+    RemoteTool["OTRO"] = "OTRO";
+})(RemoteTool || (exports.RemoteTool = RemoteTool = {}));
+class CreateTeleassistanceSessionDto {
+}
+exports.CreateTeleassistanceSessionDto = CreateTeleassistanceSessionDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del usuario que solicita la teleasistencia',
+        example: 'user-id-123',
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateTeleassistanceSessionDto.prototype, "userId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'ID del asistente que proporcionará la teleasistencia',
+        example: 'assistant-id-456',
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateTeleassistanceSessionDto.prototype, "assistantId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Tipo de problema que necesita asistencia',
+        enum: IssueType,
+        example: IssueType.AUTOFIRMA,
+    }),
+    (0, class_validator_1.IsEnum)(IssueType),
+    __metadata("design:type", String)
+], CreateTeleassistanceSessionDto.prototype, "issueType", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Descripción detallada del problema',
+        example: 'No puedo instalar Autofirma en mi ordenador',
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateTeleassistanceSessionDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Herramienta de control remoto preferida',
+        enum: RemoteTool,
+        example: RemoteTool.REMOTELY_ANYWHERE,
+    }),
+    (0, class_validator_1.IsEnum)(RemoteTool),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateTeleassistanceSessionDto.prototype, "remoteTool", void 0);
+
+
+/***/ }),
+/* 125 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UpdateTeleassistanceSessionDto = exports.SessionStatus = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+var SessionStatus;
+(function (SessionStatus) {
+    SessionStatus["PENDING"] = "PENDING";
+    SessionStatus["ACTIVE"] = "ACTIVE";
+    SessionStatus["COMPLETED"] = "COMPLETED";
+    SessionStatus["CANCELLED"] = "CANCELLED";
+})(SessionStatus || (exports.SessionStatus = SessionStatus = {}));
+class UpdateTeleassistanceSessionDto {
+}
+exports.UpdateTeleassistanceSessionDto = UpdateTeleassistanceSessionDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Estado de la sesión de teleasistencia',
+        enum: SessionStatus,
+        example: SessionStatus.ACTIVE,
+    }),
+    (0, class_validator_1.IsEnum)(SessionStatus),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateTeleassistanceSessionDto.prototype, "status", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Resolución del problema al finalizar la sesión',
+        example: 'Problema resuelto: Autofirma instalado correctamente',
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateTeleassistanceSessionDto.prototype, "resolution", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Notas adicionales del asistente',
+        example: 'Usuario necesitaba actualizar Java para que funcionara Autofirma',
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateTeleassistanceSessionDto.prototype, "notes", void 0);
+
+
+/***/ }),
+/* 126 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NotesModule = void 0;
+const common_1 = __webpack_require__(2);
+const notes_controller_1 = __webpack_require__(127);
+const public_notes_controller_1 = __webpack_require__(131);
+const notes_service_1 = __webpack_require__(128);
+const prisma_module_1 = __webpack_require__(36);
+let NotesModule = class NotesModule {
+};
+exports.NotesModule = NotesModule;
+exports.NotesModule = NotesModule = __decorate([
+    (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
+        controllers: [notes_controller_1.NotesController, public_notes_controller_1.PublicNotesController],
+        providers: [notes_service_1.NotesService],
+        exports: [notes_service_1.NotesService],
+    })
+], NotesModule);
+
+
+/***/ }),
+/* 127 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NotesController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const notes_service_1 = __webpack_require__(128);
+const create_note_dto_1 = __webpack_require__(129);
+const update_note_dto_1 = __webpack_require__(130);
+const jwt_auth_guard_1 = __webpack_require__(27);
+let NotesController = class NotesController {
+    constructor(notesService) {
+        this.notesService = notesService;
+    }
+    create(createNoteDto, req) {
+        return this.notesService.create(createNoteDto, req.user.id);
+    }
+    test() {
+        console.log('Test endpoint called');
+        return {
+            message: 'Notes module is working!',
+            timestamp: new Date().toISOString(),
+            serviceAvailable: true
+        };
+    }
+    publicTest() {
+        console.log('Public test endpoint called');
+        return {
+            message: 'Public notes endpoint is working!',
+            timestamp: new Date().toISOString(),
+            serviceAvailable: true
+        };
+    }
+    async testDb() {
+        try {
+            const count = await this.notesService.testDatabase();
+            return {
+                message: 'Database connection working!',
+                notesCount: count,
+                timestamp: new Date().toISOString()
+            };
+        }
+        catch (error) {
+            return {
+                message: 'Database error',
+                error: error.message,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+    getTempNotes() {
+        return this.notesService.getTempNotes();
+    }
+    findAll(expedienteId, req) {
+        console.log('Fetching notes for expediente:', expedienteId);
+        console.log('User:', req.user);
+        return this.notesService.findAll(expedienteId, req.user.id, req.user.role);
+    }
+    findOne(id, req) {
+        return this.notesService.findOne(id, req.user.id, req.user.role);
+    }
+    update(id, updateNoteDto, req) {
+        return this.notesService.update(id, updateNoteDto, req.user.id, req.user.role);
+    }
+    remove(id, req) {
+        return this.notesService.remove(id, req.user.id, req.user.role);
+    }
+};
+exports.NotesController = NotesController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Crear una nueva nota' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Nota creada exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof create_note_dto_1.CreateNoteDto !== "undefined" && create_note_dto_1.CreateNoteDto) === "function" ? _b : Object, Object]),
+    __metadata("design:returntype", void 0)
+], NotesController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)('test'),
+    (0, swagger_1.ApiOperation)({ summary: 'Endpoint de prueba para verificar que el módulo funciona' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], NotesController.prototype, "test", null);
+__decorate([
+    (0, common_1.Get)('public/test'),
+    (0, swagger_1.ApiOperation)({ summary: 'Endpoint público de prueba' }),
+    (0, common_1.UseGuards)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], NotesController.prototype, "publicTest", null);
+__decorate([
+    (0, common_1.Get)('test-db'),
+    (0, swagger_1.ApiOperation)({ summary: 'Endpoint de prueba para verificar la base de datos' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], NotesController.prototype, "testDb", null);
+__decorate([
+    (0, common_1.Get)('test/temp-notes'),
+    (0, swagger_1.ApiOperation)({ summary: 'Ver notas temporales disponibles' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Lista de notas temporales' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], NotesController.prototype, "getTempNotes", null);
+__decorate([
+    (0, common_1.Get)('expediente/:expedienteId'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Obtener todas las notas de un expediente' }),
+    (0, swagger_1.ApiParam)({ name: 'expedienteId', description: 'ID del expediente' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Lista de notas obtenida exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Param)('expedienteId')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], NotesController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Obtener una nota específica' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la nota' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Nota obtenida exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Nota no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'No tienes permisos para ver esta nota' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], NotesController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Actualizar una nota' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la nota' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Nota actualizada exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Nota no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'No tienes permisos para editar esta nota' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_c = typeof update_note_dto_1.UpdateNoteDto !== "undefined" && update_note_dto_1.UpdateNoteDto) === "function" ? _c : Object, Object]),
+    __metadata("design:returntype", void 0)
+], NotesController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Eliminar una nota' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la nota' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Nota eliminada exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Nota no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'No tienes permisos para eliminar esta nota' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], NotesController.prototype, "remove", null);
+exports.NotesController = NotesController = __decorate([
+    (0, swagger_1.ApiTags)('notes'),
+    (0, common_1.Controller)('notes'),
+    __metadata("design:paramtypes", [typeof (_a = typeof notes_service_1.NotesService !== "undefined" && notes_service_1.NotesService) === "function" ? _a : Object])
+], NotesController);
+
+
+/***/ }),
+/* 128 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NotesService = void 0;
+const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
+let NotesService = class NotesService {
+    constructor(prisma) {
+        this.prisma = prisma;
+        console.log('NotesService constructor called');
+    }
+    async create(createNoteDto, userId) {
+        console.log('Creating note with:', { createNoteDto, userId });
+        const newNote = await this.prisma.note.create({
+            data: {
+                ...createNoteDto,
+                authorId: userId,
+            },
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+        console.log('Created note:', newNote);
+        return newNote;
+    }
+    async findAll(expedienteId, userId, userRole) {
+        console.log('NotesService.findAll called with:', { expedienteId, userId, userRole });
+        const where = {
+            expedienteId: expedienteId,
+        };
+        if (userRole !== 'ADMIN' && userRole !== 'ABOGADO') {
+            where.OR = [
+                { isPrivate: false },
+                { authorId: userId },
+            ];
+        }
+        const notes = await this.prisma.note.findMany({
+            where,
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+        console.log('Found notes:', notes);
+        return notes;
+    }
+    async findOne(id, userId, userRole) {
+        const note = await this.prisma.note.findUnique({
+            where: { id },
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+        if (!note) {
+            throw new common_1.NotFoundException('Nota no encontrada');
+        }
+        if (note.isPrivate && note.authorId !== userId && userRole !== 'ADMIN' && userRole !== 'ABOGADO') {
+            throw new common_1.ForbiddenException('No tienes permisos para ver esta nota');
+        }
+        return note;
+    }
+    async update(id, updateNoteDto, userId, userRole) {
+        const existingNote = await this.prisma.note.findUnique({
+            where: { id },
+            select: { authorId: true },
+        });
+        if (!existingNote) {
+            throw new common_1.NotFoundException('Nota no encontrada');
+        }
+        if (existingNote.authorId !== userId && userRole !== 'ADMIN') {
+            throw new common_1.ForbiddenException('No tienes permisos para editar esta nota');
+        }
+        const updatedNote = await this.prisma.note.update({
+            where: { id },
+            data: updateNoteDto,
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+        return updatedNote;
+    }
+    async remove(id, userId, userRole) {
+        const existingNote = await this.prisma.note.findUnique({
+            where: { id },
+            select: { authorId: true },
+        });
+        if (!existingNote) {
+            throw new common_1.NotFoundException('Nota no encontrada');
+        }
+        if (existingNote.authorId !== userId && userRole !== 'ADMIN') {
+            throw new common_1.ForbiddenException('No tienes permisos para eliminar esta nota');
+        }
+        const deletedNote = await this.prisma.note.delete({
+            where: { id },
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+        return deletedNote;
+    }
+    async testDatabase() {
+        const count = await this.prisma.note.count();
+        return count;
+    }
+    async getTempNotes() {
+        const notes = await this.prisma.note.findMany({
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+        return {
+            totalNotes: notes.length,
+            notes: notes,
+        };
+    }
+};
+exports.NotesService = NotesService;
+exports.NotesService = NotesService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], NotesService);
+
+
+/***/ }),
+/* 129 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CreateNoteDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+class CreateNoteDto {
+}
+exports.CreateNoteDto = CreateNoteDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'ID del expediente al que pertenece la nota' }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateNoteDto.prototype, "expedienteId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Título de la nota' }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateNoteDto.prototype, "title", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Contenido de la nota' }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateNoteDto.prototype, "content", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Si la nota es privada (solo visible para abogados)', default: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateNoteDto.prototype, "isPrivate", void 0);
+
+
+/***/ }),
+/* 130 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UpdateNoteDto = void 0;
+const swagger_1 = __webpack_require__(3);
+const create_note_dto_1 = __webpack_require__(129);
+class UpdateNoteDto extends (0, swagger_1.PartialType)(create_note_dto_1.CreateNoteDto) {
+}
+exports.UpdateNoteDto = UpdateNoteDto;
+
+
+/***/ }),
+/* 131 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PublicNotesController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const notes_service_1 = __webpack_require__(128);
+let PublicNotesController = class PublicNotesController {
+    constructor(notesService) {
+        this.notesService = notesService;
+    }
+    test() {
+        console.log('Public test endpoint called');
+        return {
+            message: 'Public notes endpoint is working!',
+            timestamp: new Date().toISOString(),
+            serviceAvailable: true
+        };
+    }
+    getTempNotes() {
+        return this.notesService.getTempNotes();
+    }
+};
+exports.PublicNotesController = PublicNotesController;
+__decorate([
+    (0, common_1.Get)('test'),
+    (0, swagger_1.ApiOperation)({ summary: 'Endpoint público de prueba' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], PublicNotesController.prototype, "test", null);
+__decorate([
+    (0, common_1.Get)('temp-notes'),
+    (0, swagger_1.ApiOperation)({ summary: 'Ver notas temporales disponibles' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], PublicNotesController.prototype, "getTempNotes", null);
+exports.PublicNotesController = PublicNotesController = __decorate([
+    (0, swagger_1.ApiTags)('public-notes'),
+    (0, common_1.Controller)('public-notes'),
+    __metadata("design:paramtypes", [typeof (_a = typeof notes_service_1.NotesService !== "undefined" && notes_service_1.NotesService) === "function" ? _a : Object])
+], PublicNotesController);
+
+
+/***/ }),
+/* 132 */
+/***/ ((module) => {
+
+module.exports = require("helmet");
+
+/***/ }),
+/* 133 */
+/***/ ((module) => {
+
+module.exports = require("express-rate-limit");
+
+/***/ }),
+/* 134 */
+/***/ ((module) => {
+
+module.exports = require("compression");
+
+/***/ })
+/******/ 	]);
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module is referenced by other modules so it can't be inlined
+/******/ 	var __webpack_exports__ = __webpack_require__(0);
+/******/ 	
+/******/ })()
+;

@@ -433,6 +433,8 @@ export class CasesService {
   }
 
   async getCasesStats(currentUserId: string, userRole: string) {
+    console.log('[CASES_STATS] Iniciando estadísticas para usuario:', currentUserId, 'rol:', userRole);
+    
     let whereClause = {};
 
     // Filtrar por rol del usuario
@@ -446,10 +448,14 @@ export class CasesService {
       }
 
       whereClause = { clientId: client.id };
+      console.log('[CASES_STATS] Cliente encontrado, clientId:', client.id);
     } else if (userRole === 'ABOGADO') {
       whereClause = { lawyerId: currentUserId };
+      console.log('[CASES_STATS] Abogado, lawyerId:', currentUserId);
     }
     // Los admins ven todas las estadísticas (whereClause vacío)
+
+    console.log('[CASES_STATS] Where clause:', JSON.stringify(whereClause));
 
     const [total, abiertos, enProceso, cerrados] = await Promise.all([
       this.prisma.expediente.count({ where: whereClause }),
@@ -457,6 +463,15 @@ export class CasesService {
       this.prisma.expediente.count({ where: { ...whereClause, status: Status.EN_PROCESO } }),
       this.prisma.expediente.count({ where: { ...whereClause, status: Status.CERRADO } }),
     ]);
+
+    console.log('[CASES_STATS] Resultados:', { total, abiertos, enProceso, cerrados });
+
+    // Verificar si hay casos para este usuario
+    const allCases = await this.prisma.expediente.findMany({
+      where: whereClause,
+      select: { id: true, title: true, status: true, lawyerId: true, clientId: true }
+    });
+    console.log('[CASES_STATS] Todos los casos encontrados:', allCases);
 
     return {
       total,
