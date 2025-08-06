@@ -479,12 +479,14 @@ export class InvoicesController {
         throw error;
       }
       
-      if (error.message?.includes('No se puede eliminar')) {
-        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (errorMessage.includes('No se puede eliminar')) {
+        throw new HttpException(errorMessage, HttpStatus.BAD_REQUEST);
       }
       
-      if (error.message?.includes('no encontrada')) {
-        throw new HttpException(error.message, HttpStatus.NOT_FOUND);
+      if (errorMessage.includes('no encontrada')) {
+        throw new HttpException(errorMessage, HttpStatus.NOT_FOUND);
       }
       
       throw new HttpException(

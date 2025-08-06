@@ -17571,11 +17571,12 @@ let InvoicesController = class InvoicesController {
             if (error instanceof common_1.HttpException) {
                 throw error;
             }
-            if (error.message?.includes('No se puede eliminar')) {
-                throw new common_1.HttpException(error.message, common_1.HttpStatus.BAD_REQUEST);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (errorMessage.includes('No se puede eliminar')) {
+                throw new common_1.HttpException(errorMessage, common_1.HttpStatus.BAD_REQUEST);
             }
-            if (error.message?.includes('no encontrada')) {
-                throw new common_1.HttpException(error.message, common_1.HttpStatus.NOT_FOUND);
+            if (errorMessage.includes('no encontrada')) {
+                throw new common_1.HttpException(errorMessage, common_1.HttpStatus.NOT_FOUND);
             }
             throw new common_1.HttpException('Error interno del servidor al eliminar la factura', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
