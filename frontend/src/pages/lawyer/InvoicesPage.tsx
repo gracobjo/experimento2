@@ -920,8 +920,32 @@ const InvoicesPage = () => {
       window.print();
     };
 
-    const handleDownload = () => {
-      window.open(`/api/invoices/${invoice.id}/pdf-qr`, '_blank');
+    const handleDownload = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/invoices/${invoice.id}/pdf-qr`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Error al descargar el PDF');
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `factura_${invoice.numeroFactura || invoice.id}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Error downloading PDF:', error);
+        alert('Error al descargar el PDF. Por favor, inténtalo de nuevo.');
+      }
     };
 
     if (loading) return <div className="p-8 text-center">Cargando previsualización...</div>;

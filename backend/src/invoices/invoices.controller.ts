@@ -164,12 +164,39 @@ export class InvoicesController {
   }
 
   @Get(':id/pdf-qr')
-  async getInvoicePdfWithQR(@Param('id') id: string, @Res() res: Response) {
+  @Roles(Role.ABOGADO, Role.ADMIN, Role.CLIENTE)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ 
+    summary: 'Descargar PDF con QR',
+    description: 'Descarga el PDF de la factura con código QR'
+  })
+  @ApiParam({ name: 'id', description: 'ID de la factura', type: 'string' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'PDF con QR',
+    schema: {
+      type: 'string',
+      format: 'binary'
+    }
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente' })
+  @ApiResponse({ status: 404, description: 'Factura no encontrada' })
+  async getInvoicePdfWithQR(@Param('id') id: string, @Res() res: Response, @Request() req) {
     try {
       // Obtener la factura de la base de datos
       const invoice = await this.invoicesService.findOne(id);
       if (!invoice) {
         return res.status(404).send('Factura no encontrada');
+      }
+
+      // Verificar permisos
+      if (req.user.role === 'CLIENTE' && invoice.receptorId !== req.user.id) {
+        return res.status(403).send('No autorizado para acceder a esta factura');
+      }
+
+      if (req.user.role === 'ABOGADO' && invoice.emisorId !== req.user.id && req.user.role !== 'ADMIN') {
+        return res.status(403).send('No autorizado para acceder a esta factura');
       }
       console.log('[PDF-QR] Datos de la factura:', JSON.stringify(invoice, null, 2));
       
