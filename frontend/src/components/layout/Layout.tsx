@@ -172,14 +172,21 @@ const Layout = () => {
   useEffect(() => {
     const fetchContactParams = async () => {
       try {
+        console.log('[LAYOUT] Obteniendo parámetros de contacto...');
         const [contactResponse, legalResponse] = await Promise.all([
           api.get('/parametros/contact'),
           api.get('/parametros/legal')
         ]);
         
+        console.log('[LAYOUT] Respuesta de contact:', contactResponse.data);
+        console.log('[LAYOUT] Respuesta de legal:', legalResponse.data);
+        
         // Asegurar que contactParams sea siempre un array
         const contactData = Array.isArray(contactResponse.data) ? contactResponse.data : [];
         setContactParams(contactData);
+        
+        console.log('[LAYOUT] Parámetros de contacto cargados:', contactData.length);
+        console.log('[LAYOUT] Parámetros encontrados:', contactData.map(p => ({ clave: p.clave, valor: p.valor })));
         
         // Buscar el texto de copyright
         const legalData = Array.isArray(legalResponse.data) ? legalResponse.data : [];
@@ -188,6 +195,7 @@ const Layout = () => {
           setCopyrightText(copyrightParam.valor);
         }
       } catch (error) {
+        console.error('[LAYOUT] Error obteniendo parámetros:', error);
         // En caso de error, establecer arrays vacíos
         setContactParams([]);
       }
@@ -213,9 +221,11 @@ const Layout = () => {
   // Función para obtener valor de parámetro por clave
   const getParamValue = (clave: string): string => {
     if (!Array.isArray(contactParams)) {
+      console.log('[LAYOUT] getParamValue - contactParams no es array:', contactParams);
       return '';
     }
     const param = contactParams.find(p => p.clave === clave);
+    console.log(`[LAYOUT] getParamValue(${clave}):`, param ? param.valor : 'NO ENCONTRADO');
     return param ? param.valor : '';
   };
 
