@@ -17642,6 +17642,37 @@ let InvoicesController = class InvoicesController {
     async getClientsWithInvoices() {
         return this.invoicesService.getClientsWithInvoices();
     }
+    async debugInvoice(id) {
+        console.log('[DEBUG] Verificando factura:', id);
+        try {
+            const invoice = await this.invoicesService.findOne(id);
+            console.log('[DEBUG] Resultado de búsqueda:', invoice ? 'ENCONTRADA' : 'NO ENCONTRADA');
+            if (invoice) {
+                console.log('[DEBUG] Datos de la factura:', {
+                    id: invoice.id,
+                    numeroFactura: invoice.numeroFactura,
+                    estado: invoice.estado,
+                    emisorId: invoice.emisorId
+                });
+            }
+            return {
+                exists: !!invoice,
+                invoice: invoice ? {
+                    id: invoice.id,
+                    numeroFactura: invoice.numeroFactura,
+                    estado: invoice.estado,
+                    emisorId: invoice.emisorId
+                } : null
+            };
+        }
+        catch (error) {
+            console.error('[DEBUG] Error verificando factura:', error);
+            return {
+                exists: false,
+                error: error instanceof Error ? error.message : String(error)
+            };
+        }
+    }
     async getAuditHistory(id) {
         const invoice = await this.invoicesService.findOne(id);
         if (!invoice) {
@@ -18280,6 +18311,20 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], InvoicesController.prototype, "getClientsWithInvoices", null);
+__decorate([
+    (0, common_1.Get)('debug/:id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE, client_1.Role.ABOGADO, client_1.Role.ADMIN),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Debug factura',
+        description: 'Endpoint de debug para verificar si una factura existe'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la factura', type: 'string' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "debugInvoice", null);
 __decorate([
     (0, common_1.Get)(':id/audit-history'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),

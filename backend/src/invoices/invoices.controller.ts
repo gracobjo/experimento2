@@ -745,6 +745,49 @@ export class InvoicesController {
     return this.invoicesService.getClientsWithInvoices();
   }
 
+  @Get('debug/:id')
+  @Roles(Role.CLIENTE, Role.ABOGADO, Role.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ 
+    summary: 'Debug factura',
+    description: 'Endpoint de debug para verificar si una factura existe'
+  })
+  @ApiParam({ name: 'id', description: 'ID de la factura', type: 'string' })
+  async debugInvoice(@Param('id') id: string) {
+    console.log('[DEBUG] Verificando factura:', id);
+    
+    try {
+      // Verificar si existe en la base de datos
+      const invoice = await this.invoicesService.findOne(id);
+      console.log('[DEBUG] Resultado de búsqueda:', invoice ? 'ENCONTRADA' : 'NO ENCONTRADA');
+      
+      if (invoice) {
+        console.log('[DEBUG] Datos de la factura:', {
+          id: invoice.id,
+          numeroFactura: invoice.numeroFactura,
+          estado: invoice.estado,
+          emisorId: invoice.emisorId
+        });
+      }
+      
+      return {
+        exists: !!invoice,
+        invoice: invoice ? {
+          id: invoice.id,
+          numeroFactura: invoice.numeroFactura,
+          estado: invoice.estado,
+          emisorId: invoice.emisorId
+        } : null
+      };
+    } catch (error) {
+      console.error('[DEBUG] Error verificando factura:', error);
+      return {
+        exists: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
   @Get(':id/audit-history')
   @Roles(Role.ADMIN, Role.ABOGADO)
   @UseGuards(JwtAuthGuard, RolesGuard)
