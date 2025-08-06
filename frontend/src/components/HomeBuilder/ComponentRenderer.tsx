@@ -121,7 +121,7 @@ const ServiceCards: React.FC<{ props: any }> = ({ props }) => {
     };
 
     fetchServices();
-  }, [props.services]);
+  }, []); // Removed props.services dependency to always fetch from API
 
   console.log('[ServiceCards] Estado actual:', { loading, error, servicesCount: services.length });
 
