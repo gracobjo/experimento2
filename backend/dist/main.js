@@ -9251,7 +9251,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AdminLayoutsController = exports.LayoutsController = void 0;
 const common_1 = __webpack_require__(2);
@@ -9269,9 +9269,16 @@ let LayoutsController = class LayoutsController {
     async getActiveHomeLayout() {
         const layout = await this.layoutsService.findActiveLayout('home');
         if (!layout) {
-            throw new common_1.HttpException({ message: 'No hay layout activo para la home' }, common_1.HttpStatus.NOT_FOUND);
+            console.log('[LAYOUTS] No hay layout activo para home, creando por defecto...');
+            const defaultLayout = await this.layoutsService.createDefaultHomeLayout();
+            return defaultLayout;
         }
         return layout;
+    }
+    async initializeDefaultLayout(req) {
+        console.log('[LAYOUTS] Inicializando layout por defecto...');
+        const defaultLayout = await this.layoutsService.createDefaultHomeLayout(req.user.id);
+        return defaultLayout;
     }
 };
 exports.LayoutsController = LayoutsController;
@@ -9294,6 +9301,25 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", typeof (_b = typeof Promise !== "undefined" && Promise) === "function" ? _b : Object)
 ], LayoutsController.prototype, "getActiveHomeLayout", null);
+__decorate([
+    (0, common_1.Post)('initialize-default'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Inicializar layout por defecto para la home',
+        description: 'Crea un layout por defecto para la página principal'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Layout por defecto creado exitosamente',
+        type: layout_dto_1.LayoutConfigDto
+    }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", typeof (_c = typeof Promise !== "undefined" && Promise) === "function" ? _c : Object)
+], LayoutsController.prototype, "initializeDefaultLayout", null);
 exports.LayoutsController = LayoutsController = __decorate([
     (0, swagger_1.ApiTags)('Layouts - Home Builder'),
     (0, common_1.Controller)('layouts'),
@@ -9355,8 +9381,8 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [typeof (_d = typeof layout_dto_1.CreateLayoutDto !== "undefined" && layout_dto_1.CreateLayoutDto) === "function" ? _d : Object, Object]),
-    __metadata("design:returntype", typeof (_e = typeof Promise !== "undefined" && Promise) === "function" ? _e : Object)
+    __metadata("design:paramtypes", [typeof (_e = typeof layout_dto_1.CreateLayoutDto !== "undefined" && layout_dto_1.CreateLayoutDto) === "function" ? _e : Object, Object]),
+    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
 ], AdminLayoutsController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
@@ -9372,7 +9398,7 @@ __decorate([
     }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
+    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
 ], AdminLayoutsController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)(':id'),
@@ -9394,7 +9420,7 @@ __decorate([
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
+    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
 ], AdminLayoutsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Get)('slug/:slug'),
@@ -9416,7 +9442,7 @@ __decorate([
     __param(0, (0, common_1.Param)('slug')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
+    __metadata("design:returntype", typeof (_j = typeof Promise !== "undefined" && Promise) === "function" ? _j : Object)
 ], AdminLayoutsController.prototype, "findBySlug", null);
 __decorate([
     (0, common_1.Get)('active/:slug'),
@@ -9438,7 +9464,7 @@ __decorate([
     __param(0, (0, common_1.Param)('slug')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", typeof (_j = typeof Promise !== "undefined" && Promise) === "function" ? _j : Object)
+    __metadata("design:returntype", typeof (_k = typeof Promise !== "undefined" && Promise) === "function" ? _k : Object)
 ], AdminLayoutsController.prototype, "findActiveLayout", null);
 __decorate([
     (0, common_1.Patch)(':id'),
@@ -9466,8 +9492,8 @@ __decorate([
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, typeof (_k = typeof layout_dto_1.UpdateLayoutDto !== "undefined" && layout_dto_1.UpdateLayoutDto) === "function" ? _k : Object, Object]),
-    __metadata("design:returntype", typeof (_l = typeof Promise !== "undefined" && Promise) === "function" ? _l : Object)
+    __metadata("design:paramtypes", [String, typeof (_l = typeof layout_dto_1.UpdateLayoutDto !== "undefined" && layout_dto_1.UpdateLayoutDto) === "function" ? _l : Object, Object]),
+    __metadata("design:returntype", typeof (_m = typeof Promise !== "undefined" && Promise) === "function" ? _m : Object)
 ], AdminLayoutsController.prototype, "update", null);
 __decorate([
     (0, common_1.Post)(':id/activate'),
@@ -9490,7 +9516,7 @@ __decorate([
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", typeof (_m = typeof Promise !== "undefined" && Promise) === "function" ? _m : Object)
+    __metadata("design:returntype", typeof (_o = typeof Promise !== "undefined" && Promise) === "function" ? _o : Object)
 ], AdminLayoutsController.prototype, "activate", null);
 __decorate([
     (0, common_1.Post)(':id/deactivate'),
@@ -9513,7 +9539,7 @@ __decorate([
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", typeof (_o = typeof Promise !== "undefined" && Promise) === "function" ? _o : Object)
+    __metadata("design:returntype", typeof (_p = typeof Promise !== "undefined" && Promise) === "function" ? _p : Object)
 ], AdminLayoutsController.prototype, "deactivate", null);
 __decorate([
     (0, common_1.Post)(':id/duplicate'),
@@ -9537,7 +9563,7 @@ __decorate([
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", typeof (_p = typeof Promise !== "undefined" && Promise) === "function" ? _p : Object)
+    __metadata("design:returntype", typeof (_q = typeof Promise !== "undefined" && Promise) === "function" ? _q : Object)
 ], AdminLayoutsController.prototype, "duplicate", null);
 __decorate([
     (0, common_1.Delete)(':id'),
@@ -9559,14 +9585,14 @@ __decorate([
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", typeof (_q = typeof Promise !== "undefined" && Promise) === "function" ? _q : Object)
+    __metadata("design:returntype", typeof (_r = typeof Promise !== "undefined" && Promise) === "function" ? _r : Object)
 ], AdminLayoutsController.prototype, "remove", null);
 exports.AdminLayoutsController = AdminLayoutsController = __decorate([
     (0, swagger_1.ApiTags)('Admin - Layouts'),
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, common_1.Controller)('admin/layouts'),
-    __metadata("design:paramtypes", [typeof (_c = typeof layouts_service_1.LayoutsService !== "undefined" && layouts_service_1.LayoutsService) === "function" ? _c : Object])
+    __metadata("design:paramtypes", [typeof (_d = typeof layouts_service_1.LayoutsService !== "undefined" && layouts_service_1.LayoutsService) === "function" ? _d : Object])
 ], AdminLayoutsController);
 
 
@@ -9815,6 +9841,104 @@ let LayoutsService = class LayoutsService {
             }
         });
         return this.mapToLayoutConfigDto(duplicatedLayout);
+    }
+    async createDefaultHomeLayout(userId) {
+        console.log('[LAYOUTS_SERVICE] Creando layout por defecto para home...');
+        const defaultComponents = [
+            {
+                id: 'hero-banner',
+                type: 'hero-banner',
+                props: {
+                    title: 'Bienvenido a Nuestro Despacho Legal',
+                    subtitle: 'Servicios legales profesionales y confiables para proteger sus derechos',
+                    backgroundImage: '/images/hero-bg.jpg',
+                    ctaText: 'Solicitar Consulta Gratuita',
+                    secondaryText: 'Conocer Servicios',
+                    secondaryLink: '/contact'
+                },
+                order: 0
+            },
+            {
+                id: 'service-cards',
+                type: 'service-cards',
+                props: {
+                    title: 'Nuestros Servicios',
+                    services: [
+                        {
+                            title: 'Derecho Civil',
+                            description: 'Asesoría especializada en casos civiles y comerciales',
+                            icon: '⚖️'
+                        },
+                        {
+                            title: 'Derecho Laboral',
+                            description: 'Protección de sus derechos laborales y reclamaciones',
+                            icon: '👥'
+                        },
+                        {
+                            title: 'Derecho Familiar',
+                            description: 'Divorcios, custodia y asuntos familiares',
+                            icon: '👨‍👩‍👧‍👦'
+                        }
+                    ]
+                },
+                order: 1
+            },
+            {
+                id: 'stats',
+                type: 'stats',
+                props: {
+                    title: 'Nuestros Números',
+                    stats: [
+                        { label: 'Casos Exitosos', value: '500+', icon: '✅' },
+                        { label: 'Años de Experiencia', value: '15', icon: '📅' },
+                        { label: 'Clientes Satisfechos', value: '1000+', icon: '👥' }
+                    ]
+                },
+                order: 2
+            },
+            {
+                id: 'contact-form',
+                type: 'contact-form',
+                props: {
+                    title: '¿Necesitas Asesoría Legal?',
+                    subtitle: 'Nuestros abogados especialistas están listos para ayudarte',
+                    buttonText: 'Solicitar Consulta Gratuita',
+                    submitText: 'Enviar Consulta'
+                },
+                order: 3
+            }
+        ];
+        const existingActiveLayout = await this.prisma.layout.findFirst({
+            where: {
+                slug: 'home',
+                isActive: true
+            }
+        });
+        if (existingActiveLayout) {
+            console.log('[LAYOUTS_SERVICE] Ya existe un layout activo para home');
+            return this.mapToLayoutConfigDto(existingActiveLayout);
+        }
+        const defaultLayout = await this.prisma.layout.create({
+            data: {
+                name: 'Home Page Layout',
+                slug: 'home',
+                components: defaultComponents,
+                version: 1,
+                isActive: true,
+                createdBy: userId || 'system'
+            },
+            include: {
+                createdByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        console.log('[LAYOUTS_SERVICE] Layout por defecto creado exitosamente');
+        return this.mapToLayoutConfigDto(defaultLayout);
     }
     generateSlug(name) {
         return name

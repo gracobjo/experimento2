@@ -49,9 +49,31 @@ export class LayoutsController {
   async getActiveHomeLayout(): Promise<LayoutConfigDto> {
     const layout = await this.layoutsService.findActiveLayout('home');
     if (!layout) {
-      throw new HttpException({ message: 'No hay layout activo para la home' }, HttpStatus.NOT_FOUND);
+      // Crear layout por defecto si no existe
+      console.log('[LAYOUTS] No hay layout activo para home, creando por defecto...');
+      const defaultLayout = await this.layoutsService.createDefaultHomeLayout();
+      return defaultLayout;
     }
     return layout;
+  }
+
+  @Post('initialize-default')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Inicializar layout por defecto para la home',
+    description: 'Crea un layout por defecto para la página principal'
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Layout por defecto creado exitosamente',
+    type: LayoutConfigDto
+  })
+  async initializeDefaultLayout(@Request() req): Promise<LayoutConfigDto> {
+    console.log('[LAYOUTS] Inicializando layout por defecto...');
+    const defaultLayout = await this.layoutsService.createDefaultHomeLayout(req.user.id);
+    return defaultLayout;
   }
 }
 

@@ -267,6 +267,112 @@ export class LayoutsService {
     return this.mapToLayoutConfigDto(duplicatedLayout);
   }
 
+  async createDefaultHomeLayout(userId?: string): Promise<LayoutConfigDto> {
+    console.log('[LAYOUTS_SERVICE] Creando layout por defecto para home...');
+    
+    const defaultComponents = [
+      {
+        id: 'hero-banner',
+        type: 'hero-banner',
+        props: {
+          title: 'Bienvenido a Nuestro Despacho Legal',
+          subtitle: 'Servicios legales profesionales y confiables para proteger sus derechos',
+          backgroundImage: '/images/hero-bg.jpg',
+          ctaText: 'Solicitar Consulta Gratuita',
+          secondaryText: 'Conocer Servicios',
+          secondaryLink: '/contact'
+        },
+        order: 0
+      },
+      {
+        id: 'service-cards',
+        type: 'service-cards',
+        props: {
+          title: 'Nuestros Servicios',
+          services: [
+            {
+              title: 'Derecho Civil',
+              description: 'Asesoría especializada en casos civiles y comerciales',
+              icon: '⚖️'
+            },
+            {
+              title: 'Derecho Laboral',
+              description: 'Protección de sus derechos laborales y reclamaciones',
+              icon: '👥'
+            },
+            {
+              title: 'Derecho Familiar',
+              description: 'Divorcios, custodia y asuntos familiares',
+              icon: '👨‍👩‍👧‍👦'
+            }
+          ]
+        },
+        order: 1
+      },
+      {
+        id: 'stats',
+        type: 'stats',
+        props: {
+          title: 'Nuestros Números',
+          stats: [
+            { label: 'Casos Exitosos', value: '500+', icon: '✅' },
+            { label: 'Años de Experiencia', value: '15', icon: '📅' },
+            { label: 'Clientes Satisfechos', value: '1000+', icon: '👥' }
+          ]
+        },
+        order: 2
+      },
+      {
+        id: 'contact-form',
+        type: 'contact-form',
+        props: {
+          title: '¿Necesitas Asesoría Legal?',
+          subtitle: 'Nuestros abogados especialistas están listos para ayudarte',
+          buttonText: 'Solicitar Consulta Gratuita',
+          submitText: 'Enviar Consulta'
+        },
+        order: 3
+      }
+    ];
+
+    // Verificar si ya existe un layout activo para home
+    const existingActiveLayout = await this.prisma.layout.findFirst({
+      where: {
+        slug: 'home',
+        isActive: true
+      }
+    });
+
+    if (existingActiveLayout) {
+      console.log('[LAYOUTS_SERVICE] Ya existe un layout activo para home');
+      return this.mapToLayoutConfigDto(existingActiveLayout);
+    }
+
+    // Crear el layout por defecto
+    const defaultLayout = await this.prisma.layout.create({
+      data: {
+        name: 'Home Page Layout',
+        slug: 'home',
+        components: defaultComponents,
+        version: 1,
+        isActive: true,
+        createdBy: userId || 'system'
+      },
+      include: {
+        createdByUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    console.log('[LAYOUTS_SERVICE] Layout por defecto creado exitosamente');
+    return this.mapToLayoutConfigDto(defaultLayout);
+  }
+
   private generateSlug(name: string): string {
     return name
       .toLowerCase()
