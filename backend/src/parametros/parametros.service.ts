@@ -66,6 +66,8 @@ export class ParametrosService {
   }
 
   async findServices() {
+    console.log('[PARAMETROS] findServices - Iniciando búsqueda de servicios...');
+    
     const services = await this.prisma.parametro.findMany({
       where: {
         clave: {
@@ -77,10 +79,15 @@ export class ParametrosService {
       }
     });
 
+    console.log('[PARAMETROS] findServices - Parámetros encontrados con SERVICE_:', services.length);
+    console.log('[PARAMETROS] findServices - Claves encontradas:', services.map(s => s.clave));
+
     // Transformar los servicios a un formato más útil
     const servicesMap = new Map();
     services.forEach(service => {
       const parts = service.clave.split('_');
+      console.log('[PARAMETROS] findServices - Procesando clave:', service.clave, 'parts:', parts);
+      
       if (parts.length >= 3) {
         const serviceId = parts[1];
         const field = parts[2];
@@ -90,13 +97,20 @@ export class ParametrosService {
             id: serviceId,
             orden: parseInt(parts[1]) || 0
           });
+          console.log('[PARAMETROS] findServices - Nuevo servicio creado:', serviceId);
         }
         
         servicesMap.get(serviceId)[field] = service.valor;
+        console.log('[PARAMETROS] findServices - Campo agregado:', field, '=', service.valor);
+      } else {
+        console.log('[PARAMETROS] findServices - Clave ignorada (formato incorrecto):', service.clave);
       }
     });
 
-    return Array.from(servicesMap.values()).sort((a, b) => a.orden - b.orden);
+    const result = Array.from(servicesMap.values()).sort((a, b) => a.orden - b.orden);
+    console.log('[PARAMETROS] findServices - Resultado final:', result);
+    
+    return result;
   }
 
   async updateService(serviceId: string, serviceData: {
