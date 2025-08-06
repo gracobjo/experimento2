@@ -1950,12 +1950,24 @@ export class InvoicesService {
     
     console.log('🔍 [generateInvoiceHtml] Total para QR calculado:', totalParaQR);
     
-    // Generar qrData con el total correcto
+    // Generar hash de integridad
+    const invoiceHash = this.generateInvoiceHash(invoice);
+    
+    // Generar qrData con el total correcto y hash
+    const fechaFactura = invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : '';
+    const importeTotal = Math.round(totalParaQR * 100) / 100;
+    const nifEmisor = invoice.emisor?.dni || invoice.emisor?.nif || '';
+    const nifReceptor = invoice.receptor?.dni || invoice.receptor?.nif || '';
+    
     const qrData = [
-      `NIF:${invoice.emisor?.email || ''}`,
+      `NIF:${nifEmisor}`,
       `NUM:${invoice.numeroFactura || ''}`,
-      `FEC:${invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : ''}`,
-      `IMP:${Math.round(totalParaQR * 100) / 100}`
+      `FEC:${fechaFactura}`,
+      `IMP:${importeTotal}`,
+      `TIPO:${invoice.tipoFactura || 'F'}`,
+      `NIF_RECEPTOR:${nifReceptor}`,
+      `ESTADO:${invoice.estado || 'EMITIDA'}`,
+      `HASH:${invoiceHash}`
     ].join('|');
     
     console.log('🔍 [generateInvoiceHtml] QR Data generado:', qrData);

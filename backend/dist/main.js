@@ -14791,11 +14791,20 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
             Number(invoice.cuotaIVA || 0) -
             (Number(invoice.baseImponible || 0) * (Number(invoice.retencion || 0) / 100));
         console.log('🔍 [generateInvoiceHtml] Total para QR calculado:', totalParaQR);
+        const invoiceHash = this.generateInvoiceHash(invoice);
+        const fechaFactura = invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : '';
+        const importeTotal = Math.round(totalParaQR * 100) / 100;
+        const nifEmisor = invoice.emisor?.dni || invoice.emisor?.nif || '';
+        const nifReceptor = invoice.receptor?.dni || invoice.receptor?.nif || '';
         const qrData = [
-            `NIF:${invoice.emisor?.email || ''}`,
+            `NIF:${nifEmisor}`,
             `NUM:${invoice.numeroFactura || ''}`,
-            `FEC:${invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : ''}`,
-            `IMP:${Math.round(totalParaQR * 100) / 100}`
+            `FEC:${fechaFactura}`,
+            `IMP:${importeTotal}`,
+            `TIPO:${invoice.tipoFactura || 'F'}`,
+            `NIF_RECEPTOR:${nifReceptor}`,
+            `ESTADO:${invoice.estado || 'EMITIDA'}`,
+            `HASH:${invoiceHash}`
         ].join('|');
         console.log('🔍 [generateInvoiceHtml] QR Data generado:', qrData);
         const qrImageDataUrl = await (await Promise.resolve().then(() => __importStar(__webpack_require__(101)))).toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
