@@ -156,6 +156,163 @@ async function main() {
       },
     });
 
+    // Crear parámetros de contacto
+    await prisma.parametro.upsert({
+      where: { clave: 'CONTACT_EMAIL' },
+      update: {},
+      create: {
+        clave: 'CONTACT_EMAIL',
+        valor: 'info@despacho.com',
+        etiqueta: 'Email de Contacto',
+        tipo: 'email',
+      },
+    });
+
+    await prisma.parametro.upsert({
+      where: { clave: 'CONTACT_PHONE' },
+      update: {},
+      create: {
+        clave: 'CONTACT_PHONE',
+        valor: '+34 600 123 456',
+        etiqueta: 'Teléfono de Contacto',
+        tipo: 'string',
+      },
+    });
+
+    await prisma.parametro.upsert({
+      where: { clave: 'CONTACT_PHONE_PREFIX' },
+      update: {},
+      create: {
+        clave: 'CONTACT_PHONE_PREFIX',
+        valor: '+34',
+        etiqueta: 'Prefijo Telefónico',
+        tipo: 'string',
+      },
+    });
+
+    await prisma.parametro.upsert({
+      where: { clave: 'CONTACT_INFO' },
+      update: {},
+      create: {
+        clave: 'CONTACT_INFO',
+        valor: 'Calle Mayor 123, Madrid',
+        etiqueta: 'Dirección de Contacto',
+        tipo: 'string',
+      },
+    });
+
+    // Crear parámetros legales
+    await prisma.parametro.upsert({
+      where: { clave: 'LEGAL_PRIVACY' },
+      update: {},
+      create: {
+        clave: 'LEGAL_PRIVACY',
+        valor: 'Política de Privacidad del Despacho Legal',
+        etiqueta: 'Política de Privacidad',
+        tipo: 'text',
+      },
+    });
+
+    await prisma.parametro.upsert({
+      where: { clave: 'LEGAL_TERMS' },
+      update: {},
+      create: {
+        clave: 'LEGAL_TERMS',
+        valor: 'Términos y Condiciones del Servicio',
+        etiqueta: 'Términos y Condiciones',
+        tipo: 'text',
+      },
+    });
+
+    await prisma.parametro.upsert({
+      where: { clave: 'LEGAL_COOKIES' },
+      update: {},
+      create: {
+        clave: 'LEGAL_COOKIES',
+        valor: 'Política de Cookies',
+        etiqueta: 'Política de Cookies',
+        tipo: 'text',
+      },
+    });
+
+    await prisma.parametro.upsert({
+      where: { clave: 'LEGAL_COPYRIGHT' },
+      update: {},
+      create: {
+        clave: 'LEGAL_COPYRIGHT',
+        valor: '© 2024 Despacho Legal. Todos los derechos reservados.',
+        etiqueta: 'Copyright',
+        tipo: 'string',
+      },
+    });
+
+    // Crear parámetros de servicios
+    await prisma.parametro.upsert({
+      where: { clave: 'SERVICE_1_TITLE' },
+      update: {},
+      create: {
+        clave: 'SERVICE_1_TITLE',
+        valor: 'Derecho Civil',
+        etiqueta: 'Servicio 1 - Título',
+        tipo: 'string',
+      },
+    });
+
+    await prisma.parametro.upsert({
+      where: { clave: 'SERVICE_1_DESCRIPTION' },
+      update: {},
+      create: {
+        clave: 'SERVICE_1_DESCRIPTION',
+        valor: 'Asesoramiento en contratos, compraventas y derecho civil',
+        etiqueta: 'Servicio 1 - Descripción',
+        tipo: 'text',
+      },
+    });
+
+    await prisma.parametro.upsert({
+      where: { clave: 'SERVICE_1_ICON' },
+      update: {},
+      create: {
+        clave: 'SERVICE_1_ICON',
+        valor: 'gavel',
+        etiqueta: 'Servicio 1 - Icono',
+        tipo: 'string',
+      },
+    });
+
+    await prisma.parametro.upsert({
+      where: { clave: 'SERVICE_2_TITLE' },
+      update: {},
+      create: {
+        clave: 'SERVICE_2_TITLE',
+        valor: 'Derecho Laboral',
+        etiqueta: 'Servicio 2 - Título',
+        tipo: 'string',
+      },
+    });
+
+    await prisma.parametro.upsert({
+      where: { clave: 'SERVICE_2_DESCRIPTION' },
+      update: {},
+      create: {
+        clave: 'SERVICE_2_DESCRIPTION',
+        valor: 'Asesoramiento en despidos, conflictos laborales y negociaciones',
+        etiqueta: 'Servicio 2 - Descripción',
+        tipo: 'text',
+      },
+    });
+
+    await prisma.parametro.upsert({
+      where: { clave: 'SERVICE_2_ICON' },
+      update: {},
+      create: {
+        clave: 'SERVICE_2_ICON',
+        valor: 'work',
+        etiqueta: 'Servicio 2 - Icono',
+        tipo: 'string',
+      },
+    });
+
     console.log('✅ Seed completado exitosamente!');
     console.log('📋 Datos creados:');
     console.log('- 1 Administrador');
@@ -163,6 +320,9 @@ async function main() {
     console.log('- 2 Clientes');
     console.log('- 2 Expedientes');
     console.log('- 2 Tareas');
+    console.log('- 4 Parámetros de contacto');
+    console.log('- 4 Parámetros legales');
+    console.log('- 6 Parámetros de servicios');
     
     console.log('🔑 Credenciales de acceso:');
     console.log('Admin: admin@despacho.com / password123');
