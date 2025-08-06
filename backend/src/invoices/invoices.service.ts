@@ -1266,25 +1266,65 @@ export class InvoicesService {
         });
       }
 
-      // Generar QR simple
+      // Generar QR según normativa española de facturación electrónica
       try {
-        const qrData = `FACTURA:${invoice.numeroFactura || 'N/A'}`;
+        // Formatear fecha en formato ISO
+        const fechaFactura = invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : '';
+        
+        // Formatear importe con 2 decimales
+        const importeTotal = (invoice.importeTotal || 0).toFixed(2);
+        
+        // Obtener NIF del emisor (si está disponible)
+        const nifEmisor = invoice.emisor?.dni || invoice.emisor?.nif || '';
+        
+        // Obtener NIF del receptor (si está disponible)
+        const nifReceptor = invoice.receptor?.dni || invoice.receptor?.nif || '';
+        
+        // Construir datos del QR según normativa española
+        // Formato: NIF|NUM|FEC|IMP|TIPO
+        const qrData = [
+          `NIF:${nifEmisor}`,
+          `NUM:${invoice.numeroFactura || ''}`,
+          `FEC:${fechaFactura}`,
+          `IMP:${importeTotal}`,
+          `TIPO:${invoice.tipoFactura || 'F'}`,
+          `NIF_RECEPTOR:${nifReceptor}`,
+          `ESTADO:${invoice.estado || 'EMITIDA'}`
+        ].join('|');
+        
+        this.logger.log('QR Data generado:', qrData);
+        
+        // Guardar los datos del QR en la factura para su reutilización
+        invoice.qrData = qrData;
+        
         const qrImageDataUrl = await QRCode.toDataURL(qrData, { 
           errorCorrectionLevel: 'M', 
-          width: 150 
+          width: 200,
+          margin: 2
         });
         const qrImageBase64 = qrImageDataUrl.replace(/^data:image\/png;base64,/, '');
         const qrImageBytes = Buffer.from(qrImageBase64, 'base64');
         
         // Insertar imagen QR
         const qrImage = await pdfDoc.embedPng(qrImageBytes);
-        const qrDims = qrImage.scale(0.5);
+        const qrDims = qrImage.scale(0.6);
         page.drawImage(qrImage, {
-          x: width - 100,
-          y: height - 100,
+          x: width - 120,
+          y: height - 120,
           width: qrDims.width,
           height: qrDims.height
         });
+        
+        // Agregar texto explicativo del QR
+        page.drawText('Código QR para facturación electrónica', {
+          x: width - 120,
+          y: height - 140,
+          size: 8,
+          font: helveticaFont,
+          color: darkGray
+        });
+        
+        this.logger.log('QR generado exitosamente con datos normativos');
       } catch (qrError) {
         this.logger.warn('Error generando QR, continuando sin QR:', qrError);
       }
@@ -1483,12 +1523,20 @@ export class InvoicesService {
     try {
       this.logger.log('Generando PDF profesional con pdf-lib (formato mejorado)');
       
-      // 1. Construir la cadena de datos para el QR según la normativa
+      // 1. Construir la cadena de datos para el QR según la normativa española
+      const fechaFactura = invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : '';
+      const importeTotal = (invoice.importeTotal || 0).toFixed(2);
+      const nifEmisor = invoice.emisor?.dni || invoice.emisor?.nif || '';
+      const nifReceptor = invoice.receptor?.dni || invoice.receptor?.nif || '';
+      
       const qrData = [
-        `NIF:${invoice.emisor?.email || ''}`,
+        `NIF:${nifEmisor}`,
         `NUM:${invoice.numeroFactura || ''}`,
-        `FEC:${invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : ''}`,
-        `IMP:${invoice.importeTotal || ''}`
+        `FEC:${fechaFactura}`,
+        `IMP:${importeTotal}`,
+        `TIPO:${invoice.tipoFactura || 'F'}`,
+        `NIF_RECEPTOR:${nifReceptor}`,
+        `ESTADO:${invoice.estado || 'EMITIDA'}`
       ].join('|');
 
       // Guardar el contenido del QR en el modelo de factura para su reutilización

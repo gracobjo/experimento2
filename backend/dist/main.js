@@ -14218,21 +14218,44 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
                 });
             }
             try {
-                const qrData = `FACTURA:${invoice.numeroFactura || 'N/A'}`;
+                const fechaFactura = invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : '';
+                const importeTotal = (invoice.importeTotal || 0).toFixed(2);
+                const nifEmisor = invoice.emisor?.dni || invoice.emisor?.nif || '';
+                const nifReceptor = invoice.receptor?.dni || invoice.receptor?.nif || '';
+                const qrData = [
+                    `NIF:${nifEmisor}`,
+                    `NUM:${invoice.numeroFactura || ''}`,
+                    `FEC:${fechaFactura}`,
+                    `IMP:${importeTotal}`,
+                    `TIPO:${invoice.tipoFactura || 'F'}`,
+                    `NIF_RECEPTOR:${nifReceptor}`,
+                    `ESTADO:${invoice.estado || 'EMITIDA'}`
+                ].join('|');
+                this.logger.log('QR Data generado:', qrData);
+                invoice.qrData = qrData;
                 const qrImageDataUrl = await QRCode.toDataURL(qrData, {
                     errorCorrectionLevel: 'M',
-                    width: 150
+                    width: 200,
+                    margin: 2
                 });
                 const qrImageBase64 = qrImageDataUrl.replace(/^data:image\/png;base64,/, '');
                 const qrImageBytes = Buffer.from(qrImageBase64, 'base64');
                 const qrImage = await pdfDoc.embedPng(qrImageBytes);
-                const qrDims = qrImage.scale(0.5);
+                const qrDims = qrImage.scale(0.6);
                 page.drawImage(qrImage, {
-                    x: width - 100,
-                    y: height - 100,
+                    x: width - 120,
+                    y: height - 120,
                     width: qrDims.width,
                     height: qrDims.height
                 });
+                page.drawText('Código QR para facturación electrónica', {
+                    x: width - 120,
+                    y: height - 140,
+                    size: 8,
+                    font: helveticaFont,
+                    color: darkGray
+                });
+                this.logger.log('QR generado exitosamente con datos normativos');
             }
             catch (qrError) {
                 this.logger.warn('Error generando QR, continuando sin QR:', qrError);
@@ -14409,11 +14432,18 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
     async generateInvoicePdfFallback(invoice) {
         try {
             this.logger.log('Generando PDF profesional con pdf-lib (formato mejorado)');
+            const fechaFactura = invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : '';
+            const importeTotal = (invoice.importeTotal || 0).toFixed(2);
+            const nifEmisor = invoice.emisor?.dni || invoice.emisor?.nif || '';
+            const nifReceptor = invoice.receptor?.dni || invoice.receptor?.nif || '';
             const qrData = [
-                `NIF:${invoice.emisor?.email || ''}`,
+                `NIF:${nifEmisor}`,
                 `NUM:${invoice.numeroFactura || ''}`,
-                `FEC:${invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : ''}`,
-                `IMP:${invoice.importeTotal || ''}`
+                `FEC:${fechaFactura}`,
+                `IMP:${importeTotal}`,
+                `TIPO:${invoice.tipoFactura || 'F'}`,
+                `NIF_RECEPTOR:${nifReceptor}`,
+                `ESTADO:${invoice.estado || 'EMITIDA'}`
             ].join('|');
             invoice.qrData = qrData;
             const qrImageDataUrl = await QRCode.toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200 });
