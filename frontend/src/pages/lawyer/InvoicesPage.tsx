@@ -982,7 +982,7 @@ const InvoicesPage = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(blobUrl);
         
         console.log('[FRONTEND] PDF descargado exitosamente');
       } catch (error) {
