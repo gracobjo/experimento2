@@ -939,7 +939,35 @@ const InvoicesPage = () => {
     }, [invoice.id]);
 
     const handlePrint = () => {
-      window.print();
+      // Crear una nueva ventana para imprimir solo el contenido de la factura
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Factura ${invoice.numeroFactura}</title>
+            <style>
+              @media print {
+                body { margin: 0; padding: 0; }
+                .no-print { display: none !important; }
+              }
+              body { font-family: Arial, sans-serif; }
+            </style>
+          </head>
+          <body>
+            ${html}
+          </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      } else {
+        // Fallback si no se puede abrir ventana
+        window.print();
+      }
     };
 
     const handleDownload = async () => {
@@ -1019,8 +1047,8 @@ const InvoicesPage = () => {
     
     return (
       <div className="invoice-preview-container">
-        {/* Debug info */}
-        <div className="mb-4 p-2 bg-gray-100 text-xs">
+        {/* Debug info - oculto en impresión */}
+        <div className="mb-4 p-2 bg-gray-100 text-xs no-print">
           <p>HTML length: {html.length}</p>
           <p>HTML preview: {html.substring(0, 100)}...</p>
         </div>
@@ -1036,8 +1064,8 @@ const InvoicesPage = () => {
           }}
         />
         
-        {/* Botones de acción */}
-        <div className="flex gap-4 mt-8 justify-center">
+        {/* Botones de acción - ocultos en impresión */}
+        <div className="flex gap-4 mt-8 justify-center no-print">
           <button 
             onClick={handlePrint} 
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -1051,6 +1079,25 @@ const InvoicesPage = () => {
             📄 Descargar PDF
           </button>
         </div>
+        
+        {/* Estilos CSS para impresión */}
+        <style jsx>{`
+          @media print {
+            .no-print { display: none !important; }
+            body { margin: 0; padding: 0; }
+            .invoice-preview-container { 
+              padding: 0; 
+              margin: 0; 
+              background: white; 
+            }
+            .invoice-content { 
+              padding: 0; 
+              margin: 0; 
+              box-shadow: none; 
+              border-radius: 0; 
+            }
+          }
+        `}</style>
       </div>
     );
   };
