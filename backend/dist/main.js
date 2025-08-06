@@ -17354,17 +17354,23 @@ let InvoicesController = class InvoicesController {
     }
     async getInvoicePdfWithQR(id, res, req) {
         try {
+            console.log('[PDF-QR] Iniciando generación de PDF para factura:', id);
             const invoice = await this.invoicesService.findOne(id);
             if (!invoice) {
+                console.log('[PDF-QR] Factura no encontrada');
                 return res.status(404).send('Factura no encontrada');
             }
             if (req.user.role === 'CLIENTE' && invoice.receptorId !== req.user.id) {
+                console.log('[PDF-QR] No autorizado - CLIENTE');
                 return res.status(403).send('No autorizado para acceder a esta factura');
             }
             if (req.user.role === 'ABOGADO' && invoice.emisorId !== req.user.id && req.user.role !== 'ADMIN') {
+                console.log('[PDF-QR] No autorizado - ABOGADO');
                 return res.status(403).send('No autorizado para acceder a esta factura');
             }
+            console.log('[PDF-QR] Permisos verificados correctamente');
             console.log('[PDF-QR] Datos de la factura:', JSON.stringify(invoice, null, 2));
+            console.log('[PDF-QR] Iniciando generación de PDF...');
             const pdfBuffer = await this.invoicesService.generateInvoicePdfWithQR(invoice);
             if (!Buffer.isBuffer(pdfBuffer)) {
                 console.error('[PDF-QR] Error: pdfBuffer no es un Buffer válido');
@@ -17372,16 +17378,12 @@ let InvoicesController = class InvoicesController {
             }
             console.log(`[PDF-QR] Buffer PDF generado. Tamaño: ${pdfBuffer.length} bytes`);
             console.log(`[PDF-QR] Primeros bytes: ${Array.from(pdfBuffer.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
-            const fs = __webpack_require__(44);
-            const path = __webpack_require__(45);
-            const debugPath = path.join(process.cwd(), `factura_DEBUG_${invoice.numeroFactura || id}.pdf`);
-            try {
-                fs.writeFileSync(debugPath, pdfBuffer);
-                console.log(`[PDF-QR] PDF guardado para diagnóstico en: ${debugPath}`);
+            const pdfHeader = pdfBuffer.slice(0, 4).toString('ascii');
+            if (pdfHeader !== '%PDF') {
+                console.error('[PDF-QR] Error: Buffer no es un PDF válido. Header:', pdfHeader);
+                return res.status(500).send('Error: Buffer no es un PDF válido');
             }
-            catch (err) {
-                console.error('[PDF-QR] Error guardando PDF de diagnóstico:', err);
-            }
+            console.log('[PDF-QR] Configurando headers de respuesta...');
             res.set({
                 'Content-Type': 'application/pdf',
                 'Content-Length': pdfBuffer.length.toString(),
@@ -17390,10 +17392,13 @@ let InvoicesController = class InvoicesController {
                 'Pragma': 'no-cache',
                 'Expires': '0'
             });
+            console.log('[PDF-QR] Enviando PDF al cliente...');
             res.end(pdfBuffer);
+            console.log('[PDF-QR] PDF enviado exitosamente');
         }
         catch (error) {
             console.error('[PDF-QR] Error al generar PDF con QR:', error);
+            console.error('[PDF-QR] Stack trace:', error.stack);
             res.status(500).send({ error: error.message || error.toString() });
         }
     }
