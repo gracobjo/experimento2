@@ -11,6 +11,17 @@ import compression from 'compression';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
+  // Configurar trust proxy para Railway
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  
+  // Configurar trust proxy para express-rate-limit
+  app.use((req, res, next) => {
+    req.setTimeout(30000);
+    res.setTimeout(30000);
+    next();
+  });
+  
   // Configuración de CORS - debe ir ANTES de otros middleware
   const corsOrigins = process.env.CORS_ORIGIN 
     ? process.env.CORS_ORIGIN.split(',') 
@@ -49,13 +60,14 @@ async function bootstrap() {
     crossOriginResourcePolicy: { policy: "cross-origin" },
   }));
 
-  // Rate Limiting
+  // Rate Limiting - configuración mejorada para Railway
   const limiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minuto
     max: 10000, // hasta 10000 peticiones por IP cada minuto
     message: 'Too many requests from this IP, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
+    skipSuccessfulRequests: true, // Agregar esta línea
   });
   app.use('/api/', limiter);
 
@@ -66,6 +78,7 @@ async function bootstrap() {
     message: 'Too many authentication attempts, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
+    skipSuccessfulRequests: true, // Agregar esta línea
   });
   app.use('/api/auth/', authLimiter);
 
@@ -198,7 +211,7 @@ async function bootstrap() {
   console.log(`🚀 Servidor corriendo en puerto ${port}`);
   console.log(`🌍 CORS origins configurados: ${corsOrigins.join(', ')}`);
   console.log(`📁 Archivos estáticos disponibles en /uploads`);
-  console.log(`📚 Documentación Swagger disponible en /api/docs`);
+  console.log(`📚 Documentación Swagger disponible en /docs`);
   console.log(`💚 Health check disponible en /health`);
   console.log(`🔧 Debug environment disponible en /debug-env`);
 }
