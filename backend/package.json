@@ -24,6 +24,9 @@
     "seed": "ts-node prisma/seed.ts",
     "cleanup": "node scripts/cleanup-uploads.js"
   },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.0.0",

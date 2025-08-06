@@ -62,6 +62,11 @@ echo "Comando: npx prisma db pull"
 npx prisma db pull
 
 echo ""
+echo "🌱 Ejecutando seed para crear datos de prueba..."
+echo "Comando: npx prisma db seed"
+npx prisma db seed
+
+echo ""
 echo "🔍 Verificando estado de la base de datos..."
 echo "Comando: node scripts/check-database.js"
 node scripts/check-database.js
