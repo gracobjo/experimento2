@@ -960,6 +960,21 @@ const InvoicesPage = () => {
           throw new Error('El archivo descargado no es un PDF válido');
         }
         
+        // Verificar que el PDF es válido leyendo los primeros bytes
+        const arrayBuffer = await blob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        const header = String.fromCharCode.apply(null, uint8Array.slice(0, 4));
+        console.log('[FRONTEND] Header del PDF:', header);
+        
+        if (header !== '%PDF') {
+          console.error('[FRONTEND] Error: El archivo no es un PDF válido. Header:', header);
+          const text = await blob.text();
+          console.error('[FRONTEND] Contenido completo:', text);
+          throw new Error('El archivo descargado no es un PDF válido');
+        }
+        
+        console.log('[FRONTEND] PDF válido detectado');
+        
         const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = blobUrl;
