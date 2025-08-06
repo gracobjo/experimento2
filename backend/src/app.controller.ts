@@ -1,9 +1,13 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
+import { PrismaService } from './prisma/prisma.service';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get()
   getHello(): string {
@@ -55,5 +59,44 @@ export class AppController {
     return {
       message: 'Endpoint simple funcionando',
     };
+  }
+
+  @Get('db-status')
+  async getDbStatus(): Promise<{ 
+    connected: boolean; 
+    tables: any[]; 
+    userCount: number;
+    error?: string;
+  }> {
+    try {
+      // Verificar conexión
+      await this.prisma.$connect();
+      
+      // Obtener lista de tablas
+      const tables = await this.prisma.$queryRaw`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        ORDER BY table_name
+      `;
+      
+      // Contar usuarios
+      const userCount = await this.prisma.user.count();
+      
+      await this.prisma.$disconnect();
+      
+      return {
+        connected: true,
+        tables: tables as any[],
+        userCount,
+      };
+    } catch (error) {
+      return {
+        connected: false,
+        tables: [],
+        userCount: 0,
+        error: error.message,
+      };
+    }
   }
 } 
