@@ -100,16 +100,18 @@ const ServiceCards: React.FC<{ props: any }> = ({ props }) => {
     const fetchServices = async () => {
       try {
         setLoading(true);
+        console.log('[ServiceCards] Iniciando fetch de servicios...'); // Updated logging
         const response = await fetch(`${(import.meta as any).env.VITE_API_URL}/api/parametros/services`);
         
         if (response.ok) {
           const data = await response.json();
+          console.log('[ServiceCards] Datos recibidos:', data);
           setServices(data);
         } else {
           throw new Error('Error al cargar los servicios');
         }
       } catch (err) {
-        console.error('Error fetching services:', err);
+        console.error('[ServiceCards] Error fetching services:', err);
         setError('Error al cargar los servicios');
         // Fallback a servicios estáticos si hay error
         setServices(props.services || []);
@@ -120,6 +122,8 @@ const ServiceCards: React.FC<{ props: any }> = ({ props }) => {
 
     fetchServices();
   }, [props.services]);
+
+  console.log('[ServiceCards] Estado actual:', { loading, error, servicesCount: services.length });
 
   return (
     <div className="bg-white p-6 rounded-lg border">
