@@ -742,6 +742,7 @@ const InvoicesPage = () => {
     console.log('[FRONTEND] Abriendo modal para factura:', inv.id, inv.numeroFactura);
     setViewingInvoice(inv);
     // No necesitamos setShowInvoiceModal porque el modal se abre con viewingInvoice
+    // Forzando redeploy - v2
   };
 
   const handleEdit = async (inv: Invoice) => {
