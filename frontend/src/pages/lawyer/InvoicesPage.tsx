@@ -739,8 +739,9 @@ const InvoicesPage = () => {
 
   // Handlers para las acciones de la tabla de facturas
   const handleView = (inv: Invoice) => {
+    console.log('[FRONTEND] Abriendo modal para factura:', inv.id, inv.numeroFactura);
     setViewingInvoice(inv);
-    setShowInvoiceModal(true);
+    // No necesitamos setShowInvoiceModal porque el modal se abre con viewingInvoice
   };
 
   const handleEdit = async (inv: Invoice) => {
@@ -891,6 +892,7 @@ const InvoicesPage = () => {
 
   // Componente para mostrar la factura completa
   const InvoiceView = ({ invoice }: { invoice: Invoice }) => {
+    console.log('[FRONTEND] InvoiceView renderizado para factura:', invoice.id, invoice.numeroFactura);
     const [html, setHtml] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -1310,9 +1312,14 @@ const InvoicesPage = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
-              <h2 className="text-xl font-bold">Vista de Factura</h2>
+              <h2 className="text-xl font-bold">
+                Vista de Factura - {viewingInvoice.numeroFactura}
+              </h2>
               <button
-                onClick={() => setViewingInvoice(null)}
+                onClick={() => {
+                  console.log('[FRONTEND] Cerrando modal de factura');
+                  setViewingInvoice(null);
+                }}
                 className="text-gray-500 hover:text-gray-700"
               >
                 ✕
