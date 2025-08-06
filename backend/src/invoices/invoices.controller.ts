@@ -455,15 +455,24 @@ export class InvoicesController {
       console.log('[DELETE] Usuario:', req.user.id, req.user.role);
       
       // Verificar que la factura existe y pertenece al usuario
+      console.log('[DELETE] Buscando factura en base de datos...');
       const invoice = await this.invoicesService.findOne(id);
+      console.log('[DELETE] Resultado de búsqueda:', invoice ? 'Factura encontrada' : 'Factura NO encontrada');
+      
       if (!invoice) {
-        console.log('[DELETE] Factura no encontrada:', id);
+        console.log('[DELETE] Factura no encontrada en base de datos:', id);
         throw new HttpException('Factura no encontrada', HttpStatus.NOT_FOUND);
       }
+      
+      console.log('[DELETE] Factura encontrada, verificando permisos...');
+      console.log('[DELETE] Emisor de la factura:', invoice.emisorId);
+      console.log('[DELETE] Usuario actual:', req.user.id);
+      console.log('[DELETE] Rol del usuario:', req.user.role);
       
       // Verificar permisos
       if (req.user.role !== 'ADMIN' && invoice.emisorId !== req.user.id) {
         console.log('[DELETE] No autorizado para eliminar factura:', id);
+        console.log('[DELETE] Usuario no es ADMIN y no es el emisor de la factura');
         throw new HttpException('No autorizado para eliminar esta factura', HttpStatus.FORBIDDEN);
       }
       
@@ -474,21 +483,28 @@ export class InvoicesController {
       return result;
     } catch (error) {
       console.error('[DELETE] Error eliminando factura:', error);
+      console.error('[DELETE] Tipo de error:', error.constructor.name);
+      console.error('[DELETE] Mensaje de error:', error.message);
       
       if (error instanceof HttpException) {
+        console.log('[DELETE] Re-lanzando HttpException');
         throw error;
       }
       
       const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log('[DELETE] Error message procesado:', errorMessage);
       
       if (errorMessage.includes('No se puede eliminar')) {
+        console.log('[DELETE] Lanzando BAD_REQUEST por restricción de eliminación');
         throw new HttpException(errorMessage, HttpStatus.BAD_REQUEST);
       }
       
       if (errorMessage.includes('no encontrada')) {
+        console.log('[DELETE] Lanzando NOT_FOUND por factura no encontrada');
         throw new HttpException(errorMessage, HttpStatus.NOT_FOUND);
       }
       
+      console.log('[DELETE] Lanzando INTERNAL_SERVER_ERROR genérico');
       throw new HttpException(
         'Error interno del servidor al eliminar la factura', 
         HttpStatus.INTERNAL_SERVER_ERROR

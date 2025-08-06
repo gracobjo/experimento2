@@ -383,6 +383,8 @@ export class InvoicesService {
   }
 
   async findOne(id: string) {
+    console.log('[FINDONE] Buscando factura con ID:', id);
+    
     const invoice = await this.prisma.invoice.findUnique({
       where: { id },
       include: { 
@@ -401,7 +403,19 @@ export class InvoicesService {
         }
       },
     });
+    
+    console.log('[FINDONE] Resultado de búsqueda:', invoice ? 'Factura encontrada' : 'Factura NO encontrada');
+    if (invoice) {
+      console.log('[FINDONE] Datos de la factura encontrada:', {
+        id: invoice.id,
+        numeroFactura: invoice.numeroFactura,
+        emisorId: invoice.emisorId,
+        estado: invoice.estado
+      });
+    }
+    
     if (!invoice) return null;
+    
     // Generar qrData dinámicamente y devolver junto con la factura
     return {
       ...invoice,
