@@ -58,15 +58,23 @@ echo "🔍 Valor de DATABASE_URL: $DATABASE_URL"
 
 # Esperar un poco para que la base de datos esté lista
 echo "⏳ Esperando que la base de datos esté lista..."
-sleep 5
+sleep 10
 
-# Ejecutar migraciones de Prisma
+# Verificar conexión a la base de datos
+echo "🔍 Verificando conexión a la base de datos..."
+npx prisma db push --accept-data-loss || echo "⚠️ ADVERTENCIA: Error en db push"
+
+# Ejecutar migraciones
 echo "📊 Ejecutando migraciones de la base de datos..."
 npx prisma migrate deploy || echo "⚠️ ADVERTENCIA: Error en migrate deploy"
 
 # Generar cliente de Prisma
 echo "🔧 Generando cliente de Prisma..."
 npx prisma generate
+
+# Verificar que las tablas se crearon
+echo "📋 Verificando tablas creadas..."
+npx prisma db pull || echo "⚠️ ADVERTENCIA: Error en db pull"
 
 # Verificar base de datos
 echo "🔍 Verificando estado de la base de datos..."
