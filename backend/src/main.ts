@@ -25,13 +25,44 @@ async function bootstrap() {
   // Configuración de CORS - debe ir ANTES de otros middleware
   const corsOrigins = process.env.CORS_ORIGIN 
     ? process.env.CORS_ORIGIN.split(',') 
-    : ['http://localhost:5173', 'http://localhost:3000', 'https://*.railway.app', 'https://*.vercel.app', 'https://*.netlify.app'];
+    : [
+        'http://localhost:5173', 
+        'http://localhost:3000', 
+        'https://experimento2-fenm.vercel.app',
+        'https://experimento2-production.up.railway.app',
+        'https://*.vercel.app',
+        'https://*.railway.app',
+        'https://*.netlify.app'
+      ];
   
   app.enableCors({
-    origin: corsOrigins,
+    origin: (origin, callback) => {
+      // Permitir requests sin origin (como mobile apps o Postman)
+      if (!origin) return callback(null, true);
+      
+      // Lista de dominios permitidos
+      const allowedOrigins = [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'https://experimento2-fenm.vercel.app',
+        'https://experimento2-production.up.railway.app'
+      ];
+      
+      // Verificar si el origin está en la lista permitida
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      // Para desarrollo, permitir cualquier origin de Vercel/Railway
+      if (origin.includes('vercel.app') || origin.includes('railway.app')) {
+        return callback(null, true);
+      }
+      
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
   });
   
   // Configuración global de pipes
