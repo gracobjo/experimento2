@@ -17548,8 +17548,37 @@ let InvoicesController = class InvoicesController {
             throw error;
         }
     }
-    remove(id) {
-        return this.invoicesService.remove(id);
+    async remove(id, req) {
+        try {
+            console.log('[DELETE] Iniciando eliminación de factura:', id);
+            console.log('[DELETE] Usuario:', req.user.id, req.user.role);
+            const invoice = await this.invoicesService.findOne(id);
+            if (!invoice) {
+                console.log('[DELETE] Factura no encontrada:', id);
+                throw new common_1.HttpException('Factura no encontrada', common_1.HttpStatus.NOT_FOUND);
+            }
+            if (req.user.role !== 'ADMIN' && invoice.emisorId !== req.user.id) {
+                console.log('[DELETE] No autorizado para eliminar factura:', id);
+                throw new common_1.HttpException('No autorizado para eliminar esta factura', common_1.HttpStatus.FORBIDDEN);
+            }
+            console.log('[DELETE] Permisos verificados, eliminando factura:', id);
+            const result = await this.invoicesService.remove(id);
+            console.log('[DELETE] Factura eliminada exitosamente:', id);
+            return result;
+        }
+        catch (error) {
+            console.error('[DELETE] Error eliminando factura:', error);
+            if (error instanceof common_1.HttpException) {
+                throw error;
+            }
+            if (error.message?.includes('No se puede eliminar')) {
+                throw new common_1.HttpException(error.message, common_1.HttpStatus.BAD_REQUEST);
+            }
+            if (error.message?.includes('no encontrada')) {
+                throw new common_1.HttpException(error.message, common_1.HttpStatus.NOT_FOUND);
+            }
+            throw new common_1.HttpException('Error interno del servidor al eliminar la factura', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
     async sign(id, body) {
         const certContent = body.certContent;
@@ -17962,10 +17991,12 @@ __decorate([
     (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
     (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    (0, swagger_1.ApiResponse)({ status: 500, description: 'Error interno del servidor' }),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
 ], InvoicesController.prototype, "remove", null);
 __decorate([
     (0, common_1.Post)(':id/sign'),

@@ -448,8 +448,50 @@ export class InvoicesController {
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente' })
   @ApiResponse({ status: 404, description: 'Factura no encontrada' })
-  remove(@Param('id') id: string) {
-    return this.invoicesService.remove(id);
+  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  async remove(@Param('id') id: string, @Request() req) {
+    try {
+      console.log('[DELETE] Iniciando eliminación de factura:', id);
+      console.log('[DELETE] Usuario:', req.user.id, req.user.role);
+      
+      // Verificar que la factura existe y pertenece al usuario
+      const invoice = await this.invoicesService.findOne(id);
+      if (!invoice) {
+        console.log('[DELETE] Factura no encontrada:', id);
+        throw new HttpException('Factura no encontrada', HttpStatus.NOT_FOUND);
+      }
+      
+      // Verificar permisos
+      if (req.user.role !== 'ADMIN' && invoice.emisorId !== req.user.id) {
+        console.log('[DELETE] No autorizado para eliminar factura:', id);
+        throw new HttpException('No autorizado para eliminar esta factura', HttpStatus.FORBIDDEN);
+      }
+      
+      console.log('[DELETE] Permisos verificados, eliminando factura:', id);
+      const result = await this.invoicesService.remove(id);
+      console.log('[DELETE] Factura eliminada exitosamente:', id);
+      
+      return result;
+    } catch (error) {
+      console.error('[DELETE] Error eliminando factura:', error);
+      
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      
+      if (error.message?.includes('No se puede eliminar')) {
+        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+      }
+      
+      if (error.message?.includes('no encontrada')) {
+        throw new HttpException(error.message, HttpStatus.NOT_FOUND);
+      }
+      
+      throw new HttpException(
+        'Error interno del servidor al eliminar la factura', 
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
   }
 
   @Post(':id/sign')
