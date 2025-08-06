@@ -926,13 +926,16 @@ const InvoicesPage = () => {
         const token = localStorage.getItem('token');
         console.log('[FRONTEND] Token disponible:', !!token);
         
-        const downloadUrl = `/api/invoices/${invoice.id}/pdf-qr`;
-        console.log('[FRONTEND] URL de descarga:', downloadUrl);
+        // Intentar con URL directa al backend
+        const downloadUrl = `https://experimento2-production.up.railway.app/api/invoices/${invoice.id}/pdf-qr`;
+        console.log('[FRONTEND] URL de descarga directa:', downloadUrl);
         
         const response = await fetch(downloadUrl, {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          mode: 'cors'
         });
         
         console.log('[FRONTEND] Status de respuesta:', response.status);
