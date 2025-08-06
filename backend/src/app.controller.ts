@@ -95,7 +95,7 @@ export class AppController {
         connected: false,
         tables: [],
         userCount: 0,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Error desconocido',
       };
     }
   }
