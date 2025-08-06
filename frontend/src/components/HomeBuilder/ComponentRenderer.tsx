@@ -121,7 +121,7 @@ const ServiceCards: React.FC<{ props: any }> = ({ props }) => {
     };
 
     fetchServices();
-  }, []); // Removed props.services dependency to always fetch from API
+  }, []); // Always fetch from API - ignore static layout data
 
   console.log('[ServiceCards] Estado actual:', { loading, error, servicesCount: services.length });
 
