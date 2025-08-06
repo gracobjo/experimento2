@@ -483,8 +483,8 @@ export class InvoicesController {
       return result;
     } catch (error) {
       console.error('[DELETE] Error eliminando factura:', error);
-      console.error('[DELETE] Tipo de error:', error.constructor.name);
-      console.error('[DELETE] Mensaje de error:', error.message);
+      console.error('[DELETE] Tipo de error:', error?.constructor?.name || 'Unknown');
+      console.error('[DELETE] Mensaje de error:', error instanceof Error ? error.message : String(error));
       
       if (error instanceof HttpException) {
         console.log('[DELETE] Re-lanzando HttpException');
