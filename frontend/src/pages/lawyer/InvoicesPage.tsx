@@ -1047,11 +1047,13 @@ const InvoicesPage = () => {
     
     return (
       <div className="invoice-preview-container">
-        {/* Debug info - oculto en impresión */}
-        <div className="mb-4 p-2 bg-gray-100 text-xs no-print">
-          <p>HTML length: {html.length}</p>
-          <p>HTML preview: {html.substring(0, 100)}...</p>
-        </div>
+        {/* Debug info - solo visible en desarrollo */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mb-4 p-2 bg-gray-100 text-xs no-print">
+            <p>HTML length: {html.length}</p>
+            <p>HTML preview: {html.substring(0, 100)}...</p>
+          </div>
+        )}
         
         {/* Contenido de la factura */}
         <div 
@@ -1138,14 +1140,16 @@ const InvoicesPage = () => {
         </div>
       )}
 
-      {/* Debug info */}
-      <div className="mb-4 p-4 bg-gray-100 rounded">
-        <h3 className="font-semibold mb-2">Debug Info:</h3>
-        <p>Loading: {loading ? 'Yes' : 'No'}</p>
-        <p>Clients loaded: {clients.length}</p>
-        <p>Invoices loaded: {invoices.length}</p>
-        <p>Error: {error || 'None'}</p>
-      </div>
+      {/* Debug info - solo visible en desarrollo */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mb-4 p-4 bg-gray-100 rounded">
+          <h3 className="font-semibold mb-2">Debug Info:</h3>
+          <p>Loading: {loading ? 'Yes' : 'No'}</p>
+          <p>Clients loaded: {clients.length}</p>
+          <p>Invoices loaded: {invoices.length}</p>
+          <p>Error: {error || 'None'}</p>
+        </div>
+      )}
 
       {/* Panel de información */}
       <section aria-labelledby="info-panel-heading">
