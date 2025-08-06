@@ -14155,14 +14155,95 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
     }
     async generateInvoicePdfWithQR(invoice) {
         try {
-            this.logger.log('Generando PDF profesional usando pdf-lib (método confiable)');
-            const pdfBuffer = await this.generateInvoicePdfFallback(invoice);
-            this.logger.log('PDF generado exitosamente con pdf-lib');
-            return pdfBuffer;
+            this.logger.log('Generando PDF simple y confiable');
+            const pdfDoc = await pdf_lib_1.PDFDocument.create();
+            const page = pdfDoc.addPage([595, 842]);
+            const { width, height } = page.getSize();
+            const helveticaFont = await pdfDoc.embedFont('Helvetica');
+            const helveticaBoldFont = await pdfDoc.embedFont('Helvetica-Bold');
+            const primaryColor = (0, pdf_lib_1.rgb)(0, 0.2, 0.4);
+            const darkGray = (0, pdf_lib_1.rgb)(0.2, 0.2, 0.2);
+            page.drawText('FACTURA', {
+                x: 50,
+                y: height - 60,
+                size: 24,
+                font: helveticaBoldFont,
+                color: primaryColor
+            });
+            page.drawText(`Número: ${invoice.numeroFactura || 'N/A'}`, {
+                x: 50,
+                y: height - 100,
+                size: 14,
+                font: helveticaFont,
+                color: darkGray
+            });
+            const fechaText = invoice.fechaFactura ? new Date(invoice.fechaFactura).toLocaleDateString('es-ES') : 'N/A';
+            page.drawText(`Fecha: ${fechaText}`, {
+                x: 50,
+                y: height - 120,
+                size: 14,
+                font: helveticaFont,
+                color: darkGray
+            });
+            page.drawText(`Importe Total: ${invoice.importeTotal || 0} €`, {
+                x: 50,
+                y: height - 140,
+                size: 16,
+                font: helveticaBoldFont,
+                color: primaryColor
+            });
+            page.drawText(`Estado: ${invoice.estado || 'N/A'}`, {
+                x: 50,
+                y: height - 160,
+                size: 12,
+                font: helveticaFont,
+                color: darkGray
+            });
+            if (invoice.emisor) {
+                page.drawText(`Emisor: ${invoice.emisor.name || 'N/A'}`, {
+                    x: 50,
+                    y: height - 180,
+                    size: 12,
+                    font: helveticaFont,
+                    color: darkGray
+                });
+            }
+            if (invoice.receptor) {
+                page.drawText(`Receptor: ${invoice.receptor.name || 'N/A'}`, {
+                    x: 50,
+                    y: height - 200,
+                    size: 12,
+                    font: helveticaFont,
+                    color: darkGray
+                });
+            }
+            try {
+                const qrData = `FACTURA:${invoice.numeroFactura || 'N/A'}`;
+                const qrImageDataUrl = await QRCode.toDataURL(qrData, {
+                    errorCorrectionLevel: 'M',
+                    width: 150
+                });
+                const qrImageBase64 = qrImageDataUrl.replace(/^data:image\/png;base64,/, '');
+                const qrImageBytes = Buffer.from(qrImageBase64, 'base64');
+                const qrImage = await pdfDoc.embedPng(qrImageBytes);
+                const qrDims = qrImage.scale(0.5);
+                page.drawImage(qrImage, {
+                    x: width - 100,
+                    y: height - 100,
+                    width: qrDims.width,
+                    height: qrDims.height
+                });
+            }
+            catch (qrError) {
+                this.logger.warn('Error generando QR, continuando sin QR:', qrError);
+            }
+            const pdfBytes = await pdfDoc.save();
+            this.logger.log('PDF simple generado exitosamente');
+            return Buffer.from(pdfBytes);
         }
         catch (error) {
-            this.logger.error('Error generando PDF profesional:', error);
-            throw new Error('Error generando PDF profesional');
+            this.logger.error('Error generando PDF simple:', error);
+            throw new Error('Error generando PDF simple');
         }
     }
     async htmlToPdfWithPuppeteer(htmlContent) {
