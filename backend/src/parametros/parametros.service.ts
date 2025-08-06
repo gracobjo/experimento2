@@ -92,12 +92,14 @@ export class ParametrosService {
         const serviceId = parts[1];
         const field = parts[2];
         
+        console.log('[PARAMETROS] findServices - serviceId:', serviceId, 'field:', field);
+        
         if (!servicesMap.has(serviceId)) {
           servicesMap.set(serviceId, {
             id: serviceId,
-            orden: parseInt(parts[1]) || 0
+            orden: parseInt(serviceId) || 0
           });
-          console.log('[PARAMETROS] findServices - Nuevo servicio creado:', serviceId);
+          console.log('[PARAMETROS] findServices - Nuevo servicio creado:', serviceId, 'orden:', parseInt(serviceId) || 0);
         }
         
         servicesMap.get(serviceId)[field] = service.valor;
@@ -109,6 +111,7 @@ export class ParametrosService {
 
     const result = Array.from(servicesMap.values()).sort((a, b) => a.orden - b.orden);
     console.log('[PARAMETROS] findServices - Resultado final:', result);
+    console.log('[PARAMETROS] findServices - Servicios procesados:', result.length);
     
     return result;
   }
