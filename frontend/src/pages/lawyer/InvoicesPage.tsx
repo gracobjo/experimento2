@@ -306,9 +306,16 @@ const InvoicesPage = () => {
       const res = await api.get('/invoices', { params });
       console.log('Invoices data received:', res.data);
       setInvoices(res.data);
-    } catch (err) {
+      setError(null); // Limpiar errores previos si la carga es exitosa
+    } catch (err: any) {
       console.error('Error fetching invoices:', err);
-      setError('Error al cargar las facturas');
+      const errorMessage = err?.response?.data?.message || err?.message || 'Error al cargar las facturas';
+      setError(`❌ ${errorMessage}`);
+      
+      // Si hay un error de autenticación, limpiar la lista
+      if (err?.response?.status === 401) {
+        setInvoices([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -801,7 +808,9 @@ const InvoicesPage = () => {
     // Buscar la factura para verificar su estado
     const invoice = invoices.find(inv => inv.id === id);
     if (!invoice) {
-      setError('❌ No se encontró la factura.');
+      setError('❌ No se encontró la factura en la lista local.');
+      // Refrescar la lista para sincronizar con el servidor
+      await fetchInvoices();
       return;
     }
 
@@ -822,8 +831,17 @@ const InvoicesPage = () => {
         setTimeout(() => setSuccessMsg(null), 5000);
       } catch (error: any) {
         console.error('Error al eliminar factura:', error);
-        const errorMessage = error?.response?.data?.message || error?.message || 'Error al eliminar la factura.';
-        setError(`❌ Error al eliminar la factura: ${errorMessage}`);
+        
+        // Si el error es 404, la factura no existe en el servidor
+        if (error?.response?.status === 404) {
+          setError('❌ La factura ya no existe en el servidor. Refrescando lista...');
+          // Refrescar la lista para sincronizar con el servidor
+          await fetchInvoices();
+        } else {
+          const errorMessage = error?.response?.data?.message || error?.message || 'Error al eliminar la factura.';
+          setError(`❌ Error al eliminar la factura: ${errorMessage}`);
+        }
+        
         // Limpiar el error después de 5 segundos
         setTimeout(() => setError(null), 5000);
       } finally {
