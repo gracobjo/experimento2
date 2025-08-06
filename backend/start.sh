@@ -55,6 +55,23 @@ export JWT_SECRET=${JWT_SECRET:-"default-jwt-secret-change-in-production"}
 
 echo "✅ DATABASE_URL configurado correctamente"
 echo "🔍 Valor de DATABASE_URL: $DATABASE_URL"
+
+# Esperar un poco para que la base de datos esté lista
+echo "⏳ Esperando que la base de datos esté lista..."
+sleep 5
+
+# Ejecutar migraciones de Prisma
+echo "📊 Ejecutando migraciones de la base de datos..."
+npx prisma migrate deploy || echo "⚠️ ADVERTENCIA: Error en migrate deploy"
+
+# Generar cliente de Prisma
+echo "🔧 Generando cliente de Prisma..."
+npx prisma generate
+
+# Verificar base de datos
+echo "🔍 Verificando estado de la base de datos..."
+node scripts/check-database.js || echo "⚠️ ADVERTENCIA: Error verificando base de datos"
+
 echo "🎯 Iniciando servidor directamente..."
 echo "🔍 Comando: node dist/main.js"
 echo "🔍 Variables de entorno para node:"
