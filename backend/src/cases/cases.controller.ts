@@ -152,17 +152,8 @@ export class CasesController {
     console.log('[DEBUG_CASES] Usuario:', req.user.id, req.user.role);
     
     try {
-      // Obtener todos los casos sin filtros
-      const allCases = await this.prisma.expediente.findMany({
-        include: {
-          lawyer: {
-            select: { id: true, name: true, email: true }
-          },
-          client: {
-            select: { id: true, user: { select: { id: true, name: true, email: true } } }
-          }
-        }
-      });
+      // Usar el servicio para obtener todos los casos
+      const allCases = await this.casesService.debugAllCases();
       
       console.log('[DEBUG_CASES] Total de casos en BD:', allCases.length);
       console.log('[DEBUG_CASES] Casos:', allCases.map(c => ({

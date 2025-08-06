@@ -3368,6 +3368,27 @@ let CasesService = class CasesService {
             }
         };
     }
+    async debugAllCases() {
+        console.log('[DEBUG_CASES_SERVICE] Obteniendo todos los casos...');
+        try {
+            const allCases = await this.prisma.expediente.findMany({
+                include: {
+                    lawyer: {
+                        select: { id: true, name: true, email: true }
+                    },
+                    client: {
+                        select: { id: true, user: { select: { id: true, name: true, email: true } } }
+                    }
+                }
+            });
+            console.log('[DEBUG_CASES_SERVICE] Total de casos encontrados:', allCases.length);
+            return allCases;
+        }
+        catch (error) {
+            console.error('[DEBUG_CASES_SERVICE] Error:', error);
+            throw error;
+        }
+    }
     async getRecentCases(currentUserId, userRole) {
         let whereClause = {};
         if (userRole === 'CLIENTE') {
@@ -3620,16 +3641,7 @@ let CasesController = class CasesController {
     async debugAllCases(req) {
         console.log('[DEBUG_CASES] Usuario:', req.user.id, req.user.role);
         try {
-            const allCases = await this.prisma.expediente.findMany({
-                include: {
-                    lawyer: {
-                        select: { id: true, name: true, email: true }
-                    },
-                    client: {
-                        select: { id: true, user: { select: { id: true, name: true, email: true } } }
-                    }
-                }
-            });
+            const allCases = await this.casesService.debugAllCases();
             console.log('[DEBUG_CASES] Total de casos en BD:', allCases.length);
             console.log('[DEBUG_CASES] Casos:', allCases.map(c => ({
                 id: c.id,

@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=800, initial-scale=1.0">
+    <title>Factura {{numeroFactura}}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css?family=Open+Sans:400,700&display=swap');
+        body {
+            font-family: Calibri, 'Open Sans', Arial, sans-serif;
+            color: #222;
+            background: #fff;
+            margin: 0;
+            padding: 0;
+        }
+        .invoice-container {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            padding: 20px 28px 120px 28px;
+            background: #fff;
+            position: relative;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .invoice-container {
+                width: 100%;
+                max-width: 210mm;
+                min-height: auto;
+                margin: 0;
+                padding: 16px 20px 80px 20px;
+            }
+        }
+        /* Encabezado */
+        .header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .header {
+                margin-bottom: 8px;
+            }
+        }
+        .header-row {
+            width: 100%;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+        .logo {
+            width: 48px;
+            height: 48px;
+            margin-right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        .logo span {
+            font-size: 40px;
+        }
+        .title {
+            flex: 1;
+            text-align: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #003366;
+            letter-spacing: 1px;
+        }
+        .lema {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-top: 2px;
+            margin-bottom: 8px;
+        }
+        /* Bloques de datos */
+        .data-blocks {
+            display: flex;
+            justify-content: space-between;
+            gap: 28px;
+            margin-bottom: 8px;
+        }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .data-blocks {
+                gap: 20px;
+                margin-bottom: 6px;
+            }
+        }
+        .party-block {
+            flex: 1;
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 12px 14px;
+            font-size: 1rem;
+            min-width: 0;
+        }
+        .party-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #003366;
+            margin-bottom: 8px;
+        }
+        .party-info {
+            margin-bottom: 4px;
+            font-size: 0.98rem;
+        }
+        .party-label {
+            font-weight: bold;
+            color: #555;
+        }
+        /* Datos de factura */
+        .factura-datos {
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .factura-datos {
+                margin-bottom: 6px;
+                font-size: 1rem;
+            }
+        }
+        .factura-datos .factura-num {
+            font-weight: bold;
+            color: #003366;
+            margin: 0 8px;
+        }
+        .factura-datos .factura-status {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: #dcfce7;
+            color: #166534;
+            margin-left: 8px;
+        }
+        /* Información adicional */
+        .additional-info {
+            margin: 8px 0;
+            padding: 8px;
+            background: #f9fafb;
+            border-radius: 4px;
+            border-left: 3px solid #3b82f6;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 0.85rem;
+        }
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #374151;
+        }
+        .info-value {
+            color: #6b7280;
+        }
+        /* Tabla de conceptos */
+        .items-section {
+            margin-bottom: 10px;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 0.98rem;
+            margin-bottom: 0;
+        }
+        .items-table th {
+            background: #003366;
+            color: white;
+            padding: 7px 5px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 1rem;
+            border: none;
+        }
+        .items-table td {
+            padding: 7px 5px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.98rem;
+            vertical-align: top;
+        }
+        .items-table tr:last-child td {
+            border-bottom: none;
+        }
+        .items-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        
+        /* Estilos específicos para tabla de provisiones */
+        .provisiones-table {
+            width: 100%;
+            table-layout: fixed;
+        }
+        .provisiones-table th,
+        .provisiones-table td {
+            padding: 7px 5px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.98rem;
+            vertical-align: top;
+        }
+        .provisiones-table tr:last-child td {
+            border-bottom: none;
+        }
+        .provisiones-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        /* Totales y descuentos */
+        .totals-section {
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        .totals-table {
+            min-width: 260px;
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .totals-table td {
+            padding: 7px 12px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: middle;
+        }
+        .totals-table td:first-child {
+            width: 60%;
+            text-align: left;
+        }
+        .totals-table td:last-child {
+            width: 40%;
+            text-align: right;
+        }
+        .totals-table tr:last-child td {
+            border-bottom: none;
+        }
+        .total-row {
+            background: #003366;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .discount-row {
+            background: #fef3c7;
+            color: #92400e;
+            font-weight: bold;
+        }
+        /* QR integrado en el campo de firma */
+        .qr-integrated {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .qr-integrated .firma-text {
+            flex: 1;
+            text-align: center;
+            color: #bbb;
+            font-size: 1rem;
+        }
+        
+        .qr-integrated .qr-section {
+            margin-left: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .qr-integrated .qr-section img {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 4px;
+        }
+        
+        .qr-integrated .qr-legend {
+            font-size: 5px;
+            color: #666;
+            background: #f3f4f6;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            word-break: break-word;
+            text-align: center;
+            max-width: 80px;
+            line-height: 1.2;
+            overflow-wrap: break-word;
+        }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .qr-integrated .qr-section img {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .qr-integrated .qr-legend {
+                font-size: 6px;
+                max-width: 70px;
+                padding: 4px 8px;
+            }
+        }
+        .qr-absolute img {
+            width: 90px;
+            height: 90px;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .qr-absolute img {
+                width: 65px;
+                height: 65px;
+            }
+        }
+        .qr-legend {
+            font-size: 7px;
+            color: #666;
+            background: #f3f4f6;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            word-break: break-word;
+            margin-top: 3px;
+            text-align: center;
+            width: 100%;
+            line-height: 1.3;
+            overflow-wrap: break-word;
+        }
+        /* Pie de página y espacio firma */
+        .footer {
+            width: 100%;
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            padding: 0 32px 24px 32px;
+            box-sizing: border-box;
+            text-align: left;
+            color: #666;
+            font-size: 0.95rem;
+        }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .footer {
+                padding: 0 20px 16px 20px;
+                font-size: 0.85rem;
+            }
+        }
+        .firma-block {
+            margin-top: 16px;
+            height: 3cm;
+            border: 1px dashed #bbb;
+            border-radius: 8px;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #bbb;
+            font-size: 1rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        /* Estilos específicos para visualización web */
+        @media screen {
+            .firma-block {
+                height: 2cm;
+                font-size: 0.8rem;
+                margin-top: 8px;
+            }
+        }
+        /* Responsive */
+        @media (max-width: 900px) {
+            .invoice-container { padding: 8px; }
+            .qr-absolute { right: 8px; }
+            .footer { padding: 0 8px 12px 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <!-- Encabezado -->
+        <div class="header">
+            <div class="header-row">
+                <div class="logo"><span>🏛️</span></div>
+                <div class="title">Despacho Legal</div>
+                <div style="width:48px;"></div>
+            </div>
+            <div class="lema">Servicios Jurídicos Profesionales<br>Especialistas en Derecho Civil y Mercantil</div>
+        </div>
+        <!-- Bloques de datos -->
+        <div class="data-blocks">
+            <div class="party-block">
+                <div class="party-title">EMISOR</div>
+                <div class="party-info"><span class="party-label">Nombre:</span> {{emisor.nombre}}</div>
+                <div class="party-info"><span class="party-label">Email:</span> {{emisor.email}}</div>
+                <div class="party-info"><span class="party-label">Régimen IVA:</span> {{regimenIvaEmisor}}</div>
+            </div>
+            <div class="party-block">
+                <div class="party-title">RECEPTOR</div>
+                <div class="party-info"><span class="party-label">Nombre:</span> {{receptor.nombre}}</div>
+                <div class="party-info"><span class="party-label">Email:</span> {{receptor.email}}</div>
+                {{#if expediente}}
+                <div class="party-info"><span class="party-label">Expediente:</span> {{expediente.titulo}}</div>
+                {{/if}}
+            </div>
+        </div>
+        <!-- Espacio adicional para aprovechar el área disponible -->
+        <div style="height: 20px;"></div>
+        <!-- Datos de factura -->
+        <div class="factura-datos">
+            <span class="factura-num">FACTURA {{numeroFactura}}</span>
+            <span>Fecha de Factura: {{fechaFactura}}</span>
+            <span class="factura-status">{{estado}}</span>
+        </div>
+        <!-- Información adicional - Movida más cerca del expediente -->
+        <div class="additional-info" style="margin-top: 8px; margin-bottom: 16px;">
+            <div class="info-row">
+                <span class="info-label">Fecha de Operación:</span>
+                <span class="info-value">{{fechaOperacion}}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Fecha de Creación:</span>
+                <span class="info-value">{{fechaCreacion}}</span>
+            </div>
+        </div>
+        
+        <!-- Información de Factura Rectificativa -->
+        <div id="rectificativa-section" class="rectificativa-info" style="margin: 5px 0; padding: 5px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; color: #856404; font-size: 5px; display: none;">
+            <div style="font-weight: bold; margin-bottom: 3px; color: #d63031; font-size: 6px;">
+                ⚠️ FACTURA RECTIFICATIVA
+            </div>
+            <div style="margin-bottom: 2px;">
+                <strong>Factura Original:</strong> <span id="factura-original-numero">{{facturaOriginal.numeroFactura}}</span> (emitida el <span id="factura-original-fecha">{{facturaOriginal.fechaFactura}}</span>)
+            </div>
+            <div style="margin-bottom: 2px;">
+                <strong>Tipo de Rectificación:</strong> <span id="tipo-rectificacion">{{tipoRectificacion}}</span>
+            </div>
+            <div style="margin-bottom: 2px;">
+                <strong>Motivo de Rectificación:</strong> <span id="motivo-rectificacion">{{motivoRectificacion}}</span>
+            </div>
+            <div id="importe-original-section" style="margin-bottom: 2px; display: none;">
+                <strong>Importe de la Factura Original:</strong> <span id="factura-original-importe">{{facturaOriginal.importeTotal}}</span> €
+            </div>
+        </div>
+        
+        <script>
+        // JavaScript para mostrar/ocultar sección rectificativa
+        (function() {
+            const rectificativaSection = document.getElementById('rectificativa-section');
+            const facturaOriginalId = '{{facturaOriginalId}}';
+            const tipoRectificacion = '{{tipoRectificacion}}';
+            const motivoRectificacion = '{{motivoRectificacion}}';
+            const facturaOriginalNumero = '{{facturaOriginal.numeroFactura}}';
+            const facturaOriginalFecha = '{{facturaOriginal.fechaFactura}}';
+            const facturaOriginalImporte = '{{facturaOriginal.importeTotal}}';
+            
+            // Solo mostrar si es una factura rectificativa real
+            if (facturaOriginalId && facturaOriginalId.trim() !== '' && 
+                facturaOriginalNumero && facturaOriginalNumero.trim() !== '') {
+                
+                rectificativaSection.style.display = 'block';
+                
+                // Mostrar importe original si existe
+                if (facturaOriginalImporte && facturaOriginalImporte.trim() !== '') {
+                    document.getElementById('importe-original-section').style.display = 'block';
+                }
+            } else {
+                // Eliminar completamente la sección si no es rectificativa
+                if (rectificativaSection && rectificativaSection.parentNode) {
+                    rectificativaSection.parentNode.removeChild(rectificativaSection);
+                }
+            }
+        })();
+        </script>
+        <!-- Conceptos -->
+        {{#if items}}
+        <div class="items-section">
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">Descripción</th>
+                        <th class="text-center" style="width: 15%;">Cantidad</th>
+                        <th class="text-right" style="width: 20%;">Precio Unitario</th>
+                        <th class="text-right" style="width: 25%;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each items}}
+                    <tr>
+                        <td style="width: 40%;">{{descripcion}}</td>
+                        <td class="text-center" style="width: 15%;">{{cantidad}}</td>
+                        <td class="text-right" style="width: 20%;">{{precioUnitario}} €</td>
+                        <td class="text-right" style="width: 25%;">{{total}} €</td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+        {{/if}}
+        
+        <!-- Detalle de provisiones aplicadas -->
+        {{#if provisiones}}
+        <div class="items-section" style="margin-top: 10px;">
+            <div style="font-size: 1rem; font-weight: bold; color: #003366; margin-bottom: 8px;">
+                Provisiones de Fondos Aplicadas
+            </div>
+            <table class="items-table provisiones-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50%;">Descripción</th>
+                        <th class="text-center" style="width: 25%;">Fecha</th>
+                        <th class="text-right" style="width: 25%;">Importe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each provisiones}}
+                    <tr>
+                        <td style="width: 50%;">{{descripcion}}</td>
+                        <td class="text-center" style="width: 25%;">{{fecha}}</td>
+                        <td class="text-right" style="width: 25%;">{{importe}} €</td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+        {{/if}}
+        
+        <!-- Totales y descuentos -->
+        <div class="totals-section">
+            <table class="totals-table">
+                <colgroup>
+                    <col style="width: 60%;">
+                    <col style="width: 40%;">
+                </colgroup>
+                {{#if descuento}}
+                <tr class="discount-row">
+                    <td>Descuento ({{descuento}}%)</td>
+                    <td class="text-right">-{{descuentoCalculado}} €</td>
+                </tr>
+                {{/if}}
+                <tr>
+                    <td>Base Imponible</td>
+                    <td class="text-right">{{baseImponible}} €</td>
+                </tr>
+                <tr>
+                    <td>IVA ({{tipoIVA}}%)</td>
+                    <td class="text-right">{{cuotaIVA}} €</td>
+                </tr>
+                {{#if retencion}}
+                <tr>
+                    <td>Retención ({{retencion}}%)</td>
+                    <td class="text-right">-{{cuotaRetencion}} €</td>
+                </tr>
+                {{/if}}
+                <tr class="total-row">
+                    <td>TOTAL</td>
+                    <td class="text-right">{{subtotal}} €</td>
+                </tr>
+                {{#if provisiones}}
+                <tr class="discount-row">
+                    <td>Provisiones Aplicadas</td>
+                    <td class="text-right">-{{descuentoProvisiones}} €</td>
+                </tr>
+                <tr class="total-row" style="background: #059669; color: white;">
+                    <td>TOTAL A PAGAR</td>
+                    <td class="text-right">{{importeTotal}} €</td>
+                </tr>
+                {{/if}}
+            </table>
+        </div>
+        <!-- Pie de página -->
+        <div class="footer">
+            <div>Firmado electrónicamente conforme a la ley vigente. Código de verificación incluido.</div>
+            <div style="font-size:0.93rem; color:#003366; margin-top:2px;">Verifica la autenticidad en: <span style="text-decoration:underline;">{{verificacionUrl}}</span></div>
+        </div>
+        <!-- QR y espacio para firma/certificado -->
+        <div class="firma-block">
+            <div class="qr-integrated">
+                <div class="firma-text">
+                    Espacio reservado para certificado/firma
+                </div>
+                <div class="qr-section">
+                    <img src="{{qrImage}}" alt="QR Code" />
+                    <div class="qr-legend">{{qrData}}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

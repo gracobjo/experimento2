@@ -486,6 +486,30 @@ export class CasesService {
     };
   }
 
+  async debugAllCases() {
+    console.log('[DEBUG_CASES_SERVICE] Obteniendo todos los casos...');
+    
+    try {
+      const allCases = await this.prisma.expediente.findMany({
+        include: {
+          lawyer: {
+            select: { id: true, name: true, email: true }
+          },
+          client: {
+            select: { id: true, user: { select: { id: true, name: true, email: true } } }
+          }
+        }
+      });
+      
+      console.log('[DEBUG_CASES_SERVICE] Total de casos encontrados:', allCases.length);
+      
+      return allCases;
+    } catch (error) {
+      console.error('[DEBUG_CASES_SERVICE] Error:', error);
+      throw error;
+    }
+  }
+
   async getRecentCases(currentUserId: string, userRole: string) {
     let whereClause = {};
 
