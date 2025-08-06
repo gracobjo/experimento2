@@ -13215,6 +13215,7 @@ const xades_sign_util_1 = __webpack_require__(93);
 const facturae_service_1 = __webpack_require__(97);
 const pdf_generator_service_1 = __webpack_require__(99);
 const fs = __importStar(__webpack_require__(44));
+const crypto = __importStar(__webpack_require__(20));
 const pdf_lib_1 = __webpack_require__(102);
 const QRCode = __importStar(__webpack_require__(101));
 const invoice_audit_service_1 = __webpack_require__(103);
@@ -14222,6 +14223,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
                 const importeTotal = (invoice.importeTotal || 0).toFixed(2);
                 const nifEmisor = invoice.emisor?.dni || invoice.emisor?.nif || '';
                 const nifReceptor = invoice.receptor?.dni || invoice.receptor?.nif || '';
+                const invoiceHash = this.generateInvoiceHash(invoice);
                 const qrData = [
                     `NIF:${nifEmisor}`,
                     `NUM:${invoice.numeroFactura || ''}`,
@@ -14229,7 +14231,8 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
                     `IMP:${importeTotal}`,
                     `TIPO:${invoice.tipoFactura || 'F'}`,
                     `NIF_RECEPTOR:${nifReceptor}`,
-                    `ESTADO:${invoice.estado || 'EMITIDA'}`
+                    `ESTADO:${invoice.estado || 'EMITIDA'}`,
+                    `HASH:${invoiceHash}`
                 ].join('|');
                 this.logger.log('QR Data generado:', qrData);
                 invoice.qrData = qrData;
@@ -14436,6 +14439,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
             const importeTotal = (invoice.importeTotal || 0).toFixed(2);
             const nifEmisor = invoice.emisor?.dni || invoice.emisor?.nif || '';
             const nifReceptor = invoice.receptor?.dni || invoice.receptor?.nif || '';
+            const invoiceHash = this.generateInvoiceHash(invoice);
             const qrData = [
                 `NIF:${nifEmisor}`,
                 `NUM:${invoice.numeroFactura || ''}`,
@@ -14443,7 +14447,8 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
                 `IMP:${importeTotal}`,
                 `TIPO:${invoice.tipoFactura || 'F'}`,
                 `NIF_RECEPTOR:${nifReceptor}`,
-                `ESTADO:${invoice.estado || 'EMITIDA'}`
+                `ESTADO:${invoice.estado || 'EMITIDA'}`,
+                `HASH:${invoiceHash}`
             ].join('|');
             invoice.qrData = qrData;
             const qrImageDataUrl = await QRCode.toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200 });
@@ -14890,6 +14895,31 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
         }
         catch (error) {
             console.error('❌ Error en devolución de provisiones:', error);
+        }
+    }
+    generateInvoiceHash(invoice) {
+        try {
+            const criticalData = {
+                numeroFactura: invoice.numeroFactura || '',
+                fechaFactura: invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : '',
+                importeTotal: (invoice.importeTotal || 0).toFixed(2),
+                nifEmisor: invoice.emisor?.dni || invoice.emisor?.nif || '',
+                nifReceptor: invoice.receptor?.dni || invoice.receptor?.nif || '',
+                tipoFactura: invoice.tipoFactura || 'F',
+                estado: invoice.estado || 'EMITIDA',
+                id: invoice.id || ''
+            };
+            const dataString = Object.entries(criticalData)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([key, value]) => `${key}:${value}`)
+                .join('|');
+            const hash = crypto.createHash('sha256').update(dataString).digest('hex');
+            this.logger.log(`Hash generado para factura ${invoice.numeroFactura}: ${hash.substring(0, 16)}...`);
+            return hash.substring(0, 16);
+        }
+        catch (error) {
+            this.logger.error('Error generando hash de factura:', error);
+            return '';
         }
     }
     async generateRectificativaNumber(facturaOriginalId, tipoRectificacion) {

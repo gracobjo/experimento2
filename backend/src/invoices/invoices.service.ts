@@ -8,6 +8,7 @@ import { FacturaeService, FacturaeGenerationResult } from './facturae.service';
 import { FacturaeValidator, ValidationResult } from './facturae-validator.util';
 import { PdfGeneratorService } from './pdf-generator.service';
 import * as fs from 'fs';
+import * as crypto from 'crypto';
 import { PDFDocument, rgb } from 'pdf-lib';
 import * as QRCode from 'qrcode';
 import { InvoiceAuditService } from './invoice-audit.service';
@@ -1280,8 +1281,11 @@ export class InvoicesService {
         // Obtener NIF del receptor (si está disponible)
         const nifReceptor = invoice.receptor?.dni || invoice.receptor?.nif || '';
         
-        // Construir datos del QR según normativa española
-        // Formato: NIF|NUM|FEC|IMP|TIPO
+        // Generar hash de integridad
+        const invoiceHash = this.generateInvoiceHash(invoice);
+        
+        // Construir datos del QR según normativa española con hash
+        // Formato: NIF|NUM|FEC|IMP|TIPO|HASH
         const qrData = [
           `NIF:${nifEmisor}`,
           `NUM:${invoice.numeroFactura || ''}`,
@@ -1289,7 +1293,8 @@ export class InvoicesService {
           `IMP:${importeTotal}`,
           `TIPO:${invoice.tipoFactura || 'F'}`,
           `NIF_RECEPTOR:${nifReceptor}`,
-          `ESTADO:${invoice.estado || 'EMITIDA'}`
+          `ESTADO:${invoice.estado || 'EMITIDA'}`,
+          `HASH:${invoiceHash}`
         ].join('|');
         
         this.logger.log('QR Data generado:', qrData);
@@ -1523,11 +1528,14 @@ export class InvoicesService {
     try {
       this.logger.log('Generando PDF profesional con pdf-lib (formato mejorado)');
       
-      // 1. Construir la cadena de datos para el QR según la normativa española
+      // 1. Construir la cadena de datos para el QR según la normativa española con hash
       const fechaFactura = invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : '';
       const importeTotal = (invoice.importeTotal || 0).toFixed(2);
       const nifEmisor = invoice.emisor?.dni || invoice.emisor?.nif || '';
       const nifReceptor = invoice.receptor?.dni || invoice.receptor?.nif || '';
+      
+      // Generar hash de integridad
+      const invoiceHash = this.generateInvoiceHash(invoice);
       
       const qrData = [
         `NIF:${nifEmisor}`,
@@ -1536,7 +1544,8 @@ export class InvoicesService {
         `IMP:${importeTotal}`,
         `TIPO:${invoice.tipoFactura || 'F'}`,
         `NIF_RECEPTOR:${nifReceptor}`,
-        `ESTADO:${invoice.estado || 'EMITIDA'}`
+        `ESTADO:${invoice.estado || 'EMITIDA'}`,
+        `HASH:${invoiceHash}`
       ].join('|');
 
       // Guardar el contenido del QR en el modelo de factura para su reutilización
@@ -2080,6 +2089,42 @@ export class InvoicesService {
     } catch (error) {
       console.error('❌ Error en devolución de provisiones:', error);
       // No fallar la creación de la factura por error en devolución de provisiones
+    }
+  }
+
+  /**
+   * Genera un hash SHA-256 de los datos críticos de la factura
+   * para garantizar la integridad en el QR
+   */
+  private generateInvoiceHash(invoice: any): string {
+    try {
+      // Datos críticos para el hash (ordenados alfabéticamente para consistencia)
+      const criticalData = {
+        numeroFactura: invoice.numeroFactura || '',
+        fechaFactura: invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : '',
+        importeTotal: (invoice.importeTotal || 0).toFixed(2),
+        nifEmisor: invoice.emisor?.dni || invoice.emisor?.nif || '',
+        nifReceptor: invoice.receptor?.dni || invoice.receptor?.nif || '',
+        tipoFactura: invoice.tipoFactura || 'F',
+        estado: invoice.estado || 'EMITIDA',
+        id: invoice.id || ''
+      };
+
+      // Crear string ordenado y consistente
+      const dataString = Object.entries(criticalData)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, value]) => `${key}:${value}`)
+        .join('|');
+
+      // Generar hash SHA-256
+      const hash = crypto.createHash('sha256').update(dataString).digest('hex');
+      
+      this.logger.log(`Hash generado para factura ${invoice.numeroFactura}: ${hash.substring(0, 16)}...`);
+      
+      return hash.substring(0, 16); // Usar solo los primeros 16 caracteres para el QR
+    } catch (error) {
+      this.logger.error('Error generando hash de factura:', error);
+      return '';
     }
   }
 
