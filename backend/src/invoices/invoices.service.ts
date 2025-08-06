@@ -1183,21 +1183,12 @@ export class InvoicesService {
    */
   async generateInvoicePdfWithQR(invoice: any): Promise<Buffer> {
     try {
-      this.logger.log('Generando PDF profesional usando template HTML');
+      this.logger.log('Generando PDF profesional usando pdf-lib (método confiable)');
       
-      // Usar el mismo método que genera la previsualización HTML
-      const htmlContent = await this.generateInvoiceHtml(invoice);
-      
-      // Convertir HTML a PDF usando Puppeteer, pero con manejo de errores robusto
-      try {
-        const pdfBuffer = await this.htmlToPdfWithPuppeteer(htmlContent);
-        this.logger.log('PDF generado exitosamente con Puppeteer');
-        return pdfBuffer;
-      } catch (puppeteerError) {
-        this.logger.warn('Puppeteer falló, usando método de fallback:', puppeteerError);
-        // Si Puppeteer falla, usar el método de fallback
-        return await this.generateInvoicePdfFallback(invoice);
-      }
+      // Usar directamente el método de fallback que es más confiable en producción
+      const pdfBuffer = await this.generateInvoicePdfFallback(invoice);
+      this.logger.log('PDF generado exitosamente con pdf-lib');
+      return pdfBuffer;
     } catch (error) {
       this.logger.error('Error generando PDF profesional:', error);
       throw new Error('Error generando PDF profesional');

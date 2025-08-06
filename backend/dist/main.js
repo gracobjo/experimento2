@@ -14155,17 +14155,10 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
     }
     async generateInvoicePdfWithQR(invoice) {
         try {
-            this.logger.log('Generando PDF profesional usando template HTML');
-            const htmlContent = await this.generateInvoiceHtml(invoice);
-            try {
-                const pdfBuffer = await this.htmlToPdfWithPuppeteer(htmlContent);
-                this.logger.log('PDF generado exitosamente con Puppeteer');
-                return pdfBuffer;
-            }
-            catch (puppeteerError) {
-                this.logger.warn('Puppeteer falló, usando método de fallback:', puppeteerError);
-                return await this.generateInvoicePdfFallback(invoice);
-            }
+            this.logger.log('Generando PDF profesional usando pdf-lib (método confiable)');
+            const pdfBuffer = await this.generateInvoicePdfFallback(invoice);
+            this.logger.log('PDF generado exitosamente con pdf-lib');
+            return pdfBuffer;
         }
         catch (error) {
             this.logger.error('Error generando PDF profesional:', error);
