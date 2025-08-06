@@ -348,6 +348,37 @@ export class LayoutsService {
       return this.mapToLayoutConfigDto(existingActiveLayout);
     }
 
+    // Buscar un usuario administrador para asignar como creador
+    let creatorId = userId;
+    if (!creatorId) {
+      const adminUser = await this.prisma.user.findFirst({
+        where: {
+          role: 'ADMIN'
+        },
+        select: {
+          id: true
+        }
+      });
+      
+      if (adminUser) {
+        creatorId = adminUser.id;
+        console.log('[LAYOUTS_SERVICE] Usando usuario admin como creador:', creatorId);
+      } else {
+        console.log('[LAYOUTS_SERVICE] No se encontró usuario admin, usando primer usuario disponible');
+        const firstUser = await this.prisma.user.findFirst({
+          select: {
+            id: true
+          }
+        });
+        
+        if (firstUser) {
+          creatorId = firstUser.id;
+        } else {
+          throw new Error('No hay usuarios en la base de datos para crear el layout por defecto');
+        }
+      }
+    }
+
     // Crear el layout por defecto
     const defaultLayout = await this.prisma.layout.create({
       data: {
@@ -356,7 +387,7 @@ export class LayoutsService {
         components: defaultComponents,
         version: 1,
         isActive: true,
-        createdBy: userId || 'system'
+        createdBy: creatorId
       },
       include: {
         createdByUser: {
