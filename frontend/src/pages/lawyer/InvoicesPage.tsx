@@ -922,29 +922,54 @@ const InvoicesPage = () => {
 
     const handleDownload = async () => {
       try {
+        console.log('[FRONTEND] Iniciando descarga de PDF para factura:', invoice.id);
         const token = localStorage.getItem('token');
-        const response = await fetch(`/api/invoices/${invoice.id}/pdf-qr`, {
+        console.log('[FRONTEND] Token disponible:', !!token);
+        
+        const downloadUrl = `/api/invoices/${invoice.id}/pdf-qr`;
+        console.log('[FRONTEND] URL de descarga:', downloadUrl);
+        
+        const response = await fetch(downloadUrl, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
         
+        console.log('[FRONTEND] Status de respuesta:', response.status);
+        console.log('[FRONTEND] Headers de respuesta:', Object.fromEntries(response.headers.entries()));
+        
         if (!response.ok) {
-          throw new Error('Error al descargar el PDF');
+          const errorText = await response.text();
+          console.error('[FRONTEND] Error response:', errorText);
+          throw new Error(`Error al descargar el PDF: ${response.status} ${response.statusText}`);
         }
         
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        console.log('[FRONTEND] Blob recibido. Tamaño:', blob.size, 'bytes');
+        console.log('[FRONTEND] Tipo de contenido:', blob.type);
+        
+        // Verificar que es un PDF
+        if (blob.type !== 'application/pdf') {
+          console.error('[FRONTEND] Error: El contenido no es un PDF. Tipo:', blob.type);
+          // Leer el contenido para debug
+          const text = await blob.text();
+          console.error('[FRONTEND] Contenido recibido:', text.substring(0, 200));
+          throw new Error('El archivo descargado no es un PDF válido');
+        }
+        
+        const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = url;
+        link.href = blobUrl;
         link.download = `factura_${invoice.numeroFactura || invoice.id}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
+        
+        console.log('[FRONTEND] PDF descargado exitosamente');
       } catch (error) {
-        console.error('Error downloading PDF:', error);
-        alert('Error al descargar el PDF. Por favor, inténtalo de nuevo.');
+        console.error('[FRONTEND] Error downloading PDF:', error);
+        alert(`Error al descargar el PDF: ${error.message}`);
       }
     };
 
