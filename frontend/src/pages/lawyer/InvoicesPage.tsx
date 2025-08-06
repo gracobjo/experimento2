@@ -901,13 +901,32 @@ const InvoicesPage = () => {
         setError(null);
         try {
           const token = localStorage.getItem('token');
-          const res = await fetch(`/api/invoices/${invoice.id}/html-preview`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+          console.log('[FRONTEND] Cargando HTML preview para factura:', invoice.id);
+          
+          // Usar URL directa al backend
+          const res = await fetch(`https://experimento2-production.up.railway.app/api/invoices/${invoice.id}/html-preview`, {
+            headers: { 
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            mode: 'cors'
           });
-          if (!res.ok) throw new Error('No se pudo cargar la previsualización');
+          
+          console.log('[FRONTEND] Status de respuesta HTML:', res.status);
+          
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error('[FRONTEND] Error response HTML:', errorText);
+            throw new Error(`No se pudo cargar la previsualización: ${res.status} ${res.statusText}`);
+          }
+          
           const htmlText = await res.text();
+          console.log('[FRONTEND] HTML recibido, longitud:', htmlText.length);
+          console.log('[FRONTEND] Primeros 200 caracteres:', htmlText.substring(0, 200));
+          
           setHtml(htmlText);
         } catch (err: any) {
+          console.error('[FRONTEND] Error cargando HTML:', err);
           setError(err.message || 'Error desconocido');
         } finally {
           setLoading(false);
@@ -993,19 +1012,41 @@ const InvoicesPage = () => {
 
     if (loading) return <div className="p-8 text-center">Cargando previsualización...</div>;
     if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
-    if (!html) return null;
+    if (!html) return <div className="p-8 text-center text-gray-500">No se pudo cargar el contenido de la factura</div>;
+    
     return (
       <div className="invoice-preview-container">
+        {/* Debug info */}
+        <div className="mb-4 p-2 bg-gray-100 text-xs">
+          <p>HTML length: {html.length}</p>
+          <p>HTML preview: {html.substring(0, 100)}...</p>
+        </div>
+        
+        {/* Contenido de la factura */}
         <div 
-          className="invoice-content" 
+          className="invoice-content bg-white p-4 rounded shadow" 
           dangerouslySetInnerHTML={{ __html: html }} 
           style={{
-            minHeight: '100%',
-            position: 'relative'
+            minHeight: '400px',
+            position: 'relative',
+            overflow: 'auto'
           }}
         />
+        
+        {/* Botones de acción */}
         <div className="flex gap-4 mt-8 justify-center">
-          <button onClick={handleDownload} className="px-4 py-2 bg-green-700 text-white rounded hover:bg-green-800">Descargar PDF</button>
+          <button 
+            onClick={handlePrint} 
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            🖨️ Imprimir
+          </button>
+          <button 
+            onClick={handleDownload} 
+            className="px-4 py-2 bg-green-700 text-white rounded hover:bg-green-800"
+          >
+            📄 Descargar PDF
+          </button>
         </div>
       </div>
     );
