@@ -175,14 +175,15 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   
   // Prefijo global para la API (excluir health endpoints)
-  // app.setGlobalPrefix('api', {
-  //   exclude: [
-  //     { path: 'health', method: RequestMethod.GET },
-  //     { path: 'debug-env', method: RequestMethod.GET },
-  //     { path: 'test-health', method: RequestMethod.GET },
-  //     { path: 'api-test', method: RequestMethod.GET },
-  //   ],
-  // });
+  app.setGlobalPrefix('api', {
+    exclude: [
+      { path: 'health', method: RequestMethod.GET },
+      { path: 'debug-env', method: RequestMethod.GET },
+      { path: 'test-health', method: RequestMethod.GET },
+      { path: 'api-test', method: RequestMethod.GET },
+      { path: 'db-status', method: RequestMethod.GET },
+    ],
+  });
 
   // Configurar Swagger UI con opciones personalizadas
   SwaggerModule.setup('docs', app, document, {
