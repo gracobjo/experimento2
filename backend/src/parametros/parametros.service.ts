@@ -16,8 +16,18 @@ export class ParametrosService {
   }
 
   async findByClave(clave: string) {
+    console.log('[PARAMETROS] Buscando parámetro con clave:', clave);
+    
     const parametro = await this.prisma.parametro.findUnique({ where: { clave } });
-    if (!parametro) throw new NotFoundException('Parámetro no encontrado');
+    
+    console.log('[PARAMETROS] Resultado de búsqueda:', parametro ? 'ENCONTRADO' : 'NO ENCONTRADO');
+    
+    if (!parametro) {
+      console.log('[PARAMETROS] Parámetro no encontrado, lanzando NotFoundException');
+      throw new NotFoundException('Parámetro no encontrado');
+    }
+    
+    console.log('[PARAMETROS] Parámetro encontrado:', { id: parametro.id, clave: parametro.clave, valor: parametro.valor.substring(0, 100) + '...' });
     return parametro;
   }
 

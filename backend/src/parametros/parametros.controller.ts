@@ -112,7 +112,43 @@ export class ParametrosController {
   })
   @ApiResponse({ status: 404, description: 'Contenido no encontrado' })
   getLegalContentByKey(@Param('clave') clave: string) {
+    console.log('[PARAMETROS_CONTROLLER] Solicitud para clave:', clave);
     return this.parametrosService.findByClave(clave);
+  }
+
+  @Get('debug/all')
+  @ApiOperation({ 
+    summary: 'Debug todos los parámetros',
+    description: 'Endpoint de debug para verificar todos los parámetros en la base de datos'
+  })
+  @ApiResponse({ status: 200, description: 'Lista de todos los parámetros' })
+  async debugAllParams() {
+    console.log('[PARAMETROS_DEBUG] Obteniendo todos los parámetros...');
+    
+    try {
+      const allParams = await this.parametrosService.findAll();
+      
+      console.log('[PARAMETROS_DEBUG] Total de parámetros en BD:', allParams.length);
+      console.log('[PARAMETROS_DEBUG] Parámetros:', allParams.map(p => ({
+        id: p.id,
+        clave: p.clave,
+        valor: p.valor.substring(0, 50) + '...',
+        tipo: p.tipo
+      })));
+      
+      return {
+        totalParams: allParams.length,
+        params: allParams.map(p => ({
+          id: p.id,
+          clave: p.clave,
+          valor: p.valor.substring(0, 100) + '...',
+          tipo: p.tipo
+        }))
+      };
+    } catch (error) {
+      console.error('[PARAMETROS_DEBUG] Error:', error);
+      return { error: error instanceof Error ? error.message : String(error) };
+    }
   }
 
   // Endpoints protegidos para administradores

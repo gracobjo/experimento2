@@ -12490,9 +12490,14 @@ let ParametrosService = class ParametrosService {
         return parametro;
     }
     async findByClave(clave) {
+        console.log('[PARAMETROS] Buscando parámetro con clave:', clave);
         const parametro = await this.prisma.parametro.findUnique({ where: { clave } });
-        if (!parametro)
+        console.log('[PARAMETROS] Resultado de búsqueda:', parametro ? 'ENCONTRADO' : 'NO ENCONTRADO');
+        if (!parametro) {
+            console.log('[PARAMETROS] Parámetro no encontrado, lanzando NotFoundException');
             throw new common_1.NotFoundException('Parámetro no encontrado');
+        }
+        console.log('[PARAMETROS] Parámetro encontrado:', { id: parametro.id, clave: parametro.clave, valor: parametro.valor.substring(0, 100) + '...' });
         return parametro;
     }
     async findContactParams() {
@@ -12707,7 +12712,34 @@ let ParametrosController = class ParametrosController {
         return this.parametrosService.findLegalContent();
     }
     getLegalContentByKey(clave) {
+        console.log('[PARAMETROS_CONTROLLER] Solicitud para clave:', clave);
         return this.parametrosService.findByClave(clave);
+    }
+    async debugAllParams() {
+        console.log('[PARAMETROS_DEBUG] Obteniendo todos los parámetros...');
+        try {
+            const allParams = await this.parametrosService.findAll();
+            console.log('[PARAMETROS_DEBUG] Total de parámetros en BD:', allParams.length);
+            console.log('[PARAMETROS_DEBUG] Parámetros:', allParams.map(p => ({
+                id: p.id,
+                clave: p.clave,
+                valor: p.valor.substring(0, 50) + '...',
+                tipo: p.tipo
+            })));
+            return {
+                totalParams: allParams.length,
+                params: allParams.map(p => ({
+                    id: p.id,
+                    clave: p.clave,
+                    valor: p.valor.substring(0, 100) + '...',
+                    tipo: p.tipo
+                }))
+            };
+        }
+        catch (error) {
+            console.error('[PARAMETROS_DEBUG] Error:', error);
+            return { error: error instanceof Error ? error.message : String(error) };
+        }
     }
     findAll() {
         return this.parametrosService.findAll();
@@ -12849,6 +12881,17 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], ParametrosController.prototype, "getLegalContentByKey", null);
+__decorate([
+    (0, common_1.Get)('debug/all'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Debug todos los parámetros',
+        description: 'Endpoint de debug para verificar todos los parámetros en la base de datos'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Lista de todos los parámetros' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ParametrosController.prototype, "debugAllParams", null);
 __decorate([
     (0, common_1.Get)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
