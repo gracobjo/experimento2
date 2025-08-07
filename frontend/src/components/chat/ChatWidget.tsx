@@ -67,7 +67,7 @@ const ChatWidget = () => {
     if (!user || !isOpen) return;
 
     const token = localStorage.getItem('token');
-    const newSocket = io('http://localhost:3000', {
+    const newSocket = io(`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production.up.railway.app'}`, {
       auth: {
         token,
         user: {
