@@ -281,6 +281,34 @@ const AppointmentsCalendarPage = () => {
     }
   };
 
+  const handleConfirmAppointment = async () => {
+    if (!selected) return;
+
+    try {
+      setRescheduling(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.put(`/api/appointments/${selected.id}/confirm`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Actualizar la lista de citas
+      setAppointments(prev => prev.map(app => 
+        app.id === selected.id ? response.data : app
+      ));
+
+      setSuccess('Cita confirmada exitosamente. Se ha enviado una notificación al cliente.');
+      setSelected(null);
+      
+      // Limpiar mensaje de éxito después de 5 segundos
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al confirmar la cita');
+    } finally {
+      setRescheduling(false);
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setRescheduleForm(prev => ({
       ...prev,
@@ -714,6 +742,17 @@ const AppointmentsCalendarPage = () => {
                 >
                   {deleting ? 'Eliminando...' : 'Eliminar'}
                 </button>
+                {selected.status !== 'CONFIRMADA' && (
+                  <button 
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleConfirmAppointment}
+                    disabled={rescheduling}
+                    aria-label="Confirmar esta cita"
+                    type="button"
+                  >
+                    {rescheduling ? 'Confirmando...' : 'Confirmar'}
+                  </button>
+                )}
                 <button 
                   className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
                   onClick={() => handleRescheduleClick(selected)}

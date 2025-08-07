@@ -18,7 +18,7 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const chatbotUrl = import.meta.env.VITE_CHATBOT_URL || 'https://chatbot-legal-production.up.railway.app';
+  const chatbotUrl = import.meta.env.VITE_CHATBOT_URL || 'https://chatbot-legal-production-b91c.up.railway.app';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

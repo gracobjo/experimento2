@@ -104,6 +104,7 @@ model Appointment {
   date     DateTime
   location String?
   notes    String?
+  status   String   @default("PENDIENTE") // PENDIENTE, CONFIRMADA, CANCELADA, COMPLETADA
   client   Client   @relation(fields: [clientId], references: [id])
   lawyer   User     @relation(fields: [lawyerId], references: [id])
 }

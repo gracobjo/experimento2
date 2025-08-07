@@ -102,6 +102,7 @@ app.add_middleware(
         "http://localhost:3000",
         "https://experimento2-fenm.vercel.app",
         "https://experimento2-production.up.railway.app",
+        "https://chatbot-legal-production-b91c.up.railway.app",
         os.getenv("FRONTEND_URL", "http://localhost:5173")
     ],
     allow_credentials=True,

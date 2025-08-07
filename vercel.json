@@ -30,5 +30,9 @@
         }
       ]
     }
-  ]
+  ],
+  "env": {
+    "VITE_API_URL": "https://experimento2-production.up.railway.app",
+    "VITE_CHATBOT_URL": "https://chatbot-legal-production-b91c.up.railway.app"
+  }
 } 
