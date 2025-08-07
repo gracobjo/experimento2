@@ -40,16 +40,45 @@ const ClientCaseDetailPage = () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
+        
+        console.log('🔍 Fetching case with ID:', id);
+        console.log('🔍 API URL:', `${(import.meta as any).env.VITE_API_URL || 'http://localhost:3000'}/api/cases/${id}`);
+        
         const response = await axios.get(`/api/cases/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        console.log('Case data received:', response.data);
+        console.log('📊 Response status:', response.status);
+        console.log('📊 Response headers:', response.headers);
+        console.log('📊 Case data received:', response.data);
+        
+        // Check if we received HTML instead of JSON
+        if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
+          throw new Error('El servidor está devolviendo HTML en lugar de datos JSON. Esto indica un problema de configuración del API.');
+        }
+        
         setCaseData(response.data);
         setError(null);
       } catch (err: any) {
-        console.error('Error fetching case:', err);
-        setError(err.response?.data?.message || 'Error al cargar el expediente');
+        console.error('❌ Error fetching case:', err);
+        console.error('❌ Error response:', err.response?.data);
+        console.error('❌ Error status:', err.response?.status);
+        
+        let errorMessage = 'Error al cargar el expediente';
+        
+        if (err.response?.status === 404) {
+          errorMessage = 'Expediente no encontrado';
+        } else if (err.response?.status === 401) {
+          errorMessage = 'No autorizado para ver este expediente';
+        } else if (err.response?.status === 403) {
+          errorMessage = 'No tienes permisos para ver este expediente';
+        } else if (err.message?.includes('HTML')) {
+          errorMessage = 'Error de configuración del servidor. El backend no está respondiendo correctamente.';
+        } else if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        }
+        
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -76,6 +105,23 @@ const ClientCaseDetailPage = () => {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Fecha no disponible';
+      }
+      return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', dateString, error);
+      return 'Fecha no disponible';
+    }
+  };
+
   const handleContactLawyer = () => {
     if (caseData?.lawyer?.email) {
       setShowLawyerContact(true);
@@ -83,8 +129,6 @@ const ClientCaseDetailPage = () => {
       alert('No hay información de contacto del abogado disponible.');
     }
   };
-
-
 
   console.log('Render state:', { loading, error, caseData });
   
@@ -132,7 +176,7 @@ const ClientCaseDetailPage = () => {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{caseData.title}</h1>
               <p className="mt-1 text-gray-600">
-                Expediente creado el {new Date(caseData.createdAt).toLocaleDateString()}
+                Expediente creado el {formatDate(caseData.createdAt)}
               </p>
             </div>
           </div>
@@ -177,7 +221,7 @@ const ClientCaseDetailPage = () => {
                         <div>
                           <p className="text-sm font-medium text-gray-900">{doc.filename}</p>
                           <p className="text-xs text-gray-500">
-                            Subido el {new Date(doc.uploadedAt).toLocaleDateString()}
+                            Subido el {formatDate(doc.uploadedAt)}
                           </p>
                         </div>
                       </div>
@@ -202,43 +246,49 @@ const ClientCaseDetailPage = () => {
           <div className="space-y-6">
             {/* Información del Abogado */}
             <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Tu Abogado</h2>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-blue-600 font-semibold">
-                      {caseData.lawyer?.name ? caseData.lawyer.name.split(' ').map(n => n[0]).join('') : 'AB'}
-                    </span>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Abogado Asignado</h2>
+              {caseData.lawyer ? (
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{caseData.lawyer.name}</p>
+                      <p className="text-sm text-gray-600">{caseData.lawyer.email}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{caseData.lawyer?.name || 'Abogado no asignado'}</p>
-                    <p className="text-sm text-gray-500">{caseData.lawyer?.email || 'Email no disponible'}</p>
-                  </div>
+                  <button
+                    onClick={handleContactLawyer}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  >
+                    Contactar Abogado
+                  </button>
                 </div>
-                <button 
-                  onClick={handleContactLawyer}
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-                >
-                  Contactar Abogado
-                </button>
-              </div>
+              ) : (
+                <p className="text-gray-500">No hay abogado asignado aún.</p>
+              )}
             </div>
 
-            {/* Información de Contacto */}
+            {/* Información del Caso */}
             <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Contacto del Despacho</h2>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center space-x-2">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  <span className="text-gray-600">(555) 123-4567</span>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Información del Caso</h2>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">ID del Expediente</p>
+                  <p className="text-sm text-gray-900 font-mono">{caseData.id}</p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  <span className="text-gray-600">info@despacholegal.com</span>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Estado</p>
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(caseData.status)}`}>
+                    {getStatusText(caseData.status)}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Fecha de Creación</p>
+                  <p className="text-sm text-gray-900">{formatDate(caseData.createdAt)}</p>
                 </div>
               </div>
             </div>
@@ -247,13 +297,10 @@ const ClientCaseDetailPage = () => {
       </div>
 
       {/* Modal de Contacto con Abogado */}
-      {caseData && (
+      {showLawyerContact && caseData.lawyer && (
         <LawyerContactModal
-          isOpen={showLawyerContact}
-          onClose={() => setShowLawyerContact(false)}
           lawyer={caseData.lawyer}
-          expedienteId={caseData.id}
-          expedienteTitle={caseData.title}
+          onClose={() => setShowLawyerContact(false)}
         />
       )}
     </div>
