@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import chatbotApi from '../../api/chatbot';
 
 interface ChatMessage {
   id: string;
@@ -18,7 +19,7 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const chatbotUrl = import.meta.env.VITE_CHATBOT_URL || 'https://chatbot-legal-production-b91c.up.railway.app';
+  // Usar el API configurado en lugar de fetch directo
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -43,18 +44,12 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen, onClose }) => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${chatbotUrl}/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text,
-          language: 'es'
-        })
+      const response = await chatbotApi.post('/chat', {
+        text,
+        language: 'es'
       });
 
-      const data = await response.json();
+      const data = response.data;
       
       const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),

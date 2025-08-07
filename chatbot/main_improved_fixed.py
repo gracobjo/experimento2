@@ -107,7 +107,7 @@ app.add_middleware(
         os.getenv("FRONTEND_URL", "http://localhost:5173")
     ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -1295,6 +1295,14 @@ threading.Thread(target=cleanup_inactive_sessions, daemon=True).start()
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "chatbot", "timestamp": datetime.now().isoformat()}
+
+@app.get("/test-cors")
+async def test_cors():
+    return {"message": "CORS test successful", "timestamp": datetime.now().isoformat()}
+
+@app.options("/chat")
+async def chat_options():
+    return {"message": "CORS preflight successful"}
 
 if __name__ == "__main__":
     import uvicorn
