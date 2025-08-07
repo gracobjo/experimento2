@@ -22,7 +22,7 @@ interface Case {
     filename: string;
     fileUrl: string;
     uploadedAt: string;
-  }[];
+  }[] | Record<string, never>;
 }
 
 const ClientCaseDetailPage = () => {
@@ -44,6 +44,7 @@ const ClientCaseDetailPage = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         
+        console.log('Case data received:', response.data);
         setCaseData(response.data);
         setError(null);
       } catch (err: any) {
@@ -85,6 +86,8 @@ const ClientCaseDetailPage = () => {
 
 
 
+  console.log('Render state:', { loading, error, caseData });
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -163,7 +166,7 @@ const ClientCaseDetailPage = () => {
             <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Documentos del Caso</h2>
               
-              {caseData.documents && caseData.documents.length > 0 ? (
+              {caseData.documents && Array.isArray(caseData.documents) && caseData.documents.length > 0 ? (
                 <div className="space-y-3">
                   {caseData.documents.map((doc) => (
                     <div key={doc.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-md">
