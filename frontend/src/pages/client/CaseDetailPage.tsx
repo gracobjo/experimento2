@@ -207,7 +207,7 @@ const ClientCaseDetailPage = () => {
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                     <span className="text-blue-600 font-semibold">
-                      {caseData.lawyer?.name?.split(' ').map(n => n[0]).join('') || 'AB'}
+                      {caseData.lawyer?.name ? caseData.lawyer.name.split(' ').map(n => n[0]).join('') : 'AB'}
                     </span>
                   </div>
                   <div>

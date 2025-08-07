@@ -5,7 +5,7 @@ import api from '../api/axios';
 interface LawyerContactModalProps {
   isOpen: boolean;
   onClose: () => void;
-  lawyer: {
+  lawyer?: {
     id: string;
     name: string;
     email: string;
@@ -77,7 +77,9 @@ const LawyerContactModal: React.FC<LawyerContactModalProps> = ({
       const formDataToSend = new FormData();
       formDataToSend.append('asunto', formData.asunto);
       formDataToSend.append('mensaje', formData.mensaje);
-      formDataToSend.append('lawyerId', lawyer.id);
+      if (lawyer?.id) {
+        formDataToSend.append('lawyerId', lawyer.id);
+      }
       formDataToSend.append('expedienteId', expedienteId);
       formDataToSend.append('expedienteTitle', expedienteTitle);
 
@@ -136,7 +138,7 @@ const LawyerContactModal: React.FC<LawyerContactModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Contactar Abogado"
-      description={`Envíe un mensaje a ${lawyer.name} sobre el expediente "${expedienteTitle}"`}
+      description={`Envíe un mensaje a ${lawyer?.name || 'su abogado'} sobre el expediente "${expedienteTitle}"`}
       size="xl"
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -152,13 +154,13 @@ const LawyerContactModal: React.FC<LawyerContactModalProps> = ({
                 <div className="flex-shrink-0">
                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                     <span className="text-blue-600 font-semibold">
-                      {lawyer.name.split(' ').map(n => n[0]).join('')}
+                      {lawyer?.name ? lawyer.name.split(' ').map(n => n[0]).join('') : 'AB'}
                     </span>
                   </div>
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-blue-900">Abogado Asignado</h4>
-                  <p className="text-sm text-blue-700 mt-1">{lawyer.name}</p>
+                  <p className="text-sm text-blue-700 mt-1">{lawyer?.name || 'Abogado no asignado'}</p>
                 </div>
               </div>
 
@@ -172,7 +174,7 @@ const LawyerContactModal: React.FC<LawyerContactModalProps> = ({
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-900">Email</h4>
-                  <p className="text-sm text-gray-600 mt-1">{lawyer.email}</p>
+                  <p className="text-sm text-gray-600 mt-1">{lawyer?.email || 'Email no disponible'}</p>
                 </div>
               </div>
 
