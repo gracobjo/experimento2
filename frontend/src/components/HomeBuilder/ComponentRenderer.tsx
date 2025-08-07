@@ -143,17 +143,17 @@ const ServiceCards: React.FC<{ props: any }> = ({ props }) => {
         </div>
       )}
 
-      {!loading && !error && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {services.map((service: any, index: number) => (
-            <div key={service.id || index} className="text-center p-4 border rounded-lg hover:shadow-md transition-shadow">
-              <div className="text-4xl mb-3">{service.icon || '⚖️'}</div>
-              <h3 className="text-lg font-semibold mb-2">{service.title || 'Servicio'}</h3>
-              <p className="text-gray-600">{service.description || 'Descripción del servicio'}</p>
+                {!loading && !error && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {services.map((service: any, index: number) => (
+                <div key={service.id || index} className="text-center p-4 border rounded-lg hover:shadow-md transition-shadow">
+                  <div className="text-4xl mb-3">{service.ICON || service.icon || '⚖️'}</div>
+                  <h3 className="text-lg font-semibold mb-2">{service.TITLE || service.title || 'Servicio'}</h3>
+                  <p className="text-gray-600">{service.DESCRIPTION || service.description || 'Descripción del servicio'}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          )}
 
       {!loading && !error && services.length === 0 && (
         <div className="text-center py-8">
@@ -448,10 +448,10 @@ const ServicesModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               {services.map((service) => (
                 <div key={service.id} className="bg-gray-50 p-6 rounded-lg hover:shadow-md transition-shadow">
                   <div className="flex items-start space-x-4">
-                    <div className="text-4xl flex-shrink-0">{service.icon || '⚖️'}</div>
+                    <div className="text-4xl flex-shrink-0">{service.ICON || service.icon || '⚖️'}</div>
                     <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">{service.title}</h3>
-                      <p className="text-gray-600 leading-relaxed">{service.description}</p>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">{service.TITLE || service.title}</h3>
+                      <p className="text-gray-600 leading-relaxed">{service.DESCRIPTION || service.description}</p>
                     </div>
                   </div>
                 </div>
