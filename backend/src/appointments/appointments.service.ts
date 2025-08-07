@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { EmailService } from '../email/email.service';
+import { EmailService } from '../auth/email.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { CreateLawyerAppointmentDto } from './dto/create-lawyer-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
@@ -99,7 +99,10 @@ export class AppointmentsService {
   async create(dto: CreateAppointmentDto, user: any) {
     // Solo clientes pueden crear citas
     if (user.role !== 'CLIENTE') throw new ForbiddenException('Solo los clientes pueden agendar citas');
-    const client = await this.prisma.client.findUnique({ where: { userId: user.id } });
+    const client = await this.prisma.client.findUnique({ 
+      where: { userId: user.id },
+      include: { user: true }
+    });
     if (!client) throw new ForbiddenException('No eres cliente');
     
     // Verificar que el abogado existe

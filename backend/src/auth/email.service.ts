@@ -567,4 +567,386 @@ export class EmailService {
       return false;
     }
   }
+
+  async sendAppointmentConfirmationEmail(data: {
+    clientName: string;
+    clientEmail: string;
+    lawyerName: string;
+    appointmentDate: Date;
+    location?: string;
+    notes?: string;
+  }) {
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+      to: data.clientEmail,
+      subject: 'Cita Confirmada - Despacho de Abogados',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #27ae60;">Cita Confirmada</h2>
+          <p>Hola ${data.clientName},</p>
+          <p>Tu cita ha sido confirmada exitosamente.</p>
+          
+          <div style="background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #155724; margin-top: 0;">Detalles de la Cita</h3>
+            <p><strong>Abogado:</strong> ${data.lawyerName}</p>
+            <p><strong>Fecha y Hora:</strong> ${formatDate(data.appointmentDate)}</p>
+            ${data.location ? `<p><strong>Ubicación:</strong> ${data.location}</p>` : ''}
+            ${data.notes ? `<p><strong>Notas:</strong> ${data.notes}</p>` : ''}
+          </div>
+          
+          <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #0c5460; margin-top: 0;">Recordatorios Importantes</h3>
+            <ul style="color: #0c5460;">
+              <li>Llega 10 minutos antes de la hora programada</li>
+              <li>Trae todos los documentos relevantes</li>
+              <li>Si necesitas cancelar, hazlo con al menos 24 horas de anticipación</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:${data.lawyerName.toLowerCase().replace(' ', '.')}@despachoabogados.com?subject=Consulta sobre cita del ${formatDate(data.appointmentDate)}" 
+               style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Contactar con el Abogado
+            </a>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+            <p><strong>Teléfono:</strong> +34 612 345 678</p>
+            <p><strong>Email:</strong> info@despachoabogados.com</p>
+            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+            <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Despacho de Abogados García & Asociados<br>
+            Más de 15 años de experiencia en servicios legales
+          </p>
+        </div>
+      `,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      return true;
+    } catch (error) {
+      console.error('Error sending appointment confirmation email:', error);
+      return false;
+    }
+  }
+
+  async sendAppointmentScheduledByLawyerEmail(data: {
+    clientName: string;
+    clientEmail: string;
+    lawyerName: string;
+    appointmentDate: Date;
+    location?: string;
+    notes?: string;
+  }) {
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+      to: data.clientEmail,
+      subject: 'Nueva Cita Programada - Despacho de Abogados',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #3498db;">Nueva Cita Programada</h2>
+          <p>Hola ${data.clientName},</p>
+          <p>Se ha programado una nueva cita para ti.</p>
+          
+          <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #0c5460; margin-top: 0;">Detalles de la Cita</h3>
+            <p><strong>Abogado:</strong> ${data.lawyerName}</p>
+            <p><strong>Fecha y Hora:</strong> ${formatDate(data.appointmentDate)}</p>
+            ${data.location ? `<p><strong>Ubicación:</strong> ${data.location}</p>` : ''}
+            ${data.notes ? `<p><strong>Notas:</strong> ${data.notes}</p>` : ''}
+          </div>
+          
+          <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #856404; margin-top: 0;">Acción Requerida</h3>
+            <p>Por favor, confirma si puedes asistir a esta cita respondiendo a este email o contactando con nosotros.</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:${data.lawyerName.toLowerCase().replace(' ', '.')}@despachoabogados.com?subject=Confirmación de cita del ${formatDate(data.appointmentDate)}" 
+               style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Confirmar Cita
+            </a>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+            <p><strong>Teléfono:</strong> +34 612 345 678</p>
+            <p><strong>Email:</strong> info@despachoabogados.com</p>
+            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+            <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Despacho de Abogados García & Asociados<br>
+            Más de 15 años de experiencia en servicios legales
+          </p>
+        </div>
+      `,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      return true;
+    } catch (error) {
+      console.error('Error sending appointment scheduled by lawyer email:', error);
+      return false;
+    }
+  }
+
+  async sendAppointmentUpdatedEmail(data: {
+    clientName: string;
+    clientEmail: string;
+    lawyerName: string;
+    appointmentDate: Date;
+    location?: string;
+    notes?: string;
+  }) {
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+      to: data.clientEmail,
+      subject: 'Cita Actualizada - Despacho de Abogados',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #f39c12;">Cita Actualizada</h2>
+          <p>Hola ${data.clientName},</p>
+          <p>Tu cita ha sido actualizada.</p>
+          
+          <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #856404; margin-top: 0;">Detalles Actualizados</h3>
+            <p><strong>Abogado:</strong> ${data.lawyerName}</p>
+            <p><strong>Fecha y Hora:</strong> ${formatDate(data.appointmentDate)}</p>
+            ${data.location ? `<p><strong>Ubicación:</strong> ${data.location}</p>` : ''}
+            ${data.notes ? `<p><strong>Notas:</strong> ${data.notes}</p>` : ''}
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:${data.lawyerName.toLowerCase().replace(' ', '.')}@despachoabogados.com?subject=Consulta sobre cita actualizada del ${formatDate(data.appointmentDate)}" 
+               style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Contactar con el Abogado
+            </a>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+            <p><strong>Teléfono:</strong> +34 612 345 678</p>
+            <p><strong>Email:</strong> info@despachoabogados.com</p>
+            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+            <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Despacho de Abogados García & Asociados<br>
+            Más de 15 años de experiencia en servicios legales
+          </p>
+        </div>
+      `,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      return true;
+    } catch (error) {
+      console.error('Error sending appointment updated email:', error);
+      return false;
+    }
+  }
+
+  async sendAppointmentCancelledEmail(data: {
+    clientName: string;
+    clientEmail: string;
+    lawyerName: string;
+    appointmentDate: Date;
+    location?: string;
+    cancelledBy: string;
+  }) {
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+      to: data.clientEmail,
+      subject: 'Cita Cancelada - Despacho de Abogados',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #e74c3c;">Cita Cancelada</h2>
+          <p>Hola ${data.clientName},</p>
+          <p>Tu cita ha sido cancelada.</p>
+          
+          <div style="background-color: #f8d7da; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #721c24; margin-top: 0;">Información de la Cancelación</h3>
+            <p><strong>Abogado:</strong> ${data.lawyerName}</p>
+            <p><strong>Fecha Cancelada:</strong> ${formatDate(data.appointmentDate)}</p>
+            ${data.location ? `<p><strong>Ubicación:</strong> ${data.location}</p>` : ''}
+            <p><strong>Cancelada por:</strong> ${data.cancelledBy}</p>
+          </div>
+          
+          <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #0c5460; margin-top: 0;">¿Qué puedes hacer?</h3>
+            <ul style="color: #0c5460;">
+              <li>Programar una nueva cita en nuestro sistema</li>
+              <li>Contactar con nosotros para más información</li>
+              <li>Consultar sobre otros servicios que ofrecemos</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:info@despachoabogados.com?subject=Nueva cita después de cancelación" 
+               style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Programar Nueva Cita
+            </a>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+            <p><strong>Teléfono:</strong> +34 612 345 678</p>
+            <p><strong>Email:</strong> info@despachoabogados.com</p>
+            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+            <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Despacho de Abogados García & Asociados<br>
+            Más de 15 años de experiencia en servicios legales
+          </p>
+        </div>
+      `,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      return true;
+    } catch (error) {
+      console.error('Error sending appointment cancelled email:', error);
+      return false;
+    }
+  }
+
+  async sendAppointmentConfirmedEmail(data: {
+    clientName: string;
+    clientEmail: string;
+    lawyerName: string;
+    appointmentDate: Date;
+    location?: string;
+    notes?: string;
+  }) {
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+      to: data.clientEmail,
+      subject: 'Cita Confirmada - Despacho de Abogados',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #27ae60;">Cita Confirmada</h2>
+          <p>Hola ${data.clientName},</p>
+          <p>Tu cita ha sido confirmada por el abogado.</p>
+          
+          <div style="background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #155724; margin-top: 0;">Detalles de la Cita</h3>
+            <p><strong>Abogado:</strong> ${data.lawyerName}</p>
+            <p><strong>Fecha y Hora:</strong> ${formatDate(data.appointmentDate)}</p>
+            ${data.location ? `<p><strong>Ubicación:</strong> ${data.location}</p>` : ''}
+            ${data.notes ? `<p><strong>Notas:</strong> ${data.notes}</p>` : ''}
+          </div>
+          
+          <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #0c5460; margin-top: 0;">Recordatorios Importantes</h3>
+            <ul style="color: #0c5460;">
+              <li>Llega 10 minutos antes de la hora programada</li>
+              <li>Trae todos los documentos relevantes</li>
+              <li>Si necesitas cancelar, hazlo con al menos 24 horas de anticipación</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:${data.lawyerName.toLowerCase().replace(' ', '.')}@despachoabogados.com?subject=Consulta sobre cita confirmada del ${formatDate(data.appointmentDate)}" 
+               style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Contactar con el Abogado
+            </a>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+            <p><strong>Teléfono:</strong> +34 612 345 678</p>
+            <p><strong>Email:</strong> info@despachoabogados.com</p>
+            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+            <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Despacho de Abogados García & Asociados<br>
+            Más de 15 años de experiencia en servicios legales
+          </p>
+        </div>
+      `,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      return true;
+    } catch (error) {
+      console.error('Error sending appointment confirmed email:', error);
+      return false;
+    }
+  }
 } 
