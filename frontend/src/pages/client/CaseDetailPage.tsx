@@ -163,7 +163,7 @@ const ClientCaseDetailPage = () => {
             <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Documentos del Caso</h2>
               
-              {caseData.documents.length > 0 ? (
+              {caseData.documents && caseData.documents.length > 0 ? (
                 <div className="space-y-3">
                   {caseData.documents.map((doc) => (
                     <div key={doc.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-md">

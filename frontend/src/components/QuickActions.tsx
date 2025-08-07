@@ -13,6 +13,8 @@ interface QuickActionsProps {
 }
 
 const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteData, onAppointmentCreated, onNoteAdded, onMessageSent }) => {
+  // Validación de seguridad para expedienteData
+  const safeExpedienteData = expedienteData || {};
   const { user } = useAuth();
   const [modal, setModal] = useState<'cita' | 'nota' | 'mensaje' | null>(null);
   const [form, setForm] = useState<any>({});
@@ -41,7 +43,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
       // Lógica diferente según el rol
       if (user?.role === 'CLIENTE') {
         // Clientes crean citas con su abogado
-        let lawyerId = expedienteData?.lawyer?.id;
+        let lawyerId = safeExpedienteData?.lawyer?.id;
         if (!lawyerId) {
           setError('No se pudo obtener el abogado del expediente.');
           setLoading(false);
@@ -70,7 +72,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
         return;
       } else if (user?.role === 'ABOGADO' || user?.role === 'ADMIN') {
         // Abogados y administradores crean citas para el cliente
-        let clientId = expedienteData?.client?.id;
+        let clientId = safeExpedienteData?.client?.id;
         if (!clientId) {
           setError('No se pudo obtener el cliente del expediente.');
           setLoading(false);
@@ -186,8 +188,8 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
         title="Programar Cita"
         description={
           user?.role === 'CLIENTE' 
-            ? `Programe una cita con ${expedienteData?.lawyer?.name || 'su abogado'} para este expediente`
-            : `Programe una cita con ${expedienteData?.client?.user?.name || 'el cliente'} para este expediente`
+            ? `Programe una cita con ${safeExpedienteData?.lawyer?.name || 'su abogado'} para este expediente`
+            : `Programe una cita con ${safeExpedienteData?.client?.user?.name || 'el cliente'} para este expediente`
         }
         size="md"
       >
@@ -204,15 +206,15 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
                 </svg>
                 <span className="text-sm font-medium text-green-900">Abogado:</span>
                 <span className="text-sm text-green-700">
-                  {expedienteData?.lawyer?.name || 'Abogado no asignado'}
+                  {safeExpedienteData?.lawyer?.name || 'Abogado no asignado'}
                 </span>
               </div>
-              {expedienteData?.lawyer?.email && (
+              {safeExpedienteData?.lawyer?.email && (
                 <div className="flex items-center space-x-2 mt-1">
                   <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  <span className="text-sm text-green-700">{expedienteData.lawyer.email}</span>
+                  <span className="text-sm text-green-700">{safeExpedienteData.lawyer.email}</span>
                 </div>
               )}
             </div>
@@ -225,15 +227,15 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
                 </svg>
                 <span className="text-sm font-medium text-blue-900">Cliente:</span>
                 <span className="text-sm text-blue-700">
-                  {expedienteData?.client?.user?.name || 'Cliente no especificado'}
+                  {safeExpedienteData?.client?.user?.name || 'Cliente no especificado'}
                 </span>
               </div>
-              {expedienteData?.client?.user?.email && (
+              {safeExpedienteData?.client?.user?.email && (
                 <div className="flex items-center space-x-2 mt-1">
                   <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  <span className="text-sm text-blue-700">{expedienteData.client.user.email}</span>
+                  <span className="text-sm text-blue-700">{safeExpedienteData.client.user.email}</span>
                 </div>
               )}
             </div>
@@ -339,7 +341,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
                 </svg>
                 <span className="text-sm font-medium text-green-900">Expediente:</span>
                 <span className="text-sm text-green-700">
-                  {expedienteData?.title || expedienteId || 'Expediente'}
+                  {safeExpedienteData?.title || expedienteId || 'Expediente'}
                 </span>
               </div>
               <div className="flex items-center space-x-2 mt-1">
@@ -347,7 +349,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 <span className="text-sm text-green-700">
-                  Cliente: {expedienteData?.client?.user?.name || 'No especificado'}
+                  Cliente: {safeExpedienteData?.client?.user?.name || 'No especificado'}
                 </span>
               </div>
           </div>
@@ -445,8 +447,8 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
         title="Enviar Mensaje"
         description={
           user?.role === 'CLIENTE'
-            ? `Envíe un mensaje a ${expedienteData?.lawyer?.name || 'su abogado'} relacionado con este expediente`
-            : `Envíe un mensaje a ${expedienteData?.client?.user?.name || 'el cliente'} relacionado con este expediente`
+            ? `Envíe un mensaje a ${safeExpedienteData?.lawyer?.name || 'su abogado'} relacionado con este expediente`
+            : `Envíe un mensaje a ${safeExpedienteData?.client?.user?.name || 'el cliente'} relacionado con este expediente`
         }
         size="md"
       >
@@ -463,15 +465,15 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
                 </svg>
                 <span className="text-sm font-medium text-blue-900">Destinatario:</span>
                 <span className="text-sm text-blue-700">
-                  {expedienteData?.lawyer?.name || 'Abogado no asignado'}
+                  {safeExpedienteData?.lawyer?.name || 'Abogado no asignado'}
                 </span>
               </div>
-              {expedienteData?.lawyer?.email && (
+              {safeExpedienteData?.lawyer?.email && (
                 <div className="flex items-center space-x-2 mt-1">
                   <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  <span className="text-sm text-blue-700">{expedienteData.lawyer.email}</span>
+                  <span className="text-sm text-blue-700">{safeExpedienteData.lawyer.email}</span>
                 </div>
               )}
             </div>
@@ -484,15 +486,15 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
                 </svg>
                 <span className="text-sm font-medium text-purple-900">Destinatario:</span>
                 <span className="text-sm text-purple-700">
-                  {expedienteData?.client?.user?.name || 'Cliente no especificado'}
+                  {safeExpedienteData?.client?.user?.name || 'Cliente no especificado'}
                 </span>
               </div>
-              {expedienteData?.client?.user?.email && (
+              {safeExpedienteData?.client?.user?.email && (
                 <div className="flex items-center space-x-2 mt-1">
                   <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  <span className="text-sm text-purple-700">{expedienteData.client.user.email}</span>
+                  <span className="text-sm text-purple-700">{safeExpedienteData.client.user.email}</span>
                 </div>
               )}
             </div>
