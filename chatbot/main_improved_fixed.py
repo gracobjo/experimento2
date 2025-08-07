@@ -97,7 +97,13 @@ app = FastAPI(title="Despacho Legal Chatbot", version="1.0.0")
 # Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:5173")],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://experimento2-fenm.vercel.app",
+        "https://experimento2-production.up.railway.app",
+        os.getenv("FRONTEND_URL", "http://localhost:5173")
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
