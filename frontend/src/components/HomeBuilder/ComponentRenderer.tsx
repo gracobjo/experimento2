@@ -1,6 +1,164 @@
 import React, { useState, useEffect } from 'react';
 import { ComponentConfig } from './types';
 
+// Función para mapear nombres de iconos a emojis
+const getIconEmoji = (iconName: string): string => {
+  const iconMapping: { [key: string]: string } = {
+    'gavel': '⚖️',
+    'work': '💼',
+    'balance': '⚖️',
+    'law': '📜',
+    'justice': '⚖️',
+    'court': '🏛️',
+    'contract': '📄',
+    'document': '📋',
+    'family': '👨‍👩‍👧‍👦',
+    'divorce': '💔',
+    'inheritance': '🏠',
+    'estate': '🏠',
+    'business': '🏢',
+    'corporate': '🏢',
+    'employment': '💼',
+    'labor': '👷',
+    'tax': '💰',
+    'finance': '💳',
+    'real-estate': '🏠',
+    'property': '🏠',
+    'criminal': '🚔',
+    'civil': '⚖️',
+    'commercial': '🏢',
+    'intellectual': '💡',
+    'patent': '📋',
+    'trademark': '™️',
+    'copyright': '©️',
+    'immigration': '🛂',
+    'visa': '📋',
+    'citizenship': '🛂',
+    'international': '🌍',
+    'arbitration': '🤝',
+    'mediation': '🤝',
+    'negotiation': '🤝',
+    'litigation': '⚖️',
+    'appeal': '📤',
+    'settlement': '🤝',
+    'consultation': '💬',
+    'advice': '💡',
+    'representation': '👨‍💼',
+    'defense': '🛡️',
+    'prosecution': '⚖️',
+    'investigation': '🔍',
+    'evidence': '📋',
+    'testimony': '🗣️',
+    'expert': '👨‍🔬',
+    'witness': '👁️',
+    'jury': '👥',
+    'judge': '👨‍⚖️',
+    'lawyer': '👨‍💼',
+    'attorney': '👨‍💼',
+    'counsel': '👨‍💼',
+    'solicitor': '👨‍💼',
+    'barrister': '👨‍💼',
+    'notary': '📋',
+    'paralegal': '📋',
+    'legal-assistant': '📋',
+    'clerk': '📋',
+    'secretary': '📋',
+    'receptionist': '📞',
+    'office': '🏢',
+    'firm': '🏢',
+    'practice': '🏢',
+    'partnership': '🤝',
+    'corporation': '🏢',
+    'llc': '🏢',
+    'trust': '🔒',
+    'foundation': '🏛️',
+    'charity': '❤️',
+    'nonprofit': '🏛️',
+    'government': '🏛️',
+    'public': '🏛️',
+    'private': '🔒',
+    'confidential': '🔒',
+    'privileged': '🔒',
+    'secret': '🔒',
+    'classified': '🔒',
+    'sensitive': '🔒',
+    'personal': '👤',
+    'family-law': '👨‍👩‍👧‍👦',
+    'criminal-law': '🚔',
+    'civil-law': '⚖️',
+    'commercial-law': '🏢',
+    'corporate-law': '🏢',
+    'employment-law': '💼',
+    'labor-law': '👷',
+    'tax-law': '💰',
+    'finance-law': '💳',
+    'real-estate-law': '🏠',
+    'property-law': '🏠',
+    'intellectual-property': '💡',
+    'patent-law': '📋',
+    'trademark-law': '™️',
+    'copyright-law': '©️',
+    'immigration-law': '🛂',
+    'international-law': '🌍',
+    'arbitration-law': '🤝',
+    'mediation-law': '🤝',
+    'litigation-law': '⚖️',
+    'appeals-law': '📤',
+    'settlement-law': '🤝',
+    'consultation-law': '💬',
+    'advice-law': '💡',
+    'representation-law': '👨‍💼',
+    'defense-law': '🛡️',
+    'prosecution-law': '⚖️',
+    'investigation-law': '🔍',
+    'evidence-law': '📋',
+    'testimony-law': '🗣️',
+    'expert-law': '👨‍🔬',
+    'witness-law': '👁️',
+    'jury-law': '👥',
+    'judge-law': '👨‍⚖️',
+    'lawyer-law': '👨‍💼',
+    'attorney-law': '👨‍💼',
+    'counsel-law': '👨‍💼',
+    'solicitor-law': '👨‍💼',
+    'barrister-law': '👨‍💼',
+    'notary-law': '📋',
+    'paralegal-law': '📋',
+    'legal-assistant-law': '📋',
+    'clerk-law': '📋',
+    'secretary-law': '📋',
+    'receptionist-law': '📞',
+    'office-law': '🏢',
+    'firm-law': '🏢',
+    'practice-law': '🏢',
+    'partnership-law': '🤝',
+    'corporation-law': '🏢',
+    'llc-law': '🏢',
+    'trust-law': '🔒',
+    'foundation-law': '🏛️',
+    'charity-law': '❤️',
+    'nonprofit-law': '🏛️',
+    'government-law': '🏛️',
+    'public-law': '🏛️',
+    'private-law': '🔒',
+    'confidential-law': '🔒',
+    'privileged-law': '🔒',
+    'secret-law': '🔒',
+    'classified-law': '🔒',
+    'sensitive-law': '🔒',
+    'personal-law': '👤'
+  };
+
+  // Si ya es un emoji, devolverlo tal como está
+  if (/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(iconName)) {
+    return iconName;
+  }
+
+  // Buscar en el mapeo (case insensitive)
+  const normalizedIconName = iconName.toLowerCase().trim();
+  return iconMapping[normalizedIconName] || '⚖️'; // Default a ⚖️ si no se encuentra
+};
+
 interface ComponentRendererProps {
   component: ComponentConfig;
 }
@@ -147,7 +305,7 @@ const ServiceCards: React.FC<{ props: any }> = ({ props }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {services.map((service: any, index: number) => (
                 <div key={service.id || index} className="text-center p-4 border rounded-lg hover:shadow-md transition-shadow">
-                  <div className="text-4xl mb-3">{service.ICON || service.icon || '⚖️'}</div>
+                  <div className="text-4xl mb-3">{getIconEmoji(service.ICON || service.icon || 'gavel')}</div>
                   <h3 className="text-lg font-semibold mb-2">{service.TITLE || service.title || 'Servicio'}</h3>
                   <p className="text-gray-600">{service.DESCRIPTION || service.description || 'Descripción del servicio'}</p>
                 </div>
@@ -448,7 +606,7 @@ const ServicesModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               {services.map((service) => (
                 <div key={service.id} className="bg-gray-50 p-6 rounded-lg hover:shadow-md transition-shadow">
                   <div className="flex items-start space-x-4">
-                    <div className="text-4xl flex-shrink-0">{service.ICON || service.icon || '⚖️'}</div>
+                    <div className="text-4xl flex-shrink-0">{getIconEmoji(service.ICON || service.icon || 'gavel')}</div>
                     <div className="flex-1">
                       <h3 className="text-xl font-semibold text-gray-900 mb-2">{service.TITLE || service.title}</h3>
                       <p className="text-gray-600 leading-relaxed">{service.DESCRIPTION || service.description}</p>
