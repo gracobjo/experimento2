@@ -341,8 +341,7 @@ export class AppointmentsService {
           clientName: appointment.client.user.name,
           clientEmail: appointment.client.user.email,
           lawyerName: appointment.lawyer.name,
-          oldDate: appointment.date,
-          newDate: new Date(updateDto.date),
+          appointmentDate: new Date(updateDto.date),
           location: updateDto.location || appointment.location,
           notes: updateDto.notes
         });
