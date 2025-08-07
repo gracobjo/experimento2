@@ -3,7 +3,8 @@ import { Link, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useAppConfig } from '../../hooks/useSiteConfig';
 import Notifications from '../Notifications';
-import ChatbotWidget from '../chat/ChatbotWidget';
+import ChatbotWidget from '../Chatbot/ChatbotWidget';
+import ChatbotButton from '../Chatbot/ChatbotButton';
 import AccessibilityTester from '../AccessibilityTester';
 import ContactModal from '../ContactModal';
 import api from '../../api/axios';
@@ -28,6 +29,7 @@ const Layout = () => {
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [showAccessibilityTester, setShowAccessibilityTester] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
 
   const isAdmin = user?.role === 'ADMIN';
   const isLawyer = user?.role === 'ABOGADO';
@@ -412,8 +414,12 @@ const Layout = () => {
         </footer>
       )}
 
-      {/* Chat Widget - Solo disponible para usuarios NO autenticados */}
-      {!user && <ChatbotWidget />}
+      {/* Chatbot Components */}
+      <ChatbotButton onOpen={() => setIsChatbotOpen(true)} />
+      <ChatbotWidget 
+        isOpen={isChatbotOpen} 
+        onClose={() => setIsChatbotOpen(false)} 
+      />
 
       {/* Accessibility Tester */}
       <AccessibilityTester 
