@@ -36,30 +36,15 @@ async function bootstrap() {
       ];
   
   app.enableCors({
-    origin: (origin, callback) => {
-      // Permitir requests sin origin (como mobile apps o Postman)
-      if (!origin) return callback(null, true);
-      
-      // Lista de dominios permitidos
-      const allowedOrigins = [
-        'http://localhost:5173',
-        'http://localhost:3000',
-        'https://experimento2-fenm.vercel.app',
-        'https://experimento2-production.up.railway.app'
-      ];
-      
-      // Verificar si el origin está en la lista permitida
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      
-      // Para desarrollo, permitir cualquier origin de Vercel/Railway
-      if (origin.includes('vercel.app') || origin.includes('railway.app')) {
-        return callback(null, true);
-      }
-      
-      return callback(new Error('Not allowed by CORS'));
-    },
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://localhost:8080',
+      'https://experimento2-fenm.vercel.app',
+      'https://experimento2-production.up.railway.app',
+      /^https:\/\/.*\.vercel\.app$/,
+      /^https:\/\/.*\.railway\.app$/
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
