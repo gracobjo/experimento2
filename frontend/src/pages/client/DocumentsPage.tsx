@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
+import FileUpload from '../../components/forms/FileUpload';
 
 interface Document {
   id: string;
@@ -24,13 +25,41 @@ interface Document {
   };
 }
 
+interface Case {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  client: {
+    id: string;
+    user: {
+      id: string;
+      name: string;
+      email: string;
+    };
+  };
+  lawyer: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
 const ClientDocumentsPage = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([]);
+  const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('todos');
   const [error, setError] = useState<string | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadForm, setUploadForm] = useState({
+    expedienteId: '',
+    description: ''
+  });
   const { user } = useAuth();
 
   // Cargar documentos del cliente
@@ -57,6 +86,23 @@ const ClientDocumentsPage = () => {
     fetchDocuments();
   }, []);
 
+  // Cargar expedientes del cliente
+  useEffect(() => {
+    const fetchCases = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await api.get('/cases', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setCases(response.data);
+      } catch (err) {
+        console.error('Error fetching cases:', err);
+      }
+    };
+
+    fetchCases();
+  }, []);
+
   // Filtrado de documentos
   useEffect(() => {
     let filtered = documents;
@@ -77,6 +123,139 @@ const ClientDocumentsPage = () => {
 
     setFilteredDocuments(filtered);
   }, [documents, searchTerm, typeFilter]);
+
+  const handleFileSelect = (files: File[]) => {
+    console.log('handleFileSelect called with:', files.length, 'files');
+    console.log('Files:', files.map(f => f.name));
+    console.log('Files details:', files.map(f => ({ name: f.name, size: f.size, type: f.type })));
+    
+    // Verificar si hay duplicados
+    const uniqueFiles = files.filter((file, index, self) => 
+      index === self.findIndex(f => f.name === file.name && f.size === file.size)
+    );
+    
+    if (uniqueFiles.length !== files.length) {
+      console.warn('Se encontraron archivos duplicados, eliminando...');
+    }
+    
+    setSelectedFiles(uniqueFiles);
+  };
+
+  const clearSelectedFiles = () => {
+    setSelectedFiles([]);
+  };
+
+  const openUploadModal = () => {
+    setShowUploadModal(true);
+    setError(null);
+    // Limpiar archivos seleccionados al abrir el modal
+    setSelectedFiles([]);
+  };
+
+  const closeUploadModal = () => {
+    setShowUploadModal(false);
+    setSelectedFiles([]);
+    setUploadForm({ expedienteId: '', description: '' });
+    setError(null);
+  };
+
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0 || !uploadForm.expedienteId) {
+      setError('Por favor selecciona archivos y un expediente');
+      return;
+    }
+
+    // Validar límite de archivos
+    if (selectedFiles.length > 5) {
+      setError('No se pueden subir más de 5 archivos por envío');
+      return;
+    }
+
+    // Validar tamaño total
+    const totalSize = selectedFiles.reduce((total, file) => total + file.size, 0);
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (totalSize > maxSize) {
+      setError(`El tamaño total de los archivos (${(totalSize / (1024 * 1024)).toFixed(2)}MB) excede el límite de 5MB`);
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setError(null);
+      const token = localStorage.getItem('token');
+
+      const uploadPromises = selectedFiles.map(file => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('expedienteId', uploadForm.expedienteId);
+        if (uploadForm.description) {
+          formData.append('description', uploadForm.description);
+        }
+
+        return api.post('/documents/upload', formData, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      });
+
+      console.log('Subiendo archivos...');
+      const uploadResults = await Promise.all(uploadPromises);
+      console.log('Resultados de subida:', uploadResults.map(r => r.data));
+
+      // Recargar documentos
+      console.log('Recargando documentos...');
+      const response = await api.get('/documents', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('Documentos cargados:', response.data);
+      
+      // Verificar que los documentos tengan la estructura correcta
+      const validDocuments = response.data.filter((doc: any) => {
+        const isValid = doc && doc.id && doc.originalName;
+        if (!isValid) {
+          console.warn('Documento inválido encontrado:', doc);
+        }
+        return isValid;
+      });
+      
+      setDocuments(validDocuments);
+
+      // Cerrar modal y limpiar formulario
+      closeUploadModal();
+      
+    } catch (err: any) {
+      console.error('Error uploading files:', err);
+      console.error('Error response:', err.response?.data);
+      setError(err.response?.data?.message || 'Error al subir los archivos');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteDocument = async (documentId: string) => {
+    if (!window.confirm('¿Estás seguro de que quieres eliminar este documento?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await api.delete(`/documents/${documentId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Recargar documentos
+      const response = await api.get('/documents', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setDocuments(response.data);
+      
+    } catch (err: any) {
+      console.error('Error deleting document:', err);
+      setError('Error al eliminar el documento');
+    }
+  };
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -142,11 +321,19 @@ const ClientDocumentsPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Mis Documentos</h1>
-            <p className="mt-2 text-gray-600">
-              Accede a todos los documentos de tus expedientes
-            </p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Mis Documentos</h1>
+              <p className="mt-2 text-gray-600">
+                Accede a todos los documentos de tus expedientes
+              </p>
+            </div>
+            <button
+              onClick={openUploadModal}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              Subir Documentos
+            </button>
           </div>
         </div>
 
@@ -208,9 +395,9 @@ const ClientDocumentsPage = () => {
                   </span>
                 </div>
                 
-                                                      <h2 className="text-lg font-semibold text-gray-900 mb-2 truncate">
-                    {doc.originalName}
-                  </h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-2 truncate">
+                  {doc.originalName}
+                </h2>
                 
                 {doc.description && (
                   <p className="text-gray-600 text-sm mb-4 line-clamp-2">
@@ -254,8 +441,11 @@ const ClientDocumentsPage = () => {
                   >
                     Descargar
                   </a>
-                  <button className="px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-                    Ver
+                  <button 
+                    onClick={() => handleDeleteDocument(doc.id)}
+                    className="px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                  >
+                    Eliminar
                   </button>
                 </div>
               </div>
@@ -278,6 +468,102 @@ const ClientDocumentsPage = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de subida de documentos */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Subir Documentos</h3>
+              
+              {error && (
+                <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
+                  {error}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Expediente
+                  </label>
+                  <select
+                    id="expediente-select"
+                    aria-label="Expediente"
+                    value={uploadForm.expedienteId}
+                    onChange={(e) => setUploadForm(prev => ({ ...prev, expedienteId: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Selecciona un expediente</option>
+                    {cases.map(caseItem => (
+                      <option key={caseItem.id} value={caseItem.id}>
+                        {caseItem.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descripción (opcional)
+                  </label>
+                  <textarea
+                    value={uploadForm.description}
+                    onChange={(e) => setUploadForm(prev => ({ ...prev, description: e.target.value }))}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Descripción del documento..."
+                  />
+                </div>
+
+                <FileUpload
+                  onFileSelect={handleFileSelect}
+                  maxFiles={5}
+                  maxSize={5 * 1024 * 1024}
+                />
+
+                {selectedFiles.length > 0 && (
+                  <div className="mt-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-sm font-medium text-gray-700">Archivos seleccionados:</h4>
+                      <button
+                        onClick={clearSelectedFiles}
+                        className="text-sm text-red-600 hover:text-red-800"
+                      >
+                        Limpiar
+                      </button>
+                    </div>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      {selectedFiles.map((file, index) => (
+                        <li key={index}>{file.name} ({formatFileSize(file.size)})</li>
+                      ))}
+                    </ul>
+                    <div className="mt-2 text-xs text-gray-500">
+                      Total: {formatFileSize(selectedFiles.reduce((total, file) => total + file.size, 0))} / 5MB
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={closeUploadModal}
+                  className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleUpload}
+                  disabled={uploading || selectedFiles.length === 0 || !uploadForm.expedienteId}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {uploading ? 'Subiendo...' : 'Subir Documentos'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

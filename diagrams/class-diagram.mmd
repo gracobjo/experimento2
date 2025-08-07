@@ -1,0 +1,190 @@
+classDiagram
+    %% Entidades Principales
+    class User {
+        +String id
+        +String email
+        +String name
+        +String password
+        +Role role
+        +DateTime createdAt
+        +DateTime updatedAt
+        +create()
+        +update()
+        +delete()
+        +authenticate()
+    }
+
+    class Invoice {
+        +String id
+        +String invoiceNumber
+        +InvoiceType type
+        +InvoiceStatus status
+        +DateTime invoiceDate
+        +DateTime operationDate
+        +BigDecimal baseAmount
+        +BigDecimal ivaAmount
+        +BigDecimal totalAmount
+        +String xmlContent
+        +String signedXml
+        +String qrCode
+        +String hash
+        +create()
+        +update()
+        +delete()
+        +generatePDF()
+        +sign()
+    }
+
+    class Case {
+        +String id
+        +String caseNumber
+        +String title
+        +String description
+        +CaseStatus status
+        +DateTime createdAt
+        +DateTime updatedAt
+        +BigDecimal budget
+        +String notes
+        +create()
+        +update()
+        +delete()
+        +assignLawyer()
+        +updateStatus()
+    }
+
+    class Appointment {
+        +String id
+        +DateTime dateTime
+        +String description
+        +AppointmentStatus status
+        +String location
+        +String notes
+        +create()
+        +update()
+        +delete()
+        +confirm()
+        +cancel()
+    }
+
+    class Parameter {
+        +String id
+        +String key
+        +String value
+        +String description
+        +ParameterType type
+        +Boolean isActive
+        +DateTime createdAt
+        +DateTime updatedAt
+        +create()
+        +update()
+        +delete()
+        +getValue()
+    }
+
+    class Layout {
+        +String id
+        +String name
+        +String description
+        +LayoutType type
+        +String components
+        +Boolean isActive
+        +DateTime createdAt
+        +DateTime updatedAt
+        +create()
+        +update()
+        +delete()
+        +activate()
+    }
+
+    class ChatMessage {
+        +String id
+        +String text
+        +MessageType type
+        +DateTime timestamp
+        +String sessionId
+        +String userId
+        +create()
+        +save()
+    }
+
+    %% Relaciones
+    User ||--o{ Invoice : creates
+    User ||--o{ Case : manages
+    User ||--o{ Appointment : schedules
+    User ||--o{ ChatMessage : sends
+
+    Case ||--o{ Invoice : generates
+    Case ||--o{ Appointment : has
+
+    Invoice ||--|| User : belongsTo
+    Case ||--|| User : assignedTo
+    Appointment ||--|| User : scheduledBy
+
+    %% Enums
+    class Role {
+        <<enumeration>>
+        ADMIN
+        ABOGADO
+        CLIENTE
+    }
+
+    class InvoiceType {
+        <<enumeration>>
+        F
+        R
+    }
+
+    class InvoiceStatus {
+        <<enumeration>>
+        draft
+        emitted
+        signed
+        cancelled
+    }
+
+    class CaseStatus {
+        <<enumeration>>
+        active
+        closed
+        pending
+    }
+
+    class AppointmentStatus {
+        <<enumeration>>
+        scheduled
+        confirmed
+        cancelled
+        completed
+    }
+
+    class ParameterType {
+        <<enumeration>>
+        STRING
+        NUMBER
+        BOOLEAN
+        JSON
+    }
+
+    class LayoutType {
+        <<enumeration>>
+        HOME
+        ABOUT
+        CONTACT
+    }
+
+    class MessageType {
+        <<enumeration>>
+        USER
+        BOT
+        SYSTEM
+    }
+
+    %% Relaciones con Enums
+    User --> Role
+    Invoice --> InvoiceType
+    Invoice --> InvoiceStatus
+    Case --> CaseStatus
+    Appointment --> AppointmentStatus
+    Parameter --> ParameterType
+    Layout --> LayoutType
+    ChatMessage --> MessageType 

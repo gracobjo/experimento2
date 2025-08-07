@@ -1,0 +1,56 @@
+sequenceDiagram
+    participant U as 👤 Usuario
+    participant F as 🌐 Frontend
+    participant B as ⚙️ Backend
+    participant DB as 🗄️ Database
+    participant C as 🤖 Chatbot
+    participant A as 📝 AutoFirma
+
+    %% Flujo de Creación de Factura
+    Note over U,A: Flujo de Facturación Completa
+
+    %% 1. Usuario crea factura
+    U->>F: Crear nueva factura
+    F->>B: POST /api/invoices
+    B->>DB: Guardar factura
+    DB-->>B: Factura creada
+    B-->>F: Factura con ID
+    F-->>U: Factura creada exitosamente
+
+    %% 2. Usuario genera PDF
+    U->>F: Generar PDF
+    F->>B: GET /api/invoices/{id}/pdf
+    B->>B: Generar HTML con QR
+    B->>B: Convertir a PDF
+    B-->>F: PDF generado
+    F-->>U: Descargar PDF
+
+    %% 3. Usuario firma factura
+    U->>F: Firmar factura
+    F->>B: POST /api/invoices/{id}/sign
+    B->>A: Enviar XML para firma
+    A-->>B: XML firmado
+    B->>DB: Actualizar factura firmada
+    B-->>F: Factura firmada
+    F-->>U: Factura firmada exitosamente
+
+    %% 4. Chatbot ayuda con facturación
+    U->>F: Abrir chatbot
+    F->>C: Conectar WebSocket
+    U->>F: "¿Cómo crear una factura?"
+    F->>C: POST /chat
+    C->>B: GET /api/parametros/services
+    B-->>C: Información de servicios
+    C->>C: Procesar con NLP
+    C-->>F: Respuesta contextual
+    F-->>U: Explicación de facturación
+
+    %% 5. Usuario elimina factura
+    U->>F: Eliminar factura
+    F->>B: DELETE /api/invoices/{id}
+    B->>DB: Eliminar factura
+    DB-->>B: Factura eliminada
+    B-->>F: Confirmación
+    F-->>U: Factura eliminada
+
+    Note over U,A: Fin del flujo 

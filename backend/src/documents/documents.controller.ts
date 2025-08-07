@@ -280,10 +280,10 @@ export class DocumentsController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN, Role.ABOGADO)
+  @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
   @ApiOperation({ 
     summary: 'Eliminar documento',
-    description: 'Elimina un documento del sistema (solo ADMIN y ABOGADO)'
+    description: 'Elimina un documento del sistema (ADMIN, ABOGADO y CLIENTE pueden eliminar sus propios documentos)'
   })
   @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
   @ApiResponse({ 

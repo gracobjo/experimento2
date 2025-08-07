@@ -1,0 +1,105 @@
+graph TD
+    Start([🚀 Inicio]) --> Login{🔐 ¿Usuario autenticado?}
+    
+    Login -->|No| LoginForm[📝 Formulario de Login]
+    LoginForm --> Validate{✅ ¿Credenciales válidas?}
+    Validate -->|No| LoginForm
+    Validate -->|Sí| Dashboard[📊 Dashboard]
+    
+    Login -->|Sí| Dashboard
+    
+    Dashboard --> Menu{🎯 ¿Qué acción realizar?}
+    
+    %% Flujo de Casos
+    Menu -->|Crear Caso| CreateCase[📁 Crear Nuevo Caso]
+    CreateCase --> CaseForm[📋 Formulario de Caso]
+    CaseForm --> ValidateCase{✅ ¿Datos válidos?}
+    ValidateCase -->|No| CaseForm
+    ValidateCase -->|Sí| SaveCase[💾 Guardar Caso]
+    SaveCase --> CaseCreated[✅ Caso Creado]
+    CaseCreated --> Dashboard
+    
+    %% Flujo de Facturación
+    Menu -->|Crear Factura| CreateInvoice[📄 Crear Factura]
+    CreateInvoice --> InvoiceForm[📝 Formulario de Factura]
+    InvoiceForm --> ValidateInvoice{✅ ¿Datos válidos?}
+    ValidateInvoice -->|No| InvoiceForm
+    ValidateInvoice -->|Sí| GenerateInvoice[🔄 Generar Factura]
+    GenerateInvoice --> QRCode[📱 Generar QR]
+    QRCode --> PDF[📄 Generar PDF]
+    PDF --> SignInvoice{📝 ¿Firmar Factura?}
+    SignInvoice -->|Sí| DigitalSignature[🔏 Firma Digital]
+    DigitalSignature --> SignedInvoice[✅ Factura Firmada]
+    SignInvoice -->|No| InvoiceComplete[✅ Factura Completa]
+    SignedInvoice --> InvoiceComplete
+    InvoiceComplete --> Dashboard
+    
+    %% Flujo de Citas
+    Menu -->|Agendar Cita| ScheduleAppointment[📅 Agendar Cita]
+    ScheduleAppointment --> AppointmentForm[📋 Formulario de Cita]
+    AppointmentForm --> ValidateAppointment{✅ ¿Datos válidos?}
+    ValidateAppointment -->|No| AppointmentForm
+    ValidateAppointment -->|Sí| SaveAppointment[💾 Guardar Cita]
+    SaveAppointment --> SendConfirmation[📧 Enviar Confirmación]
+    SendConfirmation --> AppointmentScheduled[✅ Cita Agendada]
+    AppointmentScheduled --> Dashboard
+    
+    %% Flujo de Chatbot
+    Menu -->|Asistente Virtual| OpenChatbot[🤖 Abrir Chatbot]
+    OpenChatbot --> ChatInterface[💬 Interfaz de Chat]
+    ChatInterface --> UserQuestion[❓ Pregunta del Usuario]
+    UserQuestion --> ProcessNLP[🧠 Procesar con NLP]
+    ProcessNLP --> IntentDetection[🎯 Detectar Intención]
+    IntentDetection --> EntityExtraction[🏷️ Extraer Entidades]
+    EntityExtraction --> GenerateResponse[💭 Generar Respuesta]
+    GenerateResponse --> BackendQuery{🔗 ¿Necesita datos del backend?}
+    BackendQuery -->|Sí| FetchData[📊 Obtener Datos]
+    FetchData --> GenerateResponse
+    BackendQuery -->|No| SendResponse[📤 Enviar Respuesta]
+    SendResponse --> ChatInterface
+    ChatInterface --> ContinueChat{🔄 ¿Continuar chat?}
+    ContinueChat -->|Sí| UserQuestion
+    ContinueChat -->|No| CloseChatbot[❌ Cerrar Chatbot]
+    CloseChatbot --> Dashboard
+    
+    %% Flujo de Reportes
+    Menu -->|Ver Reportes| ViewReports[📈 Ver Reportes]
+    ViewReports --> SelectReport{📊 ¿Qué reporte?}
+    SelectReport -->|Estadísticas| GenerateStats[📊 Generar Estadísticas]
+    SelectReport -->|Facturación| GenerateInvoiceReport[📄 Reporte Facturación]
+    SelectReport -->|Casos| GenerateCaseReport[📁 Reporte Casos]
+    GenerateStats --> DisplayReport[📋 Mostrar Reporte]
+    GenerateInvoiceReport --> DisplayReport
+    GenerateCaseReport --> DisplayReport
+    DisplayReport --> ExportReport{📤 ¿Exportar?}
+    ExportReport -->|Sí| DownloadReport[📥 Descargar Reporte]
+    ExportReport -->|No| ReportComplete[✅ Reporte Completo]
+    DownloadReport --> ReportComplete
+    ReportComplete --> Dashboard
+    
+    %% Flujo de Configuración
+    Menu -->|Configuración| OpenSettings[⚙️ Abrir Configuración]
+    OpenSettings --> SettingsMenu{🔧 ¿Qué configurar?}
+    SettingsMenu -->|Parámetros| ManageParams[📝 Gestionar Parámetros]
+    SettingsMenu -->|Layout| ConfigureLayout[🎨 Configurar Layout]
+    SettingsMenu -->|Usuarios| ManageUsers[👥 Gestionar Usuarios]
+    ManageParams --> SaveSettings[💾 Guardar Configuración]
+    ConfigureLayout --> SaveSettings
+    ManageUsers --> SaveSettings
+    SaveSettings --> SettingsSaved[✅ Configuración Guardada]
+    SettingsSaved --> Dashboard
+    
+    %% Flujo de Logout
+    Menu -->|Cerrar Sesión| Logout[🚪 Cerrar Sesión]
+    Logout --> ClearSession[🗑️ Limpiar Sesión]
+    ClearSession --> Redirect[🔄 Redirigir a Login]
+    Redirect --> Login
+    
+    %% Estilos
+    classDef startEnd fill:#ffebee,stroke:#c62828,stroke-width:3px
+    classDef process fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef action fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef database fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class Start,Login,Validate,ValidateCase,ValidateInvoice,SignInvoice,ValidateAppointment,BackendQuery,ContinueChat,SelectReport,ExportReport,SettingsMenu,LoginForm,Dashboard,CreateCase,CaseForm,SaveCase,CaseCreated,CreateInvoice,InvoiceForm,GenerateInvoice,QRCode,PDF,DigitalSignature,SignedInvoice,InvoiceComplete,ScheduleAppointment,AppointmentForm,SaveAppointment,SendConfirmation,AppointmentScheduled,OpenChatbot,ChatInterface,UserQuestion,ProcessNLP,IntentDetection,EntityExtraction,GenerateResponse,FetchData,SendResponse,CloseChatbot,ViewReports,GenerateStats,GenerateInvoiceReport,GenerateCaseReport,DisplayReport,DownloadReport,ReportComplete,OpenSettings,ManageParams,ConfigureLayout,ManageUsers,SaveSettings,SettingsSaved,Logout,ClearSession,Redirect startEnd 

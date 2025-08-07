@@ -1,0 +1,183 @@
+graph TB
+    %% Frontend Components
+    subgraph "Frontend - React"
+        subgraph "Pages"
+            LoginPage[🔐 LoginPage]
+            DashboardPage[📊 DashboardPage]
+            CasesPage[📁 CasesPage]
+            InvoicesPage[📄 InvoicesPage]
+            ReportsPage[📈 ReportsPage]
+            AdminPage[⚙️ AdminPage]
+            HomePage[🏠 HomePage]
+        end
+
+        subgraph "Components"
+            Layout[🎨 Layout]
+            Navbar[🧭 Navbar]
+            Sidebar[📋 Sidebar]
+            Footer[👣 Footer]
+            ChatbotWidget[🤖 ChatbotWidget]
+            ChatbotButton[🔘 ChatbotButton]
+            InvoiceForm[📝 InvoiceForm]
+            CaseForm[📋 CaseForm]
+            DataTable[📊 DataTable]
+            Modal[🪟 Modal]
+        end
+
+        subgraph "Services"
+            ApiService[🌐 ApiService]
+            AuthService[🔐 AuthService]
+            ChatbotService[💬 ChatbotService]
+            StorageService[💾 StorageService]
+        end
+    end
+
+    %% Backend Components
+    subgraph "Backend - NestJS"
+        subgraph "Controllers"
+            AuthController[🔐 AuthController]
+            InvoicesController[📄 InvoicesController]
+            CasesController[📁 CasesController]
+            ReportsController[📈 ReportsController]
+            ParametrosController[⚙️ ParametrosController]
+            LayoutsController[🎨 LayoutsController]
+            ChatController[💬 ChatController]
+        end
+
+        subgraph "Services"
+            AuthService[🔐 AuthService]
+            InvoicesService[📄 InvoicesService]
+            CasesService[📁 CasesService]
+            ReportsService[📈 ReportsService]
+            ParametrosService[⚙️ ParametrosService]
+            LayoutsService[🎨 LayoutsService]
+            ChatService[💬 ChatService]
+            PrismaService[🗄️ PrismaService]
+        end
+
+        subgraph "Guards & Decorators"
+            JwtAuthGuard[🔐 JwtAuthGuard]
+            RolesGuard[👥 RolesGuard]
+            Roles[🏷️ Roles]
+        end
+    end
+
+    %% Chatbot Components
+    subgraph "Chatbot - FastAPI"
+        subgraph "Core"
+            MainApp[🚀 MainApp]
+            Router[🛣️ Router]
+            Middleware[🔧 Middleware]
+        end
+
+        subgraph "Services"
+            NLPService[🧠 NLPService]
+            IntentService[🎯 IntentService]
+            EntityService[🏷️ EntityService]
+            ResponseService[💭 ResponseService]
+            BackendService[🔗 BackendService]
+        end
+
+        subgraph "Models"
+            ChatRequest[📤 ChatRequest]
+            ChatResponse[📥 ChatResponse]
+            Intent[🎯 Intent]
+            Entity[🏷️ Entity]
+        end
+    end
+
+    %% Database
+    subgraph "Database"
+        PostgreSQL[(🗄️ PostgreSQL)]
+        PrismaORM[🔧 Prisma ORM]
+        Migrations[🔄 Migrations]
+    end
+
+    %% External Services
+    subgraph "External Services"
+        Vercel[🚀 Vercel]
+        Railway[🚂 Railway]
+        AutoFirma[📝 AutoFirma]
+        EmailService[📧 EmailService]
+    end
+
+    %% Connections Frontend
+    LoginPage --> AuthService
+    DashboardPage --> ApiService
+    CasesPage --> ApiService
+    InvoicesPage --> ApiService
+    ReportsPage --> ApiService
+    AdminPage --> ApiService
+    HomePage --> ChatbotService
+
+    Layout --> Navbar
+    Layout --> Sidebar
+    Layout --> Footer
+    Layout --> ChatbotWidget
+    Layout --> ChatbotButton
+
+    ChatbotWidget --> ChatbotService
+    ChatbotButton --> ChatbotService
+
+    %% Connections Backend
+    AuthController --> AuthService
+    InvoicesController --> InvoicesService
+    CasesController --> CasesService
+    ReportsController --> ReportsService
+    ParametrosController --> ParametrosService
+    LayoutsController --> LayoutsService
+    ChatController --> ChatService
+
+    AuthService --> PrismaService
+    InvoicesService --> PrismaService
+    CasesService --> PrismaService
+    ReportsService --> PrismaService
+    ParametrosService --> PrismaService
+    LayoutsService --> PrismaService
+    ChatService --> PrismaService
+
+    PrismaService --> PostgreSQL
+
+    %% Connections Chatbot
+    MainApp --> Router
+    Router --> NLPService
+    NLPService --> IntentService
+    NLPService --> EntityService
+    NLPService --> ResponseService
+    ResponseService --> BackendService
+
+    ChatRequest --> MainApp
+    MainApp --> ChatResponse
+    IntentService --> Intent
+    EntityService --> Entity
+
+    %% External Connections
+    Frontend -.-> Vercel
+    Backend -.-> Railway
+    Chatbot -.-> Railway
+    Backend -.-> AutoFirma
+    Backend -.-> EmailService
+
+    %% API Connections
+    ApiService --> AuthController
+    ApiService --> InvoicesController
+    ApiService --> CasesController
+    ApiService --> ReportsController
+    ApiService --> ParametrosController
+    ApiService --> LayoutsController
+    ApiService --> ChatController
+
+    ChatbotService --> MainApp
+
+    %% Styles
+    classDef frontend fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef backend fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef chatbot fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef database fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef external fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+
+    class LoginPage,DashboardPage,CasesPage,InvoicesPage,ReportsPage,AdminPage,HomePage,Layout,Navbar,Sidebar,Footer,ChatbotWidget,ChatbotButton,InvoiceForm,CaseForm,DataTable,Modal,ApiService,AuthService,ChatbotService,StorageService frontend
+    class AuthController,InvoicesController,CasesController,ReportsController,ParametrosController,LayoutsController,ChatController,AuthService,InvoicesService,CasesService,ReportsService,ParametrosService,LayoutsService,ChatService,PrismaService,JwtAuthGuard,RolesGuard,Roles backend
+    class MainApp,Router,Middleware,NLPService,IntentService,EntityService,ResponseService,BackendService,ChatRequest,ChatResponse,Intent,Entity chatbot
+    class PostgreSQL,PrismaORM,Migrations database
+    class Vercel,Railway,AutoFirma,EmailService external 

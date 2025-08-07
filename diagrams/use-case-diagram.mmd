@@ -1,0 +1,149 @@
+graph TB
+    %% Actores
+    Admin[👨‍💼 Administrador]
+    Lawyer[👨‍⚖️ Abogado]
+    Client[👤 Cliente]
+    System[🤖 Sistema]
+
+    %% Casos de Uso - Gestión de Usuarios
+    subgraph "Gestión de Usuarios"
+        UC1[👥 Gestionar Usuarios]
+        UC2[🔐 Autenticarse]
+        UC3[🔑 Recuperar Contraseña]
+        UC4[👤 Ver Perfil]
+        UC5[✏️ Editar Perfil]
+    end
+
+    %% Casos de Uso - Gestión de Casos
+    subgraph "Gestión de Casos"
+        UC6[📁 Crear Caso]
+        UC7[📝 Editar Caso]
+        UC8[🗑️ Eliminar Caso]
+        UC9[📊 Ver Casos]
+        UC10[🔍 Buscar Casos]
+        UC11[📈 Ver Estadísticas]
+    end
+
+    %% Casos de Uso - Facturación
+    subgraph "Facturación"
+        UC12[📄 Crear Factura]
+        UC13[🖨️ Generar PDF]
+        UC14[📝 Firmar Factura]
+        UC15[📥 Descargar Factura]
+        UC16[🗑️ Eliminar Factura]
+        UC17[📊 Ver Facturas]
+        UC18[🔍 Buscar Facturas]
+    end
+
+    %% Casos de Uso - Citas
+    subgraph "Gestión de Citas"
+        UC19[📅 Crear Cita]
+        UC20[✏️ Editar Cita]
+        UC21[❌ Cancelar Cita]
+        UC22[✅ Confirmar Cita]
+        UC23[📋 Ver Citas]
+    end
+
+    %% Casos de Uso - Chatbot
+    subgraph "Asistente Virtual"
+        UC24[💬 Chatear con Bot]
+        UC25[❓ Hacer Preguntas]
+        UC26[📋 Solicitar Información]
+        UC27[📅 Agendar Cita]
+        UC28[💰 Consultar Honorarios]
+    end
+
+    %% Casos de Uso - Configuración
+    subgraph "Configuración"
+        UC29[⚙️ Gestionar Parámetros]
+        UC30[🎨 Configurar Layout]
+        UC31[📧 Configurar Email]
+        UC32[🔧 Configurar Sistema]
+    end
+
+    %% Casos de Uso - Reportes
+    subgraph "Reportes"
+        UC33[📊 Generar Reportes]
+        UC34[📈 Ver Estadísticas]
+        UC35[📋 Exportar Datos]
+        UC36[📅 Ver Actividad]
+    end
+
+    %% Relaciones Administrador
+    Admin --> UC1
+    Admin --> UC29
+    Admin --> UC30
+    Admin --> UC31
+    Admin --> UC32
+    Admin --> UC33
+    Admin --> UC34
+    Admin --> UC35
+    Admin --> UC36
+
+    %% Relaciones Abogado
+    Lawyer --> UC2
+    Lawyer --> UC4
+    Lawyer --> UC5
+    Lawyer --> UC6
+    Lawyer --> UC7
+    Lawyer --> UC8
+    Lawyer --> UC9
+    Lawyer --> UC10
+    Lawyer --> UC11
+    Lawyer --> UC12
+    Lawyer --> UC13
+    Lawyer --> UC14
+    Lawyer --> UC15
+    Lawyer --> UC16
+    Lawyer --> UC17
+    Lawyer --> UC18
+    Lawyer --> UC19
+    Lawyer --> UC20
+    Lawyer --> UC21
+    Lawyer --> UC22
+    Lawyer --> UC23
+    Lawyer --> UC24
+    Lawyer --> UC25
+    Lawyer --> UC26
+    Lawyer --> UC27
+    Lawyer --> UC28
+    Lawyer --> UC33
+    Lawyer --> UC34
+    Lawyer --> UC35
+    Lawyer --> UC36
+
+    %% Relaciones Cliente
+    Client --> UC2
+    Client --> UC4
+    Client --> UC5
+    Client --> UC9
+    Client --> UC17
+    Client --> UC19
+    Client --> UC20
+    Client --> UC21
+    Client --> UC22
+    Client --> UC23
+    Client --> UC24
+    Client --> UC25
+    Client --> UC26
+    Client --> UC27
+    Client --> UC28
+
+    %% Relaciones Sistema
+    System --> UC3
+    System --> UC13
+    System --> UC14
+    System --> UC24
+    System --> UC25
+    System --> UC26
+    System --> UC27
+    System --> UC28
+
+    %% Estilos
+    classDef actor fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef useCase fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef system fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+
+    class Admin,Lawyer,Client actor
+    class UC1,UC2,UC3,UC4,UC5,UC6,UC7,UC8,UC9,UC10,UC11,UC12,UC13,UC14,UC15,UC16,UC17,UC18,UC19,UC20,UC21,UC22,UC23,UC24,UC25,UC26,UC27,UC28,UC29,UC30,UC31,UC32,UC33,UC34,UC35,UC36 useCase
+    class System system 

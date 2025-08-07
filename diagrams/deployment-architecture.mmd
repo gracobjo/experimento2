@@ -1,0 +1,92 @@
+graph TB
+    %% Usuarios
+    User[👤 Usuario Final]
+    Admin[👨‍💼 Administrador]
+    Lawyer[👨‍⚖️ Abogado]
+    Client[👤 Cliente]
+
+    %% Frontend (Vercel)
+    subgraph "Frontend - Vercel"
+        Frontend[🌐 React App<br/>https://experimento2-fenm.vercel.app]
+        FrontendComponents[📦 Componentes React]
+        FrontendPages[📄 Páginas]
+        FrontendState[💾 Estado Local]
+    end
+
+    %% Backend (Railway)
+    subgraph "Backend - Railway"
+        Backend[⚙️ NestJS API<br/>https://experimento2-production.up.railway.app]
+        AuthModule[🔐 Auth Module]
+        InvoicesModule[📄 Invoices Module]
+        CasesModule[📁 Cases Module]
+        ReportsModule[📊 Reports Module]
+        ParametrosModule[⚙️ Parámetros Module]
+        LayoutsModule[🎨 Layouts Module]
+        UsersModule[👥 Users Module]
+        ChatModule[💬 Chat Module]
+    end
+
+    %% Chatbot (Railway)
+    subgraph "Chatbot - Railway"
+        Chatbot[🤖 Python FastAPI<br/>https://chatbot-legal-production.up.railway.app]
+        NLPService[🧠 NLP Service]
+        IntentDetection[🎯 Intent Detection]
+        EntityExtraction[🏷️ Entity Extraction]
+        ResponseGeneration[💭 Response Generation]
+    end
+
+    %% Base de Datos
+    subgraph "Database - Railway"
+        Database[(🗄️ PostgreSQL<br/>Database)]
+        PrismaORM[🔧 Prisma ORM]
+    end
+
+    %% Servicios Externos
+    subgraph "External Services"
+        Vercel[🚀 Vercel<br/>Frontend Hosting]
+        Railway[🚂 Railway<br/>Backend & Chatbot Hosting]
+        Autofirma[📝 AutoFirma<br/>Digital Signatures]
+        EmailService[📧 Email Service]
+    end
+
+    %% Conexiones Frontend
+    User --> Frontend
+    Admin --> Frontend
+    Lawyer --> Frontend
+    Client --> Frontend
+
+    %% Conexiones Backend
+    Frontend --> Backend
+    Backend --> Database
+    Backend --> PrismaORM
+    PrismaORM --> Database
+
+    %% Conexiones Chatbot
+    Frontend --> Chatbot
+    Chatbot --> Backend
+    Chatbot --> NLPService
+    NLPService --> IntentDetection
+    NLPService --> EntityExtraction
+    NLPService --> ResponseGeneration
+
+    %% Conexiones Servicios Externos
+    Frontend -.-> Vercel
+    Backend -.-> Railway
+    Chatbot -.-> Railway
+    Backend -.-> Autofirma
+    Backend -.-> EmailService
+
+    %% Estilos
+    classDef frontend fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef backend fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef chatbot fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef database fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef external fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef user fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+
+    class Frontend,FrontendComponents,FrontendPages,FrontendState frontend
+    class Backend,AuthModule,InvoicesModule,CasesModule,ReportsModule,ParametrosModule,LayoutsModule,UsersModule,ChatModule backend
+    class Chatbot,NLPService,IntentDetection,EntityExtraction,ResponseGeneration chatbot
+    class Database,PrismaORM database
+    class Vercel,Railway,Autofirma,EmailService external
+    class User,Admin,Lawyer,Client user 

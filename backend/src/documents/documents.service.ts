@@ -277,6 +277,7 @@ export class DocumentsService {
       include: {
         expediente: {
           include: {
+            client: true,
             lawyer: true,
           }
         }
@@ -293,7 +294,13 @@ export class DocumentsService {
         throw new ForbiddenException('Solo puedes eliminar documentos de expedientes asignados a ti');
       }
     } else if (userRole === 'CLIENTE') {
-      throw new ForbiddenException('Los clientes no pueden eliminar documentos');
+      const client = await this.prisma.client.findUnique({
+        where: { userId: currentUserId }
+      });
+      
+      if (!client || document.expediente.clientId !== client.id) {
+        throw new ForbiddenException('Solo puedes eliminar documentos de tus propios expedientes');
+      }
     }
     // Los admins pueden eliminar cualquier documento
 
