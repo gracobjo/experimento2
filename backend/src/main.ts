@@ -23,18 +23,6 @@ async function bootstrap() {
   });
   
   // Configuración de CORS - debe ir ANTES de otros middleware
-  const corsOrigins = process.env.CORS_ORIGIN 
-    ? process.env.CORS_ORIGIN.split(',') 
-    : [
-        'http://localhost:5173', 
-        'http://localhost:3000', 
-        'https://experimento2-fenm.vercel.app',
-        'https://experimento2-production.up.railway.app',
-        'https://*.vercel.app',
-        'https://*.railway.app',
-        'https://*.netlify.app'
-      ];
-  
   app.enableCors({
     origin: [
       'http://localhost:5173',
@@ -226,7 +214,7 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 Servidor corriendo en puerto ${port}`);
-  console.log(`🌍 CORS origins configurados: ${corsOrigins.join(', ')}`);
+  console.log(`🌍 CORS origins configurados: http://localhost:5173, http://localhost:3000, https://experimento2-fenm.vercel.app, https://experimento2-production.up.railway.app, *.vercel.app, *.railway.app`);
   console.log(`📁 Archivos estáticos disponibles en /uploads`);
   console.log(`📚 Documentación Swagger disponible en /docs`);
   console.log(`💚 Health check disponible en /health`);
