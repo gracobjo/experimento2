@@ -1,0 +1,8 @@
+# Versión del Chatbot
+# Fecha: 2025-08-08
+# Cambios: Validación de edad mejorada (18-100 años)
+# URL del backend corregida
+# Foco del input mejorado
+
+VERSION=2.0.1
+BUILD_DATE=2025-08-08
