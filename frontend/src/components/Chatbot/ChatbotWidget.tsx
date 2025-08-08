@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import chatbotApi from '../../api/chatbot';
+import { sendChatMessage } from '../../api/chatbot';
 
 interface ChatMessage {
   id: string;
@@ -18,8 +18,6 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen, onClose }) => {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Usar el API configurado en lugar de fetch directo
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -44,12 +42,8 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen, onClose }) => {
     setIsLoading(true);
 
     try {
-      const response = await chatbotApi.post('/chat', {
-        text,
-        language: 'es'
-      });
-
-      const data = response.data;
+      // Use the direct fetch function to avoid CORS issues
+      const data = await sendChatMessage(text, 'es');
       
       const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),

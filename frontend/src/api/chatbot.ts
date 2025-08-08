@@ -18,6 +18,32 @@ const chatbotApi = axios.create({
   },
 });
 
+// Alternative: Use fetch directly to avoid CORS issues
+export const sendChatMessage = async (text: string, language: string = 'es') => {
+  try {
+    const response = await fetch(`${chatbotUrl}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text,
+        language
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error sending message:', error);
+    throw error;
+  }
+};
+
 chatbotApi.interceptors.request.use((config) => {
   // Debug: Log the request URL
   console.log('Request URL:', (config.baseURL || '') + (config.url || ''));
