@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
+import { useAuth } from '../../context/AuthContext';
 
 interface ClientProfile {
   id: string;
@@ -25,6 +26,7 @@ interface UpdateProfileData {
 
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
