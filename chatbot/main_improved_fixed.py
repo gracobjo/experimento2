@@ -1302,7 +1302,16 @@ async def test_cors():
 
 @app.options("/chat")
 async def chat_options():
-    return {"message": "CORS preflight successful"}
+    from fastapi.responses import Response
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "https://experimento2-fenm.vercel.app",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
 
 if __name__ == "__main__":
     import uvicorn
