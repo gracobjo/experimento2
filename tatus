@@ -1,0 +1,5 @@
+[33m11c6c71[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix chatbot CORS and API configuration - Update CORS methods, add test endpoints, use configured chatbot API instead of direct fetch
+[33me54beab[m Add missing CORS origin for chatbot to fix frontend connection
+[33m9a37894[m Fix appointment update email method call - use correct property names
+[33mf675cfe[m Fix appointment service compilation errors: correct email service import path and add missing email methods
+[33m4bdd085[m feat: implement complete CRUD for appointments and configure chatbot integration

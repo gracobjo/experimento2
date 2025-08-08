@@ -9,7 +9,7 @@ Esta guía documenta la integración completa del chatbot inteligente con el fro
 ### **Servicios Desplegados:**
 - **Frontend:** `https://experimento2-fenm.vercel.app`
 - **Backend:** `https://experimento2-production.up.railway.app`
-- **Chatbot:** `https://chatbot-legal-production.up.railway.app`
+- **Chatbot:** `https://chatbot-legal-production-b91c.up.railway.app`
 
 ## 🔧 Configuración del Chatbot
 
@@ -35,7 +35,7 @@ ALLOWED_ORIGINS=http://localhost:5173,https://experimento2-fenm.vercel.app,https
 
 ### **Health Check**
 ```bash
-GET https://chatbot-legal-production.up.railway.app/health
+GET https://chatbot-legal-production-b91c.up.railway.app/health
 ```
 **Response:**
 ```json
@@ -48,7 +48,7 @@ GET https://chatbot-legal-production.up.railway.app/health
 
 ### **Chat HTTP**
 ```bash
-POST https://chatbot-legal-production.up.railway.app/chat
+POST https://chatbot-legal-production-b91c.up.railway.app/chat
 Content-Type: application/json
 
 {
@@ -59,12 +59,12 @@ Content-Type: application/json
 
 ### **WebSocket Chat**
 ```javascript
-const ws = new WebSocket('wss://chatbot-legal-production.up.railway.app/ws');
+const ws = new WebSocket('wss://chatbot-legal-production-b91c.up.railway.app/ws');
 ```
 
 ### **End Chat**
 ```bash
-POST https://chatbot-legal-production.up.railway.app/end_chat
+POST https://chatbot-legal-production-b91c.up.railway.app/end_chat
 ```
 
 ## 🎯 Integración con Frontend
@@ -73,7 +73,7 @@ POST https://chatbot-legal-production.up.railway.app/end_chat
 
 En el frontend, agregar en `.env`:
 ```env
-VITE_CHATBOT_URL=https://chatbot-legal-production.up.railway.app
+VITE_CHATBOT_URL=https://chatbot-legal-production-b91c.up.railway.app
 ```
 
 ### **Paso 2: Crear Componente Chatbot**
@@ -101,7 +101,7 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const chatbotUrl = import.meta.env.VITE_CHATBOT_URL || 'https://chatbot-legal-production.up.railway.app';
+  const chatbotUrl = import.meta.env.VITE_CHATBOT_URL || 'https://chatbot-legal-production-b91c.up.railway.app';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
