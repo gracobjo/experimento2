@@ -131,6 +131,142 @@ export class DocumentsService {
     return document;
   }
 
+  async findMyDocuments(currentUserId: string, userRole: string) {
+    if (userRole === 'ADMIN') {
+      // Admin ve todos los documentos
+      return this.prisma.document.findMany({
+        include: {
+          expediente: {
+            include: {
+              client: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                    }
+                  }
+                }
+              },
+              lawyer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                }
+              }
+            }
+          },
+          uploadedByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            }
+          }
+        },
+        orderBy: {
+          uploadedAt: 'desc'
+        }
+      });
+    } else if (userRole === 'ABOGADO') {
+      // Abogado ve documentos de expedientes donde es el abogado asignado
+      return this.prisma.document.findMany({
+        where: {
+          expediente: {
+            lawyerId: currentUserId
+          }
+        },
+        include: {
+          expediente: {
+            include: {
+              client: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                    }
+                  }
+                }
+              },
+              lawyer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                }
+              }
+            }
+          },
+          uploadedByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            }
+          }
+        },
+        orderBy: {
+          uploadedAt: 'desc'
+        }
+      });
+    } else {
+      // Cliente ve documentos de sus expedientes
+      const client = await this.prisma.client.findUnique({
+        where: { userId: currentUserId }
+      });
+      
+      if (!client) {
+        throw new ForbiddenException('No eres cliente');
+      }
+
+      return this.prisma.document.findMany({
+        where: {
+          expediente: {
+            clientId: client.id
+          }
+        },
+        include: {
+          expediente: {
+            include: {
+              client: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                    }
+                  }
+                }
+              },
+              lawyer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                }
+              }
+            }
+          },
+          uploadedByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            }
+          }
+        },
+        orderBy: {
+          uploadedAt: 'desc'
+        }
+      });
+    }
+  }
+
   async findAll(currentUserId: string, userRole: string) {
     let whereClause = {};
 

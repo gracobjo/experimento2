@@ -74,6 +74,82 @@ export class CasesService {
     });
   }
 
+  async findMyCases(currentUserId: string, userRole: string) {
+    console.log(`🔍 CasesService.findMyCases - currentUserId: ${currentUserId}, userRole: ${userRole}`);
+    
+    let whereClause = {};
+
+    // Filtrar por rol del usuario
+    if (userRole === 'CLIENTE') {
+      console.log(`👤 Buscando perfil de cliente para userId: ${currentUserId}`);
+      
+      // Clientes solo ven sus propios expedientes
+      const client = await this.prisma.client.findUnique({
+        where: { userId: currentUserId }
+      });
+
+      console.log(`📋 Perfil de cliente encontrado:`, client);
+
+      if (!client) {
+        console.log(`❌ No se encontró perfil de cliente para userId: ${currentUserId}`);
+        throw new NotFoundException('Cliente no encontrado');
+      }
+
+      whereClause = { clientId: client.id };
+      console.log(`🔍 Filtro aplicado: clientId = ${client.id}`);
+      
+    } else if (userRole === 'ABOGADO') {
+      // Abogados ven expedientes donde son el abogado asignado
+      whereClause = { lawyerId: currentUserId };
+      console.log(`👨‍💼 Filtro aplicado: lawyerId = ${currentUserId}`);
+      
+    } else if (userRole === 'ADMIN') {
+      // Admins ven todos los expedientes
+      console.log(`👑 Admin - sin filtro aplicado`);
+    }
+
+    console.log(`🔍 Consulta final:`, whereClause);
+
+    return this.prisma.expediente.findMany({
+      where: whereClause,
+      include: {
+        client: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              }
+            }
+          }
+        },
+        lawyer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          }
+        },
+        documents: {
+          orderBy: {
+            uploadedAt: 'desc'
+          },
+          take: 5
+        },
+        _count: {
+          select: {
+            documents: true,
+            tasks: true,
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+  }
+
   async findAll(currentUserId: string, userRole: string) {
     console.log(`🔍 CasesService.findAll - currentUserId: ${currentUserId}, userRole: ${userRole}`);
     

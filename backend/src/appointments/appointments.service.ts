@@ -12,6 +12,55 @@ export class AppointmentsService {
     private emailService: EmailService
   ) {}
 
+  async findMyAppointments(user: any) {
+    if (user.role === 'ADMIN') {
+      // Admin ve todas las citas
+      return this.prisma.appointment.findMany({
+        include: {
+          lawyer: { select: { id: true, name: true, email: true } },
+          client: {
+            include: {
+              user: { select: { id: true, name: true, email: true } }
+            }
+          }
+        },
+        orderBy: { date: 'desc' }
+      });
+    } else if (user.role === 'ABOGADO') {
+      // Abogado ve expedientes asignados a ellos
+      return this.prisma.appointment.findMany({
+        where: { lawyerId: user.id },
+        include: {
+          lawyer: { select: { id: true, name: true, email: true } },
+          client: {
+            include: {
+              user: { select: { id: true, name: true, email: true } }
+            }
+          }
+        },
+        orderBy: { date: 'desc' }
+      });
+    } else {
+      // Cliente ve solo sus citas
+      const client = await this.prisma.client.findUnique({
+        where: { userId: user.id }
+      });
+      if (!client) throw new ForbiddenException('No eres cliente');
+      return this.prisma.appointment.findMany({
+        where: { clientId: client.id },
+        include: {
+          lawyer: { select: { id: true, name: true, email: true } },
+          client: {
+            include: {
+              user: { select: { id: true, name: true, email: true } }
+            }
+          }
+        },
+        orderBy: { date: 'desc' }
+      });
+    }
+  }
+
   async findAll(user: any) {
     if (user.role === 'ADMIN') {
       // Admin ve todas las citas

@@ -57,6 +57,59 @@ export class CasesController {
     return this.casesService.create(createCaseDto, req.user.id);
   }
 
+  @Get('my')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ 
+    summary: 'Obtener mis casos',
+    description: 'Devuelve los casos del usuario autenticado (CLIENTE ve sus expedientes, ABOGADO ve sus casos asignados)'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Lista de casos del usuario',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+          status: { type: 'string', enum: ['ABIERTO', 'EN_PROCESO', 'CERRADO'] },
+          clientId: { type: 'string' },
+          lawyerId: { type: 'string' },
+          createdAt: { type: 'string', format: 'date-time' },
+          client: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              user: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  email: { type: 'string' }
+                }
+              }
+            }
+          },
+          lawyer: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              email: { type: 'string' }
+            }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  findMyCases(@Request() req) {
+    return this.casesService.findMyCases(req.user.id, req.user.role);
+  }
+
   @Get()
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ 

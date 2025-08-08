@@ -133,6 +133,48 @@ export class DocumentsController {
       }
     }
   })
+  @Get('my')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ 
+    summary: 'Obtener mis documentos',
+    description: 'Devuelve los documentos del usuario autenticado (CLIENTE ve documentos de sus expedientes, ABOGADO ve documentos de sus casos)'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Lista de documentos del usuario',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          filename: { type: 'string' },
+          originalName: { type: 'string' },
+          fileUrl: { type: 'string' },
+          fileSize: { type: 'number' },
+          mimeType: { type: 'string' },
+          description: { type: 'string' },
+          expedienteId: { type: 'string' },
+          uploadedBy: { type: 'string' },
+          uploadedAt: { type: 'string', format: 'date-time' },
+          expediente: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              status: { type: 'string' }
+            }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente' })
+  findMyDocuments(@Request() req) {
+    return this.documentsService.findMyDocuments(req.user.id, req.user.role);
+  }
+
   @ApiResponse({ status: 401, description: 'No autorizado' })
   findAll(@Request() req) {
     return this.documentsService.findAll(req.user.id, req.user.role);
