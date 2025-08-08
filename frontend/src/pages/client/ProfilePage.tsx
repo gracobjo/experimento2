@@ -84,29 +84,54 @@ const ProfilePage: React.FC = () => {
   const fetchStats = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) return;
+      console.log('🔍 Token disponible:', !!token);
+      console.log('👤 Usuario actual:', user);
+      
+      if (!token) {
+        console.error('❌ No hay token de autenticación');
+        return;
+      }
 
-      // Obtener estadísticas del cliente
-      const [casesRes, appointmentsRes, documentsRes, invoicesRes] = await Promise.all([
-        api.get('/cases/my'),
-        api.get('/appointments/my'),
-        api.get('/documents/my'),
-        api.get('/invoices/my')
-      ]);
+      console.log('📊 Iniciando llamadas a la API...');
+      
+      // Obtener estadísticas del cliente con manejo de errores individual
+      try {
+        const casesRes = await api.get('/cases/my');
+        const cases = casesRes.data || [];
+        setStats(prev => ({ ...prev, totalCases: cases.length, activeCases: cases.filter((c: any) => c.status === 'ACTIVO').length }));
+      } catch (err) {
+        console.error('Error fetching cases:', err);
+      }
 
-      const cases = casesRes.data || [];
-      const appointments = appointmentsRes.data || [];
-      const documents = documentsRes.data || [];
-      const invoices = invoicesRes.data || [];
+      try {
+        const appointmentsRes = await api.get('/appointments/my');
+        const appointments = appointmentsRes.data || [];
+        setStats(prev => ({ 
+          ...prev, 
+          totalAppointments: appointments.length, 
+          upcomingAppointments: appointments.filter((a: any) => new Date(a.date) > new Date()).length 
+        }));
+      } catch (err) {
+        console.error('Error fetching appointments:', err);
+      }
 
-      setStats({
-        totalCases: cases.length,
-        activeCases: cases.filter((c: any) => c.status === 'ACTIVO').length,
-        totalAppointments: appointments.length,
-        upcomingAppointments: appointments.filter((a: any) => new Date(a.date) > new Date()).length,
-        totalDocuments: documents.length,
-        totalInvoices: invoices.length
-      });
+      try {
+        const documentsRes = await api.get('/documents/my');
+        const documents = documentsRes.data || [];
+        setStats(prev => ({ ...prev, totalDocuments: documents.length }));
+      } catch (err) {
+        console.error('Error fetching documents:', err);
+      }
+
+      try {
+        const invoicesRes = await api.get('/invoices/my');
+        const invoices = invoicesRes.data || [];
+        setStats(prev => ({ ...prev, totalInvoices: invoices.length }));
+      } catch (err) {
+        console.error('Error fetching invoices:', err);
+      }
+      
+      console.log('✅ Llamadas a la API completadas');
     } catch (err: any) {
       console.error('Error fetching stats:', err);
     }
