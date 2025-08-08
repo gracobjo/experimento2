@@ -23,16 +23,20 @@ async function bootstrap() {
   });
   
   // Configuración de CORS - debe ir ANTES de otros middleware
+  const corsOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',')
+    : [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'http://localhost:8080',
+        'https://experimento2-fenm.vercel.app',
+        'https://experimento2-production.up.railway.app',
+        /^https:\/\/.*\.vercel\.app$/,
+        /^https:\/\/.*\.railway\.app$/
+      ];
+
   app.enableCors({
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'http://localhost:8080',
-      'https://experimento2-fenm.vercel.app',
-      'https://experimento2-production.up.railway.app',
-      /^https:\/\/.*\.vercel\.app$/,
-      /^https:\/\/.*\.railway\.app$/
-    ],
+    origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],

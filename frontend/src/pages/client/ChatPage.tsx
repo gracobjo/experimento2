@@ -54,10 +54,14 @@ const ChatPage = () => {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuth();
 
-  // Inicializar WebSocket
+  // Inicializar WebSocket - TEMPORALMENTE DESHABILITADO
   useEffect(() => {
     if (!user) return;
 
+    // TODO: Implementar WebSocket en el backend de Railway
+    console.log('WebSocket temporalmente deshabilitado - implementar en backend');
+    
+    /*
     const token = localStorage.getItem('token');
     const newSocket = io(`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production.up.railway.app'}`, {
       auth: {
@@ -69,7 +73,9 @@ const ChatPage = () => {
         },
       },
     });
+    */
 
+    /*
     newSocket.on('connect', () => {
       console.log('Conectado al servidor de chat');
     });
@@ -129,6 +135,7 @@ const ChatPage = () => {
     return () => {
       newSocket.close();
     };
+    */
   }, [user]);
 
   useEffect(() => {

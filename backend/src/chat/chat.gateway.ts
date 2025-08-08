@@ -19,7 +19,16 @@ interface ConnectedUser {
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: process.env.CORS_ORIGIN 
+      ? process.env.CORS_ORIGIN.split(',')
+      : [
+          'http://localhost:5173',
+          'http://localhost:3000',
+          'https://experimento2-fenm.vercel.app',
+          'https://experimento2-production.up.railway.app',
+          /^https:\/\/.*\.vercel\.app$/,
+          /^https:\/\/.*\.railway\.app$/
+        ],
     credentials: true,
   },
 })

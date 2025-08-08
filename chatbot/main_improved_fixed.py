@@ -76,7 +76,7 @@ print(f"[DEBUG] HF_API_TOKEN loaded: {bool(HF_API_TOKEN)}")
 HF_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
 
 # Configuración del backend
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:3000")
+BACKEND_URL = os.getenv("BACKEND_URL", "https://experimento2-production.up.railway.app")
 
 # Descargar recursos necesarios de NLTK
 nltk.download('punkt', quiet=True)
@@ -405,17 +405,32 @@ def get_appointment_links():
     }
 
 def extract_age(text: str) -> Optional[int]:
-    """Extrae edad del texto"""
+    """Extrae edad del texto con validación estricta"""
     try:
-        # Buscar números entre 18 y 100 (edades razonables para consultas legales)
+        # Limpiar el texto y buscar solo números
         import re
-        numbers = re.findall(r'\b(\d{1,3})\b', text)
+        # Buscar números que estén solos (no parte de otros números)
+        numbers = re.findall(r'\b(\d{1,3})\b', text.strip())
+        
+        # Si hay múltiples números, tomar el primero que sea válido
         for num in numbers:
             age = int(num)
-            if 18 <= age <= 100:  # Cambiado de 1-120 a 18-100
+            # Validación estricta: solo edades entre 18 y 100
+            if 18 <= age <= 100:
                 return age
-    except:
+        
+        # Si no se encontró una edad válida, verificar si el texto es solo un número
+        text_clean = text.strip()
+        if text_clean.isdigit():
+            age = int(text_clean)
+            if 18 <= age <= 100:
+                return age
+            else:
+                return None  # Edad fuera del rango válido
+                
+    except (ValueError, TypeError):
         pass
+    
     return None
 
 def extract_phone(text: str) -> Optional[str]:
@@ -497,7 +512,16 @@ def handle_appointment_conversation(user_id: str, message: str) -> str:
                 conv.data['age'] = age
                 return "Perfecto. ¿Cuál es tu número de teléfono de contacto?"
             else:
-                return "Por favor, proporciona tu edad (solo el número, entre 18 y 100 años)."
+                # Mensaje más específico según el tipo de error
+                text_clean = message.strip()
+                if text_clean.isdigit():
+                    age_value = int(text_clean)
+                    if age_value < 18:
+                        return "Debes ser mayor de edad (18 años o más) para agendar una cita. Por favor, proporciona tu edad real."
+                    elif age_value > 100:
+                        return "Por favor, proporciona una edad válida (entre 18 y 100 años)."
+                else:
+                    return "Por favor, proporciona tu edad (solo el número, entre 18 y 100 años)."
         
         elif conv.data['phone'] is None:
             phone = extract_phone(message)

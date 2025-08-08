@@ -285,7 +285,7 @@ const ChatbotWidget = () => {
       if (!showCalendar) {
         setTimeout(() => {
           inputRef.current?.focus();
-        }, 100);
+        }, 200); // Aumentado el tiempo para asegurar que el DOM se actualice
       }
     }
   };
@@ -403,6 +403,14 @@ const ChatbotWidget = () => {
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (inputMessage.trim() && !isLoading && !showCalendar) {
+                      sendMessage(e);
+                    }
+                  }
+                }}
                 placeholder="Escribe tu mensaje..."
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={isLoading || showCalendar}
