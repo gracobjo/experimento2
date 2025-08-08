@@ -58,6 +58,7 @@ import AppointmentsPage from './pages/client/AppointmentsPage';
 import DashboardLawyer from './pages/lawyer/DashboardLawyer';
 import UnauthorizedPage from './pages/auth/UnauthorizedPage';
 import PaymentsPage from './pages/client/PaymentsPage';
+import ClientInvoicesPage from './pages/client/InvoicesPage';
 
 // Importar páginas legales
 import PrivacyPage from './pages/public/PrivacyPage';
@@ -147,6 +148,7 @@ function App() {
                   <Route path="teleassistance" element={<ClientTeleassistancePage />} />
                   <Route path="teleassistance/request" element={<TeleassistanceRequestPage />} />
                   <Route path="payments" element={<PaymentsPage />} />
+                  <Route path="invoices" element={<ClientInvoicesPage />} />
                   <Route path="profile" element={<PlaceholderPage title="Perfil" description="Actualizar información personal" icon="👤" />} />
                 </Route>
               </Route>
