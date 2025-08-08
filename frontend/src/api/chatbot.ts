@@ -21,6 +21,7 @@ const chatbotApi = axios.create({
 // Alternative: Use fetch directly to avoid CORS issues
 export const sendChatMessage = async (text: string, language: string = 'es') => {
   try {
+    // First try with normal CORS
     const response = await fetch(`${chatbotUrl}/chat`, {
       method: 'POST',
       headers: {
@@ -39,8 +40,39 @@ export const sendChatMessage = async (text: string, language: string = 'es') => 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error sending message:', error);
-    throw error;
+    console.error('Error with normal fetch, trying alternative method:', error);
+    
+    // Fallback: Try with different approach
+    try {
+      const response = await fetch(`${chatbotUrl}/chat`, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          text,
+          language
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (fallbackError) {
+      console.error('Fallback also failed:', fallbackError);
+      
+      // Return a mock response for now
+      return {
+        response: "Lo siento, hay un problema técnico temporal. Por favor, intenta más tarde.",
+        timestamp: new Date().toISOString()
+      };
+    }
   }
 };
 
