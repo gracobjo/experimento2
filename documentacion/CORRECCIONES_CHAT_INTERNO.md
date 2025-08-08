@@ -17,6 +17,11 @@
 - **Causa**: Falta de feedback visual y mensajes de error
 - **Impacto**: Los usuarios no sabían por qué no podían enviar mensajes
 
+### 4. **Interfaz Confusa**
+- **Problema**: Los usuarios no sabían cómo iniciar una nueva conversación
+- **Causa**: El botón "Nueva" no era suficientemente prominente
+- **Impacto**: Los usuarios se frustraban al intentar usar el chat
+
 ## 🛠️ Soluciones Implementadas
 
 ### **1. Habilitación del WebSocket**
@@ -41,6 +46,14 @@
   - Input deshabilitado cuando no hay conversación seleccionada
   - Botón de envío deshabilitado cuando no hay conversación seleccionada
   - Mensajes de error más claros y específicos
+
+### **4. Interfaz Mejorada**
+- **Archivo**: `frontend/src/components/chat/ChatWidget.tsx`
+- **Cambios**:
+  - Mensaje de ayuda prominente cuando no hay conversación seleccionada
+  - Botón "Iniciar Nueva Conversación" más prominente
+  - Mejor diseño visual para la selección de usuarios
+  - Mensajes más claros y descriptivos
 
 ## 📋 Código Implementado
 
@@ -67,6 +80,37 @@ const handleSendMessage = async (e: React.FormEvent) => {
 
   // ... resto de la implementación
 };
+```
+
+### **Mensaje de Ayuda Prominente**
+```typescript
+{/* Mensaje de ayuda prominente */}
+<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+  <div className="flex items-center space-x-2">
+    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <div>
+      <h5 className="text-sm font-medium text-blue-900">¿Cómo empezar?</h5>
+      <p className="text-xs text-blue-700 mt-1">
+        {user?.role === 'CLIENTE' 
+          ? "Selecciona un abogado para iniciar una conversación y obtener asesoramiento legal."
+          : "Selecciona un cliente para iniciar una conversación y brindar asesoramiento legal."
+        }
+      </p>
+    </div>
+  </div>
+</div>
+```
+
+### **Botón de Nueva Conversación Mejorado**
+```typescript
+<button
+  onClick={() => setShowNewConversation(true)}
+  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+>
+  Iniciar Nueva Conversación
+</button>
 ```
 
 ### **Input Mejorado**
@@ -103,6 +147,7 @@ const handleSendMessage = async (e: React.FormEvent) => {
 - ❌ No había feedback sobre por qué fallaba
 - ❌ Los usuarios no sabían qué hacer
 - ❌ WebSocket deshabilitado
+- ❌ Interfaz confusa y poco intuitiva
 
 ### **Después de las Correcciones**
 - ✅ Los mensajes se envían correctamente
@@ -110,6 +155,9 @@ const handleSendMessage = async (e: React.FormEvent) => {
 - ✅ Interfaz intuitiva que guía al usuario
 - ✅ WebSocket habilitado y funcionando
 - ✅ Validaciones robustas
+- ✅ Mensaje de ayuda prominente
+- ✅ Botones más claros y accesibles
+- ✅ Experiencia de usuario mejorada
 
 ## 🚀 Próximos Pasos
 
@@ -117,6 +165,7 @@ const handleSendMessage = async (e: React.FormEvent) => {
 2. **Verificar la conectividad WebSocket** en producción
 3. **Monitorear errores** en la consola del navegador
 4. **Recopilar feedback** de los usuarios sobre la experiencia
+5. **Optimizar la interfaz** basándose en el feedback
 
 ## 📝 Notas Técnicas
 
@@ -124,3 +173,4 @@ const handleSendMessage = async (e: React.FormEvent) => {
 - **Autenticación**: Token JWT desde localStorage
 - **Eventos WebSocket**: `send_message`, `new_message`, `typing_start`, `typing_stop`
 - **Validaciones**: Mensaje no vacío, conversación seleccionada, socket conectado
+- **UX Mejoras**: Mensajes de ayuda, botones prominentes, feedback visual
