@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateClientProfileDto } from './dto/update-client-profile.dto';
 import { Role } from '@prisma/client';
 
 @Injectable()
@@ -221,6 +222,52 @@ export class UsersService {
         }
       }
     });
+  }
+
+  async updateMyClientProfile(userId: string, updateClientProfileDto: UpdateClientProfileDto) {
+    try {
+      // Primero actualizar el usuario
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          name: updateClientProfileDto.name,
+          email: updateClientProfileDto.email,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      });
+
+      // Luego actualizar el perfil del cliente
+      const updatedClient = await this.prisma.client.update({
+        where: { userId },
+        data: {
+          phone: updateClientProfileDto.phone,
+          address: updateClientProfileDto.address,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            }
+          }
+        }
+      });
+
+      return updatedClient;
+    } catch (error) {
+      if ((error as any).code === 'P2025') {
+        throw new NotFoundException('Perfil de cliente no encontrado');
+      }
+      if ((error as any).code === 'P2002') {
+        throw new ConflictException('El correo electrónico ya está registrado');
+      }
+      throw error;
+    }
   }
 
   async findLawyers() {

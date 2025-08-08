@@ -13,6 +13,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody, ApiParam } 
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateClientProfileDto } from './dto/update-client-profile.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -249,6 +250,45 @@ export class UsersController {
   @ApiResponse({ status: 403, description: 'Rol insuficiente' })
   getMyClientProfile(@Request() req) {
     return this.usersService.getMyClientProfile(req.user.id);
+  }
+
+  @Patch('clients/profile')
+  @Roles(Role.CLIENTE)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ 
+    summary: 'Actualizar perfil del cliente',
+    description: 'Permite al cliente actualizar su información personal'
+  })
+  @ApiBody({ type: UpdateClientProfileDto })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Perfil actualizado exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        userId: { type: 'string' },
+        dni: { type: 'string' },
+        phone: { type: 'string' },
+        address: { type: 'string' },
+        createdAt: { type: 'string', format: 'date-time' },
+        user: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            email: { type: 'string' }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente' })
+  @ApiResponse({ status: 404, description: 'Perfil no encontrado' })
+  updateMyClientProfile(@Request() req, @Body() updateClientProfileDto: UpdateClientProfileDto) {
+    return this.usersService.updateMyClientProfile(req.user.id, updateClientProfileDto);
   }
 
   @Get('lawyers')

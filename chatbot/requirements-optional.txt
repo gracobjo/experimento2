@@ -1,0 +1,17 @@
+# Optional dependencies for cloud AI services
+# Install with: pip install -r requirements-optional.txt
+
+# OpenAI API
+openai>=1.0.0
+
+# Anthropic Claude API
+anthropic>=0.7.0
+
+# Cohere API
+cohere>=4.0.0
+
+# Sentence transformers for semantic similarity
+sentence-transformers>=2.2.0
+
+# Note: These are optional dependencies
+# The chatbot will work without them, but with limited AI capabilities

@@ -38,33 +38,34 @@ try:
 except ImportError:
     print("[NLP] sentence-transformers no disponible")
 
-# Verificar servicios en la nube
+# Verificar servicios en la nube (opcionales)
 CLOUD_SERVICES_AVAILABLE = {
     "openai": False,
     "anthropic": False,
     "cohere": False
 }
 
+# Importar servicios de IA en la nube (opcionales)
 try:
     import openai
     CLOUD_SERVICES_AVAILABLE["openai"] = True
     print("[NLP] OpenAI disponible")
 except ImportError:
-    print("[NLP] OpenAI no disponible")
+    print("[NLP] OpenAI no disponible - instalar con: pip install openai")
 
 try:
-    import anthropic
+    import anthropic  # type: ignore
     CLOUD_SERVICES_AVAILABLE["anthropic"] = True
     print("[NLP] Anthropic disponible")
 except ImportError:
-    print("[NLP] Anthropic no disponible")
+    print("[NLP] Anthropic no disponible - instalar con: pip install anthropic")
 
 try:
     import cohere
     CLOUD_SERVICES_AVAILABLE["cohere"] = True
     print("[NLP] Cohere disponible")
 except ImportError:
-    print("[NLP] Cohere no disponible")
+    print("[NLP] Cohere no disponible - instalar con: pip install cohere")
 
 # Cargar variables de entorno
 load_dotenv()

@@ -68,6 +68,7 @@ import CookiesPage from './pages/public/CookiesPage';
 // Importar páginas de teleasistencia
 import ClientTeleassistancePage from './pages/client/TeleassistancePage';
 import TeleassistanceRequestPage from './pages/client/TeleassistanceRequestPage';
+import ProfilePage from './pages/client/ProfilePage';
 
 function App() {
   return (
@@ -149,7 +150,7 @@ function App() {
                   <Route path="teleassistance/request" element={<TeleassistanceRequestPage />} />
                   <Route path="payments" element={<PaymentsPage />} />
                   <Route path="invoices" element={<ClientInvoicesPage />} />
-                  <Route path="profile" element={<PlaceholderPage title="Perfil" description="Actualizar información personal" icon="👤" />} />
+                  <Route path="profile" element={<ProfilePage />} />
                 </Route>
               </Route>
             </Route>
