@@ -270,26 +270,43 @@ const ChatWidget = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('🚀 SEND MESSAGE TRIGGERED!', { newMessage, selectedConversation, socket: !!socket });
+    console.log('🚀 SEND MESSAGE TRIGGERED!', { 
+      newMessage, 
+      selectedConversation, 
+      socket: !!socket,
+      sending,
+      hasMessage: !!newMessage.trim()
+    });
     
+    // Validaciones más detalladas
     if (!newMessage.trim()) {
       setError('Por favor, escribe un mensaje');
+      console.log('❌ No hay mensaje para enviar');
       return;
     }
     
     if (!selectedConversation) {
       setError('Por favor, selecciona una conversación antes de enviar un mensaje');
+      console.log('❌ No hay conversación seleccionada');
+      return;
+    }
+    
+    if (sending) {
+      console.log('❌ Ya se está enviando un mensaje');
       return;
     }
     
     if (!socket) {
       setError('No hay conexión con el servidor. Inténtalo de nuevo en unos momentos.');
+      console.log('❌ No hay conexión WebSocket');
       return;
     }
 
     try {
       setSending(true);
       setError(null);
+      
+      console.log('✅ Todas las validaciones pasaron, enviando mensaje...');
       
       // Crear mensaje temporal para mostrar inmediatamente
       const tempMessage: Message = {
@@ -864,7 +881,13 @@ const ChatWidget = () => {
                 </div>
 
                 {/* Message Input */}
-                <form onSubmit={handleSendMessage} className="p-3 border-t">
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    // El formulario no maneja el envío, solo el botón
+                  }} 
+                  className="p-3 border-t"
+                >
                   <div className="flex space-x-2">
                     <div className="flex-1">
                       <label htmlFor="chat-message-input" className="sr-only">
@@ -888,8 +911,43 @@ const ChatWidget = () => {
                     </div>
                     <button
                       type="submit"
-                      disabled={!newMessage.trim() || sending || !selectedConversation}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed min-h-[40px] min-w-[40px]"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        console.log('🔘 BUTTON CLICKED!', { 
+                          newMessage, 
+                          selectedConversation, 
+                          sending,
+                          hasMessage: !!newMessage.trim()
+                        });
+                        
+                        // Validaciones
+                        if (!newMessage.trim()) {
+                          setError('Por favor, escribe un mensaje');
+                          console.log('❌ No hay mensaje para enviar');
+                          return;
+                        }
+                        
+                        if (!selectedConversation) {
+                          setError('Por favor, selecciona una conversación antes de enviar un mensaje');
+                          console.log('❌ No hay conversación seleccionada');
+                          return;
+                        }
+                        
+                        if (sending) {
+                          console.log('❌ Ya se está enviando un mensaje');
+                          return;
+                        }
+                        
+                        // Si todo está bien, enviar el mensaje
+                        console.log('✅ Enviando mensaje...');
+                        const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+                        handleSendMessage(fakeEvent);
+                      }}
+                      className={`px-4 py-2 text-white rounded-md text-sm min-h-[40px] min-w-[40px] ${
+                        !newMessage.trim() || sending || !selectedConversation
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-700'
+                      }`}
                       aria-label="Enviar mensaje"
                     >
                       {sending ? '...' : '→'}
