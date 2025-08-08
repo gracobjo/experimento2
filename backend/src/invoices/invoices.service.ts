@@ -923,7 +923,13 @@ export class InvoicesService {
     try {
       const invoices = await this.prisma.invoice.findMany({
         where,
-        include: { emisor: true },
+        include: { 
+          emisor: true,
+          receptor: true,
+          expediente: true,
+          items: true,
+          provisionFondos: true
+        },
         orderBy: { fechaFactura: 'desc' },
       });
       
@@ -937,14 +943,41 @@ export class InvoicesService {
       
       const result = invoices.map((inv: any) => ({
         id: inv.id,
-        number: inv.numeroFactura,
-        date: inv.fechaFactura,
-        amount: inv.importeTotal,
-        status: inv.estado,
-        qrUrl: inv.xmlFirmado ? `/api/invoices/${inv.id}/qr` : null,
-        pdfUrl: inv.xmlFirmado ? `/api/invoices/${inv.id}/pdf-qr` : null,
+        numeroFactura: inv.numeroFactura,
+        fechaEmision: inv.fechaFactura,
+        fechaFactura: inv.fechaFactura,
+        tipoFactura: inv.tipoFactura,
+        estado: inv.estado,
+        receptorId: inv.receptorId,
+        importeTotal: inv.importeTotal,
+        baseImponible: inv.baseImponible,
+        cuotaIVA: inv.cuotaIVA,
+        tipoIVA: inv.tipoIVA,
+        regimenIvaEmisor: inv.regimenIvaEmisor,
+        claveOperacion: inv.claveOperacion,
+        metodoPago: inv.metodoPago,
+        fechaOperacion: inv.fechaOperacion,
+        items: inv.items || [],
+        receptor: inv.receptor,
+        emisor: inv.emisor,
+        expediente: inv.expediente,
+        provisionFondos: inv.provisionFondos || [],
+        createdAt: inv.createdAt,
+        updatedAt: inv.updatedAt,
+        motivoAnulacion: inv.motivoAnulacion,
+        aplicarIVA: inv.aplicarIVA,
+        retencion: inv.retencion,
+        descuento: inv.descuento,
+        tipoImpuesto: inv.tipoImpuesto,
+        selloTiempo: inv.selloTiempo,
+        emisorId: inv.emisorId,
+        expedienteId: inv.expedienteId,
+        xml: inv.xml,
+        xmlFirmado: inv.xmlFirmado,
         paymentDate: inv.paymentDate,
-        lawyerName: inv.emisor?.name || '',
+        fechaVencimiento: inv.fechaVencimiento,
+        concepto: inv.concepto,
+        observaciones: inv.observaciones,
       }));
       
       console.log('Result mapped, returning:', result.length, 'invoices');
