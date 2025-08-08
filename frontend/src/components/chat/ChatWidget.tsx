@@ -62,14 +62,10 @@ const ChatWidget = () => {
   const inactivityWarningTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuth();
 
-  // Inicializar WebSocket - TEMPORALMENTE DESHABILITADO
+  // Inicializar WebSocket
   useEffect(() => {
     if (!user || !isOpen) return;
 
-    // TODO: Implementar WebSocket en el backend de Railway
-    console.log('WebSocket temporalmente deshabilitado - implementar en backend');
-    
-    /*
     const token = localStorage.getItem('token');
     const newSocket = io(`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production.up.railway.app'}`, {
       auth: {
@@ -81,9 +77,7 @@ const ChatWidget = () => {
         },
       },
     });
-    */
 
-    /*
     newSocket.on('connect', () => {
       console.log('🔌 WebSocket connected:', newSocket.id);
     });
@@ -111,8 +105,6 @@ const ChatWidget = () => {
           new Notification(message.senderName, { body: message.content });
         }
       }
-      console.log('✅ Message sent confirmation:', message);
-      setMessages(prev => [...prev, message]);
     });
 
     newSocket.on('message_error', (data: { error: string }) => {
@@ -140,33 +132,11 @@ const ChatWidget = () => {
       setConnectedUsers(prev => prev.filter(u => u.userId !== user.userId));
     });
 
-    // --- NUEVO: Manejo de cierre automático por backend ---
-    newSocket.on('close', (data: { type: string; message?: string }) => {
-      // Mostrar mensaje de cierre si se desea
-      if (data.message) {
-        alert(data.message);
-      }
-      // Llama a la función de cierre del chat
-      if (typeof endChat === 'function') {
-        endChat();
-      } else {
-        // Fallback: cerrar y limpiar estado
-        setIsOpen(false);
-        setMessages([]);
-        setConversations([]);
-        setSelectedConversation('');
-        setNewMessage('');
-        setError(null);
-        setUnreadCount(0);
-      }
-    });
-
     setSocket(newSocket);
 
     return () => {
       newSocket.close();
     };
-    */
   }, [user, isOpen]);
 
   useEffect(() => {
@@ -299,11 +269,26 @@ const ChatWidget = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('🚀 SEND MESSAGE TRIGGERED!', { newMessage, selectedConversation });
-    if (!newMessage.trim() || !selectedConversation || !socket) return;
+    console.log('🚀 SEND MESSAGE TRIGGERED!', { newMessage, selectedConversation, socket: !!socket });
+    
+    if (!newMessage.trim()) {
+      setError('Por favor, escribe un mensaje');
+      return;
+    }
+    
+    if (!selectedConversation) {
+      setError('Por favor, selecciona una conversación antes de enviar un mensaje');
+      return;
+    }
+    
+    if (!socket) {
+      setError('No hay conexión con el servidor. Inténtalo de nuevo en unos momentos.');
+      return;
+    }
 
     try {
       setSending(true);
+      setError(null);
       
       // Crear mensaje temporal para mostrar inmediatamente
       const tempMessage: Message = {
@@ -350,7 +335,7 @@ const ChatWidget = () => {
       console.log('✅ Message sent successfully');
     } catch (err: any) {
       console.error('❌ Error sending message:', err);
-      setError('Error al enviar el mensaje');
+      setError('Error al enviar el mensaje: ' + (err.message || 'Error desconocido'));
     } finally {
       setSending(false);
     }
@@ -844,9 +829,9 @@ const ChatWidget = () => {
                         id="chat-message-input"
                         value={newMessage}
                         onChange={handleTyping}
-                        placeholder="Escribe tu mensaje..."
+                        placeholder={selectedConversation ? "Escribe tu mensaje..." : "Selecciona una conversación para enviar mensajes"}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[40px] max-h-[100px] resize-none"
-                        disabled={sending}
+                        disabled={sending || !selectedConversation}
                         rows={1}
                         onKeyDown={handleKeyDown}
                         aria-describedby="chat-message-help"
@@ -857,7 +842,7 @@ const ChatWidget = () => {
                     </div>
                     <button
                       type="submit"
-                      disabled={!newMessage.trim() || sending}
+                      disabled={!newMessage.trim() || sending || !selectedConversation}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed min-h-[40px] min-w-[40px]"
                       aria-label="Enviar mensaje"
                     >
