@@ -407,12 +407,12 @@ def get_appointment_links():
 def extract_age(text: str) -> Optional[int]:
     """Extrae edad del texto"""
     try:
-        # Buscar números entre 1 y 120
+        # Buscar números entre 18 y 100 (edades razonables para consultas legales)
         import re
         numbers = re.findall(r'\b(\d{1,3})\b', text)
         for num in numbers:
             age = int(num)
-            if 1 <= age <= 120:
+            if 18 <= age <= 100:  # Cambiado de 1-120 a 18-100
                 return age
     except:
         pass
@@ -450,8 +450,8 @@ def get_available_dates():
     dates = []
     base_date = datetime.now()
     
-    # Generar fechas para los próximos 7 días, solo días laborables
-    for i in range(1, 15):
+    # Generar fechas para los próximos 15 días, solo días laborables
+    for i in range(1, 16):
         date = base_date + timedelta(days=i)
         if date.weekday() < 5:  # Lunes a Viernes (0-4)
             # Generar horarios diferentes para cada día
@@ -460,12 +460,14 @@ def get_available_dates():
                 appointment_date = date.replace(hour=hour, minute=0, second=0, microsecond=0)
                 dates.append(appointment_date)
     
-    return dates[:10]  # Limitar a 10 opciones
+    return dates[:8]  # Limitar a 8 opciones (más manejable)
 
 def handle_appointment_conversation(user_id: str, message: str) -> str:
     """Maneja la conversación de agendar citas"""
     conv = active_conversations[user_id]
     text_lower = message.lower().strip()
+    
+    print(f"[DEBUG] Appointment conversation - Stage: {conv.stage}, Message: '{message}', Data: {conv.data}")
     
     # Etapa inicial - detectar si quiere agendar cita
     if conv.stage == "initial":
@@ -490,11 +492,12 @@ def handle_appointment_conversation(user_id: str, message: str) -> str:
         
         elif conv.data['age'] is None:
             age = extract_age(message)
+            print(f"[DEBUG] Age extraction - Input: '{message}', Extracted age: {age}")
             if age:
                 conv.data['age'] = age
                 return "Perfecto. ¿Cuál es tu número de teléfono de contacto?"
             else:
-                return "Por favor, proporciona tu edad (solo el número)."
+                return "Por favor, proporciona tu edad (solo el número, entre 18 y 100 años)."
         
         elif conv.data['phone'] is None:
             phone = extract_phone(message)
@@ -535,11 +538,11 @@ def handle_appointment_conversation(user_id: str, message: str) -> str:
                 conv.context['available_dates'] = available_dates
                 
                 date_options = []
-                for i, date in enumerate(available_dates[:5], 1):
+                for i, date in enumerate(available_dates, 1):
                     date_str = date.strftime("%A %d de %B a las %H:%M")
                     date_options.append(f"• {i}. {date_str}")
                 
-                return f"Perfecto. ¿Qué fecha prefieres para tu consulta?\n\nOpciones disponibles:\n" + "\n".join(date_options) + "\n\nResponde con el número de la opción que prefieras."
+                return f"Perfecto. ¿Qué fecha prefieres para tu consulta?\n\nOpciones disponibles:\n" + "\n".join(date_options) + f"\n\nResponde con el número de la opción que prefieras (1-{len(available_dates)})."
             else:
                 return "Por favor, describe el motivo de tu consulta con más detalle."
         
@@ -547,15 +550,31 @@ def handle_appointment_conversation(user_id: str, message: str) -> str:
             try:
                 date_index = int(message.strip()) - 1
                 available_dates = conv.context.get('available_dates', [])
+                print(f"[DEBUG] Date selection - Input: '{message}', Parsed index: {date_index}, Available dates count: {len(available_dates)}")
+                
                 if 0 <= date_index < len(available_dates):
                     selected_date = available_dates[date_index]
                     conv.data['preferredDate'] = selected_date.isoformat() + "Z"
                     conv.stage = "confirmation"
                     return create_confirmation_message(conv.data)
                 else:
-                    return "Por favor, responde con el número de la opción que prefieras."
+                    # Mostrar las opciones disponibles nuevamente
+                    date_options = []
+                    for i, date in enumerate(available_dates, 1):
+                        date_str = date.strftime("%A %d de %B a las %H:%M")
+                        date_options.append(f"• {i}. {date_str}")
+                    
+                    return f"Por favor, selecciona una opción válida (1-{len(available_dates)}):\n\n" + "\n".join(date_options)
             except ValueError:
-                return "Por favor, responde con el número de la opción que prefieras."
+                print(f"[DEBUG] Date selection - Invalid input: '{message}'")
+                # Mostrar las opciones disponibles nuevamente
+                available_dates = conv.context.get('available_dates', [])
+                date_options = []
+                for i, date in enumerate(available_dates, 1):
+                    date_str = date.strftime("%A %d de %B a las %H:%M")
+                    date_options.append(f"• {i}. {date_str}")
+                
+                return f"Por favor, responde con el número de la opción (1-{len(available_dates)}):\n\n" + "\n".join(date_options)
     
     # Confirmación
     elif conv.stage == "confirmation":
