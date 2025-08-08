@@ -60,6 +60,7 @@ const ChatWidget = () => {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityWarningTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const { user } = useAuth();
 
   // Inicializar WebSocket
@@ -332,6 +333,11 @@ const ChatWidget = () => {
       // Reiniciar timer de inactividad al enviar mensaje
       resetInactivityTimer();
       
+      // Mantener el foco en el input después de enviar
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      
       console.log('✅ Message sent successfully');
     } catch (err: any) {
       console.error('❌ Error sending message:', err);
@@ -344,9 +350,13 @@ const ChatWidget = () => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (newMessage.trim() && !sending) {
+      if (newMessage.trim() && !sending && selectedConversation) {
         const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
         handleSendMessage(fakeEvent);
+        // Mantener el foco en el input
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 50);
       }
     }
   };
@@ -870,6 +880,7 @@ const ChatWidget = () => {
                         rows={1}
                         onKeyDown={handleKeyDown}
                         aria-describedby="chat-message-help"
+                        ref={inputRef}
                       />
                       <div id="chat-message-help" className="sr-only">
                         Escriba su mensaje aquí. Presione Enter para enviar o use el botón de envío.

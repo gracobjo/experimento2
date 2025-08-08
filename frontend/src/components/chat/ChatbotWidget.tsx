@@ -408,6 +408,10 @@ const ChatbotWidget = () => {
                     e.preventDefault();
                     if (inputMessage.trim() && !isLoading && !showCalendar) {
                       sendMessage(e);
+                      // Mantener el foco en el input después de enviar
+                      setTimeout(() => {
+                        inputRef.current?.focus();
+                      }, 100);
                     }
                   }
                 }}
