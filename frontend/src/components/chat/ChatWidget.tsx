@@ -89,6 +89,14 @@ const ChatWidget = () => {
 
     newSocket.on('new_message', (message: Message) => {
       console.log('📨 Received new message:', message);
+      console.log('🔍 Debug foco:', {
+        selectedConversation,
+        messageSenderId: message.senderId,
+        isOpen,
+        inputRefExists: !!inputRef.current,
+        currentFocus: document.activeElement?.tagName
+      });
+      
       setMessages(prev => [...prev, message]);
       
       // Actualizar conversación
@@ -110,12 +118,19 @@ const ChatWidget = () => {
       // Restaurar el foco al input después de recibir un mensaje
       // Solo si estamos en la conversación activa y el chat está abierto
       if (selectedConversation === message.senderId && isOpen) {
+        console.log('🎯 Intentando restaurar foco después de mensaje...');
         setTimeout(() => {
           if (inputRef.current) {
             inputRef.current.focus();
-            console.log('🔍 Foco restaurado después de recibir mensaje');
+            console.log('✅ Foco restaurado después de recibir mensaje');
+          } else {
+            console.log('❌ inputRef.current no existe');
           }
-        }, 200); // Un poco más de delay para asegurar que el mensaje se haya renderizado
+        }, 200);
+      } else {
+        console.log('❌ No se restaura foco:', {
+          reason: selectedConversation !== message.senderId ? 'conversación diferente' : 'chat cerrado'
+        });
       }
     });
 
@@ -168,6 +183,22 @@ const ChatWidget = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Efecto específico para mantener el foco del input
+  useEffect(() => {
+    // Solo mantener el foco si hay una conversación seleccionada y el chat está abierto
+    if (selectedConversation && isOpen && inputRef.current) {
+      // Pequeño delay para asegurar que el DOM esté listo
+      const timer = setTimeout(() => {
+        if (inputRef.current && document.activeElement !== inputRef.current) {
+          inputRef.current.focus();
+          console.log('🔍 Foco mantenido por useEffect');
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [messages, selectedConversation, isOpen]);
 
   // Efecto para manejar la inactividad
   useEffect(() => {
@@ -277,17 +308,7 @@ const ChatWidget = () => {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    
-    // Restaurar el foco al input después del scroll
-    // Solo si hay una conversación seleccionada y el chat está abierto
-    if (selectedConversation && isOpen) {
-      setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-          console.log('🔍 Foco restaurado después del scroll automático');
-        }
-      }, 300); // Delay para que el scroll termine
-    }
+    // El foco se maneja en el useEffect separado
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
