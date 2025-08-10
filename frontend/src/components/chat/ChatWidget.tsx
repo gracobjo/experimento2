@@ -106,6 +106,17 @@ const ChatWidget = () => {
           new Notification(message.senderName, { body: message.content });
         }
       }
+
+      // Restaurar el foco al input después de recibir un mensaje
+      // Solo si estamos en la conversación activa y el chat está abierto
+      if (selectedConversation === message.senderId && isOpen) {
+        setTimeout(() => {
+          if (inputRef.current) {
+            inputRef.current.focus();
+            console.log('🔍 Foco restaurado después de recibir mensaje');
+          }
+        }, 200); // Un poco más de delay para asegurar que el mensaje se haya renderizado
+      }
     });
 
     newSocket.on('message_error', (data: { error: string }) => {
@@ -266,6 +277,17 @@ const ChatWidget = () => {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    
+    // Restaurar el foco al input después del scroll
+    // Solo si hay una conversación seleccionada y el chat está abierto
+    if (selectedConversation && isOpen) {
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          console.log('🔍 Foco restaurado después del scroll automático');
+        }
+      }, 300); // Delay para que el scroll termine
+    }
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -391,12 +413,28 @@ const ChatWidget = () => {
     setSelectedConversation(userId);
     setShowNewConversation(false);
     fetchMessagesWithUser(userId);
+    
+    // Restaurar el foco al input después de seleccionar conversación
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        console.log('🔍 Foco restaurado después de seleccionar conversación');
+      }
+    }, 200);
   };
 
   const handleStartNewConversation = (userId: string) => {
     setSelectedConversation(userId);
     setShowNewConversation(false);
     setMessages([]);
+    
+    // Restaurar el foco al input después de iniciar nueva conversación
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        console.log('🔍 Foco restaurado después de iniciar nueva conversación');
+      }
+    }, 200);
   };
 
   const handleTyping = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
