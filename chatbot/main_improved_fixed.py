@@ -123,6 +123,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Endpoint OPTIONS general para todas las rutas
+@app.options("/{full_path:path}")
+async def options_handler(request: Request, full_path: str):
+    from fastapi.responses import Response
+    
+    # Obtener el origen de la petición
+    origin = request.headers.get("origin", "")
+    
+    # Verificar si el origen está permitido
+    if origin in allowed_origins:
+        cors_origin = origin
+    else:
+        # Si no está en la lista, usar el primer origen permitido como fallback
+        cors_origin = allowed_origins[0] if allowed_origins else "*"
+    
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": cors_origin,
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
+
 class Message(BaseModel):
     text: str
     language: str = "es"
@@ -1357,33 +1382,29 @@ async def test_cors():
         "message": "CORS test successful", 
         "timestamp": datetime.now().isoformat(),
         "cors_origins": os.getenv("CORS_ORIGIN", "No configurado"),
-        "allowed_origins": allowed_origins if 'allowed_origins' in globals() else "No configurado"
+        "allowed_origins": allowed_origins,
+        "backend_url": os.getenv("BACKEND_URL", "No configurado"),
+        "frontend_url": os.getenv("FRONTEND_URL", "No configurado"),
+        "cors_middleware_active": True
     }
 
-@app.options("/chat")
-async def chat_options():
-    from fastapi.responses import Response
-    from fastapi import Request
-    
-    # Obtener el origen de la petición
-    origin = Request.headers.get("origin", "")
-    
-    # Verificar si el origen está permitido
-    if origin in allowed_origins:
-        cors_origin = origin
-    else:
-        # Si no está en la lista, usar el primer origen permitido como fallback
-        cors_origin = allowed_origins[0] if allowed_origins else "*"
-    
-    return Response(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": cors_origin,
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-            "Access-Control-Allow-Credentials": "true",
-        }
-    )
+@app.get("/debug-cors")
+async def debug_cors():
+    return {
+        "status": "CORS Debug Info",
+        "timestamp": datetime.now().isoformat(),
+        "environment_variables": {
+            "CORS_ORIGIN": os.getenv("CORS_ORIGIN", "No configurado"),
+            "BACKEND_URL": os.getenv("BACKEND_URL", "No configurado"),
+            "FRONTEND_URL": os.getenv("FRONTEND_URL", "No configurado")
+        },
+        "cors_configuration": {
+            "allowed_origins": allowed_origins,
+            "middleware_active": True,
+            "total_origins": len(allowed_origins)
+        },
+        "current_origin_check": "Verificar que tu dominio esté en allowed_origins"
+    }
 
 if __name__ == "__main__":
     import uvicorn
