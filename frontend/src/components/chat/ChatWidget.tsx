@@ -948,7 +948,7 @@ const ChatWidget = () => {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Message Input */}
+                {/* Message Input - VERSION 2.0.2 - Foco automático implementado */}
                 <form 
                   onSubmit={(e) => {
                     e.preventDefault();
