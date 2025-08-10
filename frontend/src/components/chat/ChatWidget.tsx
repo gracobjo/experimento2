@@ -268,8 +268,10 @@ const ChatWidget = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
     console.log('🚀 SEND MESSAGE TRIGGERED!', { 
       newMessage, 
       selectedConversation, 
@@ -361,20 +363,27 @@ const ChatWidget = () => {
       setError('Error al enviar el mensaje: ' + (err.message || 'Error desconocido'));
     } finally {
       setSending(false);
+      // Restaurar el foco del input
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          console.log('🔍 Foco restaurado en el input');
+        }
+      }, 100);
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (newMessage.trim() && !sending && selectedConversation) {
-        const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-        handleSendMessage(fakeEvent);
-        // Mantener el foco en el input
-        setTimeout(() => {
-          inputRef.current?.focus();
-        }, 50);
-      }
+      handleSendMessage();
+      // Restaurar el foco después de enviar
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          console.log('🔍 Foco restaurado después de Enter');
+        }
+      }, 100);
     }
   };
 
@@ -910,9 +919,8 @@ const ChatWidget = () => {
                       </div>
                     </div>
                     <button
-                      type="submit"
-                      onClick={(e) => {
-                        e.preventDefault();
+                      type="button"
+                      onClick={() => {
                         console.log('🔘 BUTTON CLICKED!', { 
                           newMessage, 
                           selectedConversation, 
@@ -940,8 +948,7 @@ const ChatWidget = () => {
                         
                         // Si todo está bien, enviar el mensaje
                         console.log('✅ Enviando mensaje...');
-                        const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-                        handleSendMessage(fakeEvent);
+                        handleSendMessage();
                       }}
                       className={`px-4 py-2 text-white rounded-md text-sm min-h-[40px] min-w-[40px] ${
                         !newMessage.trim() || sending || !selectedConversation
