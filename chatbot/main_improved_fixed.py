@@ -96,17 +96,28 @@ except OSError:
 app = FastAPI(title="Despacho Legal Chatbot", version="1.0.0")
 
 # Configurar CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+cors_origins = os.getenv("CORS_ORIGIN")
+if cors_origins:
+    # Si existe CORS_ORIGIN, dividir por comas y usar esos dominios
+    allowed_origins = [origin.strip() for origin in cors_origins.split(",")]
+    print(f"[CORS] Configurando con dominios: {allowed_origins}")
+else:
+    # Fallback a dominios por defecto
+    allowed_origins = [
         "http://localhost:5173",
         "http://localhost:3000",
         "https://experimento2-fenm.vercel.app",
         "https://experimento2-production.up.railway.app",
+        "https://experimento2-production-54c0.up.railway.app",
         "https://chatbot-legal-production-b91c.up.railway.app",
         "https://chatbot-legal-production.up.railway.app",
         os.getenv("FRONTEND_URL", "http://localhost:5173")
-    ],
+    ]
+    print(f"[CORS] Usando dominios por defecto: {allowed_origins}")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -1342,15 +1353,32 @@ async def health_check():
 
 @app.get("/test-cors")
 async def test_cors():
-    return {"message": "CORS test successful", "timestamp": datetime.now().isoformat()}
+    return {
+        "message": "CORS test successful", 
+        "timestamp": datetime.now().isoformat(),
+        "cors_origins": os.getenv("CORS_ORIGIN", "No configurado"),
+        "allowed_origins": allowed_origins if 'allowed_origins' in globals() else "No configurado"
+    }
 
 @app.options("/chat")
 async def chat_options():
     from fastapi.responses import Response
+    from fastapi import Request
+    
+    # Obtener el origen de la petición
+    origin = Request.headers.get("origin", "")
+    
+    # Verificar si el origen está permitido
+    if origin in allowed_origins:
+        cors_origin = origin
+    else:
+        # Si no está en la lista, usar el primer origen permitido como fallback
+        cors_origin = allowed_origins[0] if allowed_origins else "*"
+    
     return Response(
         status_code=200,
         headers={
-            "Access-Control-Allow-Origin": "https://experimento2-fenm.vercel.app",
+            "Access-Control-Allow-Origin": cors_origin,
             "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
             "Access-Control-Allow-Headers": "*",
             "Access-Control-Allow-Credentials": "true",
