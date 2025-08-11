@@ -235,17 +235,16 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
         throw new Error(`Invalid date: ${selectedDateTime}`);
       }
       
-      // Crear objeto de datos para la cita
-      const appointmentData = {
-        fullName: "Usuario del Chat", // Valor por defecto
-        age: 25, // Valor por defecto
-        phone: "+34 600000000", // Valor por defecto
-        email: "usuario@chat.com", // Valor por defecto
-        consultationReason: "Consulta legal general",
-        consultationType: "Derecho Civil",
-        preferredDate: selectedDateTime,
-        source: "chatbot"
-      };
+             // Crear objeto de datos para la cita
+       const appointmentData = {
+         fullName: "Usuario del Chat", // Valor por defecto
+         age: 25, // Valor por defecto
+         phone: "+34 600000000", // Valor por defecto
+         email: "usuario@chat.com", // Valor por defecto
+         consultationReason: "Consulta legal general",
+         consultationType: "Derecho Civil",
+         preferredDate: selectedDateTime
+       };
       
       console.log('🔍 [CITA] Datos de la cita:', appointmentData);
       
