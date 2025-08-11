@@ -5,11 +5,8 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Iniciando seed de la base de datos...');
-
-  // Limpiar tablas dependientes primero
-  await prisma.invoiceItem.deleteMany();
-  await prisma.provisionFondos.deleteMany();
-  await prisma.invoice.deleteMany();
+  console.log('🔒 MODO SEGURO: Preservando datos existentes (NO se eliminan facturas)');
+  console.log('⚠️  Este script solo agrega datos si no existen');
 
   // Crear usuarios de ejemplo
   const hashedPassword = await bcrypt.hash('password123', 10);
@@ -485,6 +482,11 @@ async function main() {
     create: { clave: 'telefono_contacto', valor: '+34 600 123 456', etiqueta: 'Teléfono de Contacto', tipo: 'string' },
   });
 
+  // Verificar datos existentes
+  const existingInvoices = await prisma.invoice.count();
+  const existingUsers = await prisma.user.count();
+  const existingCases = await prisma.case.count();
+  
   console.log('✅ Seed completado exitosamente!');
   console.log('\n📋 Datos creados:');
   console.log('- 1 Administrador');
@@ -494,6 +496,11 @@ async function main() {
   console.log('- 2 Documentos');
   console.log('- 2 Citas');
   console.log('- 4 Tareas');
+  
+  console.log('\n🔍 Estado de la base de datos:');
+  console.log(`- Usuarios totales: ${existingUsers}`);
+  console.log(`- Expedientes totales: ${existingCases}`);
+  console.log(`- Facturas existentes: ${existingInvoices} (preservadas)`);
   
   console.log('\n🔑 Credenciales de acceso:');
   console.log('Admin: admin@despacho.com / password123');
