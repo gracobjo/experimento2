@@ -75,6 +75,51 @@ const InvoicesPage: React.FC = () => {
     setSelectedInvoice(invoice);
   };
 
+  const handleViewProfessional = async (invoice: Invoice) => {
+    try {
+      // Abrir factura profesional en nueva pestaña
+      const url = `${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api/invoices/${invoice.id}/html-preview`;
+      
+      // Obtener token para autenticación
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('No hay token de autenticación. Por favor, inicia sesión de nuevo.');
+        return;
+      }
+
+      // Hacer petición para obtener el HTML
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const htmlContent = await response.text();
+      
+      // Crear nueva ventana con el HTML de la factura
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        newWindow.document.write(htmlContent);
+        newWindow.document.close();
+      } else {
+        // Fallback: mostrar en la misma ventana
+        const newTab = window.open();
+        if (newTab) {
+          newTab.document.write(htmlContent);
+          newTab.document.close();
+        }
+      }
+    } catch (error) {
+      console.error('Error abriendo factura profesional:', error);
+      alert('Error al abrir la factura profesional. Por favor, intenta de nuevo.');
+    }
+  };
+
   const closeModal = () => {
     setSelectedInvoice(null);
   };
@@ -307,8 +352,9 @@ const InvoicesPage: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
                           <button
-                            onClick={() => handleViewDetails(invoice)}
+                            onClick={() => handleViewProfessional(invoice)}
                             className="text-blue-600 hover:text-blue-900"
+                            title="Ver factura profesional"
                           >
                             Ver
                           </button>
@@ -383,8 +429,16 @@ const InvoicesPage: React.FC = () => {
               
               <div className="mt-6 flex justify-end space-x-3">
                 <button
-                  onClick={() => handleDownloadPdf(selectedInvoice)}
+                  onClick={() => handleViewProfessional(selectedInvoice)}
                   className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                  title="Ver factura profesional"
+                >
+                  Ver Profesional
+                </button>
+                <button
+                  onClick={() => handleDownloadPdf(selectedInvoice)}
+                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                  title="Descargar PDF"
                 >
                   Descargar PDF
                 </button>
