@@ -261,7 +261,7 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
       setIsLoading(true);
       
       // Usar la API del backend, no del chatbot
-      const backendUrl = (import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app';
+              const backendUrl = (import.meta as any).env.VITE_API_URL || 'https://experimento2-production.up.railway.app';
       const response = await fetch(`${backendUrl}/api/appointments/visitor`, {
         method: 'POST',
         headers: {
