@@ -8,8 +8,19 @@ interface ChatMessage {
   timestamp: string;
 }
 
-const ChatbotWidget = () => {
-  const [isOpen, setIsOpen] = useState(false);
+interface ChatbotWidgetProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, onClose }) => {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  
+  // Usar el estado externo si se proporciona, o el interno si no
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+  const setIsOpen = externalIsOpen !== undefined ? (value: boolean) => {
+    if (!value) onClose();
+  } : setInternalIsOpen;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -45,10 +56,13 @@ const ChatbotWidget = () => {
   // Mantener foco en el input cuando se abre el chat
   useEffect(() => {
     if (isOpen && inputRef.current && !showCalendar) {
+      console.log('🔍 [FOCUS] Chat abierto, estableciendo foco inicial...');
       setTimeout(() => {
+        console.log('🔍 [FOCUS] Foco inicial 1 (100ms)');
         inputRef.current?.focus();
       }, 100);
       setTimeout(() => {
+        console.log('🔍 [FOCUS] Foco inicial 2 (300ms)');
         inputRef.current?.focus();
       }, 300);
     }
@@ -59,21 +73,27 @@ const ChatbotWidget = () => {
     if (isOpen && messages.length > 0 && !showCalendar) {
       const lastMessage = messages[messages.length - 1];
       if (!lastMessage.isUser && inputRef.current) {
+        console.log('🔍 [FOCUS] Bot respondió, restaurando foco...');
         // El último mensaje es del bot, mantener foco en el input
         // Múltiples intentos con diferentes delays para asegurar que funcione
         setTimeout(() => {
+          console.log('🔍 [FOCUS] Intento 1 (100ms)');
           inputRef.current?.focus();
         }, 100);
         setTimeout(() => {
+          console.log('🔍 [FOCUS] Intento 2 (300ms)');
           inputRef.current?.focus();
         }, 300);
         setTimeout(() => {
+          console.log('🔍 [FOCUS] Intento 3 (500ms)');
           inputRef.current?.focus();
         }, 500);
         setTimeout(() => {
+          console.log('🔍 [FOCUS] Intento 4 (800ms)');
           inputRef.current?.focus();
         }, 800);
         setTimeout(() => {
+          console.log('🔍 [FOCUS] Intento 5 (1000ms)');
           inputRef.current?.focus();
         }, 1000);
       }
@@ -83,8 +103,10 @@ const ChatbotWidget = () => {
   // Mantener foco activo constantemente cuando el chat está abierto
   useEffect(() => {
     if (isOpen && !showCalendar && inputRef.current) {
+      console.log('🔍 [FOCUS] Iniciando intervalo de verificación de foco...');
       const focusInterval = setInterval(() => {
         if (document.activeElement !== inputRef.current) {
+          console.log('🔍 [FOCUS] Foco perdido, restaurando...');
           inputRef.current?.focus();
         }
       }, 2000); // Verificar cada 2 segundos
@@ -345,8 +367,9 @@ const ChatbotWidget = () => {
   };
 
   const toggleChat = () => {
-    setIsOpen(!isOpen);
-    if (!isOpen) {
+    const newValue = !isOpen;
+    setIsOpen(newValue);
+    if (!newValue) {
       setError(null);
       setShowCalendar(false);
       setAppointmentData(null);
@@ -479,14 +502,17 @@ const ChatbotWidget = () => {
                   }
                 }}
                 onBlur={() => {
+                  console.log('🔍 [FOCUS] Input perdió el foco');
                   // Si el input pierde el foco y el chat está abierto, restaurarlo
                   if (isOpen && !showCalendar) {
+                    console.log('🔍 [FOCUS] Restaurando foco desde onBlur...');
                     setTimeout(() => {
                       inputRef.current?.focus();
                     }, 100);
                   }
                 }}
                 onFocus={() => {
+                  console.log('🔍 [FOCUS] Input recibió el foco');
                   // Cuando el input recibe foco, asegurar que esté visible
                   inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }}

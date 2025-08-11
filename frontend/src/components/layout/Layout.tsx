@@ -3,7 +3,7 @@ import { Link, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useAppConfig } from '../../hooks/useSiteConfig';
 import Notifications from '../Notifications';
-import ChatbotWidget from '../Chatbot/ChatbotWidget';
+import ChatbotWidget from '../chat/ChatbotWidget';
 import ChatbotButton from '../Chatbot/ChatbotButton';
 import AccessibilityTester from '../AccessibilityTester';
 import ContactModal from '../ContactModal';
