@@ -43,11 +43,24 @@ sleep 15
 
 echo ""
 echo "🔍 Verificando conexión a la base de datos..."
-echo "Comando: npx prisma db push --accept-data-loss"
-npx prisma db push --accept-data-loss
+echo "Comando: npx prisma db push --force-reset (solo si es necesario)"
+# Solo ejecutar db push si es la primera vez o si hay cambios críticos
+if [ ! -f ".db-initialized" ]; then
+    echo "🆕 Primera ejecución - inicializando base de datos..."
+    npx prisma db push
+    touch .db-initialized
+    echo "✅ Base de datos inicializada"
+else
+    echo "✅ Base de datos ya inicializada - saltando db push"
+fi
 
 echo ""
-echo "📊 Ejecutando migraciones..."
+echo "📊 Verificando migraciones..."
+echo "Comando: npx prisma migrate status"
+npx prisma migrate status
+
+echo ""
+echo "📊 Aplicando migraciones pendientes..."
 echo "Comando: npx prisma migrate deploy"
 npx prisma migrate deploy
 
@@ -62,9 +75,16 @@ echo "Comando: npx prisma db pull"
 npx prisma db pull
 
 echo ""
-echo "🌱 Ejecutando seed para crear datos de prueba..."
-echo "Comando: node scripts/seed.js"
-node scripts/seed.js
+echo "🌱 Verificando si se necesitan datos de prueba..."
+if [ ! -f ".seed-executed" ]; then
+    echo "🆕 Primera ejecución - ejecutando seed..."
+    echo "Comando: node scripts/seed.js"
+    node scripts/seed.js
+    touch .seed-executed
+    echo "✅ Seed ejecutado"
+else
+    echo "✅ Seed ya ejecutado - saltando creación de datos de prueba"
+fi
 
 echo ""
 echo "🔍 Verificando estado de la base de datos..."
