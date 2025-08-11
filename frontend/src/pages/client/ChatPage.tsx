@@ -63,7 +63,7 @@ const ChatPage = () => {
     
     /*
     const token = localStorage.getItem('token');
-    const newSocket = io(`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production.up.railway.app'}`, {
+    const newSocket = io(`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}`, {
       auth: {
         token,
         user: {

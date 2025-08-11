@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: `${(window as any).APP_CONFIG?.API_URL || (import.meta as any).env.VITE_API_URL || 'https://experimento2-production.up.railway.app'}/api`,
+  baseURL: `${(window as any).APP_CONFIG?.API_URL || (import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api`,
 });
 
 // Log de configuración para debugging
