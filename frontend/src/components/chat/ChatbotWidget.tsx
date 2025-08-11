@@ -60,15 +60,38 @@ const ChatbotWidget = () => {
       const lastMessage = messages[messages.length - 1];
       if (!lastMessage.isUser && inputRef.current) {
         // El último mensaje es del bot, mantener foco en el input
+        // Múltiples intentos con diferentes delays para asegurar que funcione
         setTimeout(() => {
           inputRef.current?.focus();
-        }, 200);
+        }, 100);
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 300);
         setTimeout(() => {
           inputRef.current?.focus();
         }, 500);
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 800);
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 1000);
       }
     }
   }, [messages, isOpen, showCalendar]);
+
+  // Mantener foco activo constantemente cuando el chat está abierto
+  useEffect(() => {
+    if (isOpen && !showCalendar && inputRef.current) {
+      const focusInterval = setInterval(() => {
+        if (document.activeElement !== inputRef.current) {
+          inputRef.current?.focus();
+        }
+      }, 2000); // Verificar cada 2 segundos
+
+      return () => clearInterval(focusInterval);
+    }
+  }, [isOpen, showCalendar]);
 
   // Timeout de inactividad y advertencia - DESHABILITADO para mejor UX
   const resetInactivityTimer = () => {
@@ -455,9 +478,22 @@ const ChatbotWidget = () => {
                     }
                   }
                 }}
+                onBlur={() => {
+                  // Si el input pierde el foco y el chat está abierto, restaurarlo
+                  if (isOpen && !showCalendar) {
+                    setTimeout(() => {
+                      inputRef.current?.focus();
+                    }, 100);
+                  }
+                }}
+                onFocus={() => {
+                  // Cuando el input recibe foco, asegurar que esté visible
+                  inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }}
                 placeholder="Escribe tu mensaje..."
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={isLoading || showCalendar}
+                autoFocus={isOpen && !showCalendar}
               />
               <button
                 type="submit"
