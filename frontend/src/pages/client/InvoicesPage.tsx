@@ -738,11 +738,11 @@ const InvoicesPage: React.FC = () => {
               
               <div className="mt-6 flex justify-end space-x-3">
                 <button
-                  onClick={(e) => handleViewProfessional(selectedInvoice, e)}
+                  onClick={(e) => handleViewInvoice(selectedInvoice, e)}
                   className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                  title="Ver factura profesional"
+                  title="Ver factura completa"
                 >
-                  Ver Profesional
+                  👁️ Ver
                 </button>
                 <button
                   onClick={closeModal}
