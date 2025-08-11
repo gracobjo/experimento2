@@ -227,16 +227,18 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
       // Asegurar que la hora tenga formato HH:MM (dos dígitos)
       const [hours, minutes] = time.split(':');
       const formattedTime = `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
-      const selectedDateTime = `${date}T${formattedTime}:00`;
       
-      console.log('🔍 [CITA] selectedDateTime:', selectedDateTime);
+      // Crear fecha en zona horaria local y convertir a ISO string
+      const localDateTime = new Date(`${date}T${formattedTime}:00`);
+      const selectedDateTime = localDateTime.toISOString();
       
-      const formattedDate = new Date(selectedDateTime);
-      console.log('🔍 [CITA] formattedDate:', formattedDate);
+      console.log('🔍 [CITA] Hora local seleccionada:', `${date}T${formattedTime}:00`);
+      console.log('🔍 [CITA] Hora convertida a UTC:', selectedDateTime);
+      console.log('🔍 [CITA] Diferencia de zona horaria:', localDateTime.getTimezoneOffset() / 60, 'horas');
       
       // Validar que la fecha sea válida
-      if (isNaN(formattedDate.getTime())) {
-        throw new Error(`Invalid date: ${selectedDateTime}`);
+      if (isNaN(localDateTime.getTime())) {
+        throw new Error(`Invalid date: ${date}T${formattedTime}:00`);
       }
       
              // Crear objeto de datos para la cita
