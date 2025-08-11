@@ -538,4 +538,55 @@ export class DocumentsService {
 
     return fs.createReadStream(filePath);
   }
+
+  getFilePath(filename: string): string {
+    return path.join(process.cwd(), this.UPLOAD_DIR, filename);
+  }
+
+  async checkFileAccess(filename: string, currentUserId: string, userRole: string): Promise<boolean> {
+    try {
+      // Buscar el documento por nombre de archivo
+      const document = await this.prisma.document.findFirst({
+        where: { filename },
+        include: {
+          expediente: {
+            include: {
+              client: true,
+              lawyer: true
+            }
+          }
+        }
+      });
+
+      if (!document) {
+        return false;
+      }
+
+      // Los admins tienen acceso a todos los archivos
+      if (userRole === 'ADMIN') {
+        return true;
+      }
+
+      // Los abogados pueden acceder a archivos de sus expedientes
+      if (userRole === 'ABOGADO' && document.expediente.lawyerId === currentUserId) {
+        return true;
+      }
+
+      // Los clientes pueden acceder a archivos de sus expedientes
+      if (userRole === 'CLIENTE') {
+        const client = await this.prisma.client.findUnique({
+          where: { userId: currentUserId }
+        });
+        
+        if (client && document.expediente.clientId === client.id) {
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error checking file access:', error);
+      return false;
+    }
+  }
 } 

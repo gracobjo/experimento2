@@ -325,6 +325,75 @@ export class DocumentsController {
     fileStream.pipe(res);
   }
 
+  @Get('file/:filename')
+  @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
+  @ApiOperation({ 
+    summary: 'Servir archivo estático',
+    description: 'Sirve un archivo estático desde la carpeta uploads. Los clientes solo pueden acceder a archivos de sus expedientes.'
+  })
+  @ApiParam({ name: 'filename', description: 'Nombre del archivo', type: 'string' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Archivo servido correctamente',
+    schema: {
+      type: 'string',
+      format: 'binary'
+    }
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Acceso prohibido' })
+  @ApiResponse({ status: 404, description: 'Archivo no encontrado' })
+  async serveFile(
+    @Param('filename') filename: string,
+    @Request() req,
+    @Res() res: Response,
+  ) {
+    try {
+      // Verificar que el archivo existe
+      const filePath = this.documentsService.getFilePath(filename);
+      
+      // Verificar permisos del usuario para este archivo
+      const hasAccess = await this.documentsService.checkFileAccess(filename, req.user.id, req.user.role);
+      
+      if (!hasAccess) {
+        return res.status(403).json({ 
+          message: 'No tienes permisos para acceder a este archivo',
+          error: 'Forbidden',
+          statusCode: 403
+        });
+      }
+
+      // Servir el archivo
+      const fileStream = this.documentsService.getFileStream(filename);
+      
+      // Detectar el tipo MIME basado en la extensión
+      const ext = filename.split('.').pop()?.toLowerCase();
+      let contentType = 'application/octet-stream';
+      
+      if (ext === 'pdf') contentType = 'application/pdf';
+      else if (ext === 'jpg' || ext === 'jpeg') contentType = 'image/jpeg';
+      else if (ext === 'png') contentType = 'image/png';
+      else if (ext === 'gif') contentType = 'image/gif';
+      else if (ext === 'webp') contentType = 'image/webp';
+      else if (ext === 'txt') contentType = 'text/plain';
+      else if (ext === 'csv') contentType = 'text/csv';
+      else if (ext === 'doc') contentType = 'application/msword';
+      else if (ext === 'docx') contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache por 1 hora
+      
+      fileStream.pipe(res);
+    } catch (error) {
+      console.error('Error serving file:', error);
+      res.status(404).json({
+        message: 'Archivo no encontrado',
+        error: 'Not Found',
+        statusCode: 404
+      });
+    }
+  }
+
   @Delete(':id')
   @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
   @ApiOperation({ 
