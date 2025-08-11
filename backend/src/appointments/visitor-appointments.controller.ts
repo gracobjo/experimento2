@@ -45,11 +45,11 @@ export class VisitorAppointmentsController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN', 'ABOGADO')
+  @Roles('ADMIN', 'ABOGADO', 'CLIENTE')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ 
     summary: 'Obtener citas de visitantes',
-    description: 'Devuelve las citas de visitantes según el rol del usuario'
+    description: 'Devuelve las citas de visitantes según el rol del usuario. Los clientes solo ven sus propias citas.'
   })
   @ApiResponse({ 
     status: 200, 
@@ -81,11 +81,11 @@ export class VisitorAppointmentsController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN', 'ABOGADO')
+  @Roles('ADMIN', 'ABOGADO', 'CLIENTE')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ 
     summary: 'Obtener cita de visitante por ID',
-    description: 'Devuelve una cita específica de visitante'
+    description: 'Devuelve una cita específica de visitante. Los clientes solo pueden ver sus propias citas.'
   })
   @ApiResponse({ 
     status: 200, 

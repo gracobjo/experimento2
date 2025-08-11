@@ -76,8 +76,14 @@ export class VisitorAppointmentsService {
         where: { assignedLawyerId: user.id },
         orderBy: { createdAt: 'desc' }
       });
+    } else if (user.role === 'CLIENTE') {
+      // Cliente ve solo las citas creadas con su email
+      return this.prisma.visitorAppointment.findMany({
+        where: { email: user.email },
+        orderBy: { createdAt: 'desc' }
+      });
     } else {
-      // Cliente no puede ver citas de visitantes
+      // Otros roles no pueden ver citas de visitantes
       return [];
     }
   }
@@ -95,6 +101,9 @@ export class VisitorAppointmentsService {
     if (user.role === 'ADMIN') {
       return appointment;
     } else if (user.role === 'ABOGADO' && appointment.assignedLawyerId === user.id) {
+      return appointment;
+    } else if (user.role === 'CLIENTE' && appointment.email === user.email) {
+      // Cliente solo puede ver sus propias citas (por email)
       return appointment;
     } else {
       throw new NotFoundException('No tienes permisos para ver esta cita');
