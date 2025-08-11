@@ -998,13 +998,19 @@ const InvoicesPage = () => {
         const downloadUrl = `https://experimento2-production-54c0.up.railway.app/api/invoices/${invoice.id}/pdf-professional`;
         console.log('[FRONTEND] URL de descarga directa:', downloadUrl);
         
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos timeout
+        
         const response = await fetch(downloadUrl, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          mode: 'cors'
+          mode: 'cors',
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
         
         console.log('[FRONTEND] Status de respuesta:', response.status);
         console.log('[FRONTEND] Headers de respuesta:', Object.fromEntries(response.headers.entries()));
@@ -1055,7 +1061,14 @@ const InvoicesPage = () => {
         console.log('[FRONTEND] PDF descargado exitosamente');
       } catch (error) {
         console.error('[FRONTEND] Error downloading PDF:', error);
-        alert(`Error al descargar el PDF: ${error.message}`);
+        
+        if (error.name === 'AbortError') {
+          alert('Error: La descarga del PDF tardó demasiado tiempo. El servidor puede estar sobrecargado.');
+        } else if (error.message.includes('Failed to fetch')) {
+          alert('Error: No se pudo conectar con el servidor. Verifica tu conexión o intenta más tarde.');
+        } else {
+          alert(`Error al descargar el PDF: ${error.message}`);
+        }
       }
     };
 
