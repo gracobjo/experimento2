@@ -200,6 +200,42 @@ const CaseDetailPage = () => {
     }
   };
 
+  const handleViewDocument = async (filename: string, originalName: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setUploadError('No hay token de autenticación. Por favor, inicia sesión de nuevo.');
+        return;
+      }
+
+      // Hacer petición autenticada al endpoint
+      const response = await fetch(`${getBackendUrl()}/api/documents/file/${filename}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      // Crear blob y descargar
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = originalName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+    } catch (error: any) {
+      console.error('Error viewing document:', error);
+      setUploadError(error.message || 'Error al visualizar el documento');
+    }
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -366,16 +402,14 @@ const CaseDetailPage = () => {
                           </p>
                         </div>
                       </div>
-                      <a
-                        href={`${getBackendUrl()}/api/documents/file/${doc.filename}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 text-sm"
+                      <button
+                        onClick={() => handleViewDocument(doc.filename, doc.filename)}
+                        className="text-blue-600 hover:text-blue-800 text-sm bg-transparent border-none cursor-pointer"
                         aria-label={`Ver documento ${doc.filename}`}
                         aria-describedby={`doc-help-${doc.id}`}
                       >
                         Ver
-                      </a>
+                      </button>
                       <div id={`doc-help-${doc.id}`} className="sr-only">
                         Abrir documento en una nueva pestaña
                       </div>

@@ -128,6 +128,42 @@ const ClientCaseDetailPage = () => {
     }
   };
 
+  const handleViewDocument = async (filename: string, originalName: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('No hay token de autenticación. Por favor, inicia sesión de nuevo.');
+        return;
+      }
+
+      // Hacer petición autenticada al endpoint
+      const response = await fetch(`${getBackendUrl()}/api/documents/file/${filename}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      // Crear blob y descargar
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = originalName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+    } catch (error: any) {
+      console.error('Error viewing document:', error);
+      alert(error.message || 'Error al visualizar el documento');
+    }
+  };
+
   console.log('Render state:', { loading, error, caseData });
   
   if (loading) {
@@ -223,14 +259,12 @@ const ClientCaseDetailPage = () => {
                           </p>
                         </div>
                       </div>
-                                                  <a
-                href={`${getBackendUrl()}/api/documents/file/${doc.filename}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 text-sm"
+                                                  <button
+                onClick={() => handleViewDocument(doc.filename, doc.filename)}
+                className="text-blue-600 hover:text-blue-800 text-sm bg-transparent border-none cursor-pointer"
               >
                 Descargar
-              </a>
+              </button>
                     </div>
                   ))}
                 </div>
