@@ -415,6 +415,8 @@ const Layout = () => {
       )}
 
       {/* Chatbot Components */}
+      {console.log('🔍 [LAYOUT] Renderizando ChatbotButton y ChatbotWidget...')}
+      {console.log('🔍 [LAYOUT] Estado del chat:', { isChatbotOpen })}
       <ChatbotButton onOpen={() => setIsChatbotOpen(true)} />
       <ChatbotWidget 
         isOpen={isChatbotOpen} 

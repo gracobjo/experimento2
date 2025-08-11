@@ -19,8 +19,14 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
   // Usar el estado externo si se proporciona, o el interno si no
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const setIsOpen = externalIsOpen !== undefined ? (value: boolean) => {
-    if (!value) onClose();
+    if (!value && onClose) onClose();
+    return; // Retornar explícitamente
   } : setInternalIsOpen;
+  
+  // Debug logs
+  console.log('🔍 [CHATBOT] Props:', { externalIsOpen, onClose: !!onClose });
+  console.log('🔍 [CHATBOT] Estado interno:', { internalIsOpen });
+  console.log('🔍 [CHATBOT] Estado final:', { isOpen });
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -388,16 +394,18 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      {/* Botón del chat */}
-      <button
-        onClick={toggleChat}
-        className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200"
-        title="Chat del despacho"
-      >
+      {/* Botón del chat - solo mostrar cuando no hay estado externo */}
+      {externalIsOpen === undefined && (
+        <button
+          onClick={toggleChat}
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200"
+          title="Chat del despacho"
+        >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
-      </button>
+        </button>
+      )}
 
       {/* Calendario de citas */}
       <AppointmentCalendar
