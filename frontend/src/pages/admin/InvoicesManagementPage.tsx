@@ -77,7 +77,6 @@ const InvoicesManagementPage = () => {
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   
   // Export and copy functionality
@@ -146,37 +145,6 @@ const InvoicesManagementPage = () => {
     // Primero mostrar la factura en el modal
     setViewingInvoice(invoice);
     setShowInvoiceModal(true);
-  };
-
-  const handleDownloadPdf = async (invoice: Invoice) => {
-    setDownloadingPdf(invoice.id);
-    try {
-      // Descargar el PDF de la factura con QR
-      const response = await api.get(`/invoices/${invoice.id}/pdf-qr`, {
-        responseType: 'blob'
-      });
-      
-      // Crear URL del blob y abrir en nueva pestaña
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.target = '_blank';
-      link.download = `factura_${invoice.numeroFactura || invoice.id}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      setSuccessMsg(`✅ PDF de factura ${invoice.numeroFactura} descargado`);
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      console.error('Error downloading PDF:', err);
-      setError('Error al descargar el PDF de la factura');
-      setTimeout(() => setError(null), 3000);
-    } finally {
-      setDownloadingPdf(null);
-    }
   };
 
   const handleEdit = (invoice: Invoice) => {
@@ -585,20 +553,6 @@ const InvoicesManagementPage = () => {
 
         {/* Botones de acción */}
         <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end space-x-4">
-          <button
-            onClick={() => handleDownloadPdf(invoice)}
-            disabled={downloadingPdf === invoice.id}
-            className={`px-4 py-2 rounded flex items-center space-x-2 ${
-              downloadingPdf === invoice.id 
-                ? 'bg-gray-400 text-white cursor-not-allowed' 
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span>{downloadingPdf === invoice.id ? 'Descargando...' : '📄 Descargar PDF'}</span>
-          </button>
           <button
             onClick={() => copyInvoiceData(invoice)}
             disabled={copyingData !== null}

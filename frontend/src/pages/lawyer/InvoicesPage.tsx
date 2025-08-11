@@ -988,89 +988,7 @@ const InvoicesPage = () => {
       }
     };
 
-    const handleDownload = async () => {
-      try {
-        console.log('[FRONTEND] Iniciando descarga de PDF para factura:', invoice.id);
-        const token = localStorage.getItem('token');
-        console.log('[FRONTEND] Token disponible:', !!token);
-        
-        // Intentar con URL directa al backend
-        const downloadUrl = `https://experimento2-production-54c0.up.railway.app/api/invoices/${invoice.id}/pdf-professional`;
-        console.log('[FRONTEND] URL de descarga directa:', downloadUrl);
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos timeout
-        
-        const response = await fetch(downloadUrl, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          mode: 'cors',
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        console.log('[FRONTEND] Status de respuesta:', response.status);
-        console.log('[FRONTEND] Headers de respuesta:', Object.fromEntries(response.headers.entries()));
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('[FRONTEND] Error response:', errorText);
-          throw new Error(`Error al descargar el PDF: ${response.status} ${response.statusText}`);
-        }
-        
-        const blob = await response.blob();
-        console.log('[FRONTEND] Blob recibido. Tamaño:', blob.size, 'bytes');
-        console.log('[FRONTEND] Tipo de contenido:', blob.type);
-        
-        // Verificar que es un PDF
-        if (blob.type !== 'application/pdf') {
-          console.error('[FRONTEND] Error: El contenido no es un PDF. Tipo:', blob.type);
-          // Leer el contenido para debug
-          const text = await blob.text();
-          console.error('[FRONTEND] Contenido recibido:', text.substring(0, 200));
-          throw new Error('El archivo descargado no es un PDF válido');
-        }
-        
-        // Verificar que el PDF es válido leyendo los primeros bytes
-        const arrayBuffer = await blob.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        const header = String.fromCharCode.apply(null, uint8Array.slice(0, 4));
-        console.log('[FRONTEND] Header del PDF:', header);
-        
-        if (header !== '%PDF') {
-          console.error('[FRONTEND] Error: El archivo no es un PDF válido. Header:', header);
-          const text = await blob.text();
-          console.error('[FRONTEND] Contenido completo:', text);
-          throw new Error('El archivo descargado no es un PDF válido');
-        }
-        
-        console.log('[FRONTEND] PDF válido detectado');
-        
-        const blobUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = `factura_${invoice.numeroFactura || invoice.id}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(blobUrl);
-        
-        console.log('[FRONTEND] PDF descargado exitosamente');
-      } catch (error) {
-        console.error('[FRONTEND] Error downloading PDF:', error);
-        
-        if (error.name === 'AbortError') {
-          alert('Error: La descarga del PDF tardó demasiado tiempo. El servidor puede estar sobrecargado.');
-        } else if (error.message.includes('Failed to fetch')) {
-          alert('Error: No se pudo conectar con el servidor. Verifica tu conexión o intenta más tarde.');
-        } else {
-          alert(`Error al descargar el PDF: ${error.message}`);
-        }
-      }
-    };
+
 
     if (loading) return <div className="p-8 text-center">Cargando previsualización...</div>;
     if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
@@ -1104,12 +1022,6 @@ const InvoicesPage = () => {
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             🖨️ Imprimir
-          </button>
-          <button 
-            onClick={handleDownload} 
-            className="px-4 py-2 bg-green-700 text-white rounded hover:bg-green-800"
-          >
-            📄 Descargar PDF
           </button>
         </div>
         

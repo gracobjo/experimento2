@@ -51,72 +51,27 @@ const InvoicesPage: React.FC = () => {
     }
   };
 
-  const handleDownloadPdf = async (invoice: Invoice) => {
-    try {
-      const response = await api.get(`/invoices/${invoice.id}/pdf-qr`, {
-        responseType: 'blob'
-      });
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `factura-${invoice.numeroFactura}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      console.error('Error downloading PDF:', err);
-      alert('Error al descargar el PDF');
-    }
-  };
-
   const handleViewDetails = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
   };
 
   const handleViewProfessional = async (invoice: Invoice) => {
     try {
-      // Abrir factura profesional en nueva pestaña
-      const url = `${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api/invoices/${invoice.id}/html-preview`;
-      
-      // Obtener token para autenticación
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('No hay token de autenticación. Por favor, inicia sesión de nuevo.');
-        return;
-      }
-
-      // Hacer petición para obtener el HTML
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await api.get(`/invoices/${invoice.id}/pdf-professional`, {
+        responseType: 'blob'
       });
 
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
-      const htmlContent = await response.text();
-      
-      // Crear nueva ventana con el HTML de la factura
-      const newWindow = window.open('', '_blank');
-      if (newWindow) {
-        newWindow.document.write(htmlContent);
-        newWindow.document.close();
-      } else {
-        // Fallback: mostrar en la misma ventana
-        const newTab = window.open();
-        if (newTab) {
-          newTab.document.write(htmlContent);
-          newTab.document.close();
-        }
-      }
-    } catch (error) {
-      console.error('Error abriendo factura profesional:', error);
-      alert('Error al abrir la factura profesional. Por favor, intenta de nuevo.');
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Error viewing professional PDF:', err);
+      alert('Error al abrir el PDF profesional');
     }
   };
 
@@ -358,12 +313,6 @@ const InvoicesPage: React.FC = () => {
                           >
                             Ver
                           </button>
-                          <button
-                            onClick={() => handleDownloadPdf(invoice)}
-                            className="text-green-600 hover:text-green-900"
-                          >
-                            PDF
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -434,13 +383,6 @@ const InvoicesPage: React.FC = () => {
                   title="Ver factura profesional"
                 >
                   Ver Profesional
-                </button>
-                <button
-                  onClick={() => handleDownloadPdf(selectedInvoice)}
-                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                  title="Descargar PDF"
-                >
-                  Descargar PDF
                 </button>
                 <button
                   onClick={closeModal}
