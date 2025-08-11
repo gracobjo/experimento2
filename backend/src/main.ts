@@ -31,12 +31,42 @@ async function bootstrap() {
         'http://localhost:8080',
         'https://experimento2-fenm.vercel.app',
         'https://experimento2-production.up.railway.app',
+        'https://experimento2-production-54c0.up.railway.app',
         /^https:\/\/.*\.vercel\.app$/,
         /^https:\/\/.*\.railway\.app$/
       ];
 
+  console.log('🔧 [CORS] Configurando CORS con orígenes:', corsOrigins);
+  console.log('🔧 [CORS] CORS_ORIGIN env:', process.env.CORS_ORIGIN || 'No configurado');
+
   app.enableCors({
-    origin: corsOrigins,
+    origin: (origin, callback) => {
+      console.log('🔧 [CORS] Petición desde origen:', origin);
+      
+      // Permitir peticiones sin origen (como herramientas de desarrollo)
+      if (!origin) {
+        console.log('🔧 [CORS] Sin origen - permitiendo');
+        return callback(null, true);
+      }
+      
+      // Verificar si el origen está en la lista permitida
+      const isAllowed = corsOrigins.some(allowedOrigin => {
+        if (typeof allowedOrigin === 'string') {
+          return allowedOrigin === origin;
+        } else if (allowedOrigin instanceof RegExp) {
+          return allowedOrigin.test(origin);
+        }
+        return false;
+      });
+      
+      if (isAllowed) {
+        console.log('🔧 [CORS] Origen permitido:', origin);
+        callback(null, true);
+      } else {
+        console.log('🔧 [CORS] Origen bloqueado:', origin);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
@@ -214,6 +244,40 @@ async function bootstrap() {
 
   // Servir archivos estáticos desde la carpeta uploads
   app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
+  // Endpoint de debug CORS usando express directamente
+  app.use('/debug-cors', (req, res) => {
+    const origin = req.headers.origin;
+    const corsOrigins = process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',')
+      : [
+          'http://localhost:5173',
+          'http://localhost:3000',
+          'http://localhost:8080',
+          'https://experimento2-fenm.vercel.app',
+          'https://experimento2-production.up.railway.app',
+          'https://experimento2-production-54c0.up.railway.app',
+          /^https:\/\/.*\.vercel\.app$/,
+          /^https:\/\/.*\.railway\.app$/
+        ];
+    
+    res.json({
+      message: 'Debug CORS',
+      timestamp: new Date().toISOString(),
+      requestOrigin: origin,
+      corsOrigins: corsOrigins,
+      corsOriginEnv: process.env.CORS_ORIGIN || 'No configurado',
+      headers: req.headers,
+      isOriginAllowed: corsOrigins.some(allowedOrigin => {
+        if (typeof allowedOrigin === 'string') {
+          return allowedOrigin === origin;
+        } else if (allowedOrigin instanceof RegExp) {
+          return allowedOrigin.test(origin);
+        }
+        return false;
+      })
+    });
+  });
 
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');

@@ -1170,11 +1170,11 @@ export class InvoicesController {
   }
 
   @Get(':id/pdf-professional')
-  @Roles(Role.ABOGADO, Role.ADMIN)
+  @Roles(Role.ABOGADO, Role.ADMIN, Role.CLIENTE)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ 
     summary: 'Descargar factura profesional (PDF completo)',
-    description: 'Descarga la factura en PDF profesional con diseño completo (solo ABOGADO y ADMIN)'
+    description: 'Descarga la factura en PDF profesional con diseño completo (ABOGADO, ADMIN y CLIENTE)'
   })
   @ApiParam({ name: 'id', description: 'ID de la factura', type: 'string' })
   @ApiResponse({ 
@@ -1186,7 +1186,7 @@ export class InvoicesController {
     }
   })
   @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'Rol insuficiente' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente o no autorizado para esta factura' })
   @ApiResponse({ status: 404, description: 'Factura no encontrada' })
   async getInvoicePdfProfessional(@Param('id') id: string, @Res() res: Response, @Request() req) {
     try {
@@ -1199,9 +1199,14 @@ export class InvoicesController {
         return res.status(404).send('Factura no encontrada');
       }
 
-      // Verificar permisos (solo abogado que creó la factura o admin)
+      // Verificar permisos según el rol del usuario
       if (req.user.role === 'ABOGADO' && invoice.emisorId !== req.user.id) {
         console.log('[PDF-PROFESIONAL] No autorizado - ABOGADO');
+        return res.status(403).send('No autorizado para acceder a esta factura');
+      }
+      
+      if (req.user.role === 'CLIENTE' && invoice.receptorId !== req.user.id) {
+        console.log('[PDF-PROFESIONAL] No autorizado - CLIENTE');
         return res.status(403).send('No autorizado para acceder a esta factura');
       }
       
