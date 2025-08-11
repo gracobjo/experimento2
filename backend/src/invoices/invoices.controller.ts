@@ -1220,10 +1220,10 @@ export class InvoicesController {
         console.error('[PDF-PROFESIONAL] Error en generateInvoicePdfProfessional:', error);
         console.error('[PDF-PROFESIONAL] Stack trace:', (error as any).stack);
         
-        // Si falla el PDF profesional, intentar con el método con fallback
-        console.log('[PDF-PROFESIONAL] Intentando con método con fallback...');
-        pdfBuffer = await this.invoicesService.generateInvoicePdf(invoice);
-        console.log('[PDF-PROFESIONAL] PDF con fallback generado exitosamente');
+        // Si falla el PDF profesional, intentar con el método vectorial (compatible con Railway)
+        console.log('[PDF-PROFESIONAL] Intentando con método vectorial (compatible con Railway)...');
+        pdfBuffer = await this.invoicesService.generateInvoicePdfProfessionalVectorial(invoice);
+        console.log('[PDF-PROFESIONAL] PDF vectorial generado exitosamente');
       }
       
       // Verificar que el buffer es válido

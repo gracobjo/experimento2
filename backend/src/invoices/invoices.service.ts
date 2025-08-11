@@ -1278,26 +1278,326 @@ export class InvoicesService {
   }
 
   /**
-   * Genera un PDF profesional para el cliente (mismo que usa el abogado)
+   * Genera un PDF profesional de la factura usando pdf-lib (compatible con Railway)
    * @param invoice Factura a procesar
    * @returns Buffer del PDF generado
    */
-  async generateInvoicePdfForClient(invoice: any): Promise<Buffer> {
+  async generateInvoicePdfProfessionalVectorial(invoice: any): Promise<Buffer> {
     try {
-      this.logger.log('Generando PDF profesional para cliente');
+      this.logger.log('Generando PDF profesional vectorial (compatible con Railway)');
       
-      // Usar el servicio de generación de PDF profesional
-      const pdfBuffer = await this.pdfGeneratorService.generateInvoicePdf(invoice);
+      // Importar pdf-lib dinámicamente
+      const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib');
       
-      this.logger.log('PDF profesional para cliente generado exitosamente');
-      return pdfBuffer;
+      // Crear documento PDF
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([595, 842]); // A4
+      const { width, height } = page.getSize();
+      
+      // Configurar fuentes
+      const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      
+      // Colores corporativos
+      const primaryColor = rgb(0, 0.2, 0.4);
+      const secondaryColor = rgb(0.4, 0.4, 0.4);
+      const lightGray = rgb(0.95, 0.95, 0.95);
+      const darkGray = rgb(0.2, 0.2, 0.2);
+      
+      // 1. ENCABEZADO
+      let yPosition = height - 50;
+      
+      // Título principal
+      page.drawText('FACTURA', {
+        x: 50,
+        y: yPosition,
+        size: 24,
+        font: helveticaBoldFont,
+        color: primaryColor
+      });
+      
+      // Número de factura
+      yPosition -= 30;
+      page.drawText(`Número: ${invoice.numeroFactura || 'N/A'}`, {
+        x: 50,
+        y: yPosition,
+        size: 14,
+        font: helveticaBoldFont,
+        color: darkGray
+      });
+      
+      // Fecha
+      yPosition -= 20;
+      const fechaText = invoice.fechaFactura ? new Date(invoice.fechaFactura).toLocaleDateString('es-ES') : 'N/A';
+      page.drawText(`Fecha: ${fechaText}`, {
+        x: 50,
+        y: yPosition,
+        size: 12,
+        font: helveticaFont,
+        color: darkGray
+      });
+      
+      // 2. INFORMACIÓN DEL EMISOR (ABOGADO)
+      yPosition -= 40;
+      page.drawText('DATOS DEL EMISOR', {
+        x: 50,
+        y: yPosition,
+        size: 16,
+        font: helveticaBoldFont,
+        color: primaryColor
+      });
+      
+      yPosition -= 20;
+      page.drawText(`Nombre: ${invoice.emisor?.name || 'N/A'}`, {
+        x: 50,
+        y: yPosition,
+        size: 12,
+        font: helveticaFont,
+        color: darkGray
+      });
+      
+      yPosition -= 18;
+      page.drawText(`Email: ${invoice.emisor?.email || 'N/A'}`, {
+        x: 50,
+        y: yPosition,
+        size: 12,
+        font: helveticaFont,
+        color: darkGray
+      });
+      
+      // 3. INFORMACIÓN DEL RECEPTOR (CLIENTE)
+      yPosition -= 30;
+      page.drawText('DATOS DEL RECEPTOR', {
+        x: 50,
+        y: yPosition,
+        size: 16,
+        font: helveticaBoldFont,
+        color: primaryColor
+      });
+      
+      yPosition -= 20;
+      page.drawText(`Nombre: ${invoice.receptor?.name || 'N/A'}`, {
+        x: 50,
+        y: yPosition,
+        size: 12,
+        font: helveticaFont,
+        color: darkGray
+      });
+      
+      yPosition -= 18;
+      page.drawText(`Email: ${invoice.receptor?.email || 'N/A'}`, {
+        x: 50,
+        y: yPosition,
+        size: 12,
+        font: helveticaFont,
+        color: darkGray
+      });
+      
+      // 4. EXPEDIENTE (si existe)
+      if (invoice.expediente?.title) {
+        yPosition -= 30;
+        page.drawText('EXPEDIENTE', {
+          x: 50,
+          y: yPosition,
+          size: 16,
+          font: helveticaBoldFont,
+          color: primaryColor
+        });
+        
+        yPosition -= 20;
+        page.drawText(`Título: ${invoice.expediente.title}`, {
+          x: 50,
+          y: yPosition,
+          size: 12,
+          font: helveticaFont,
+          color: darkGray
+        });
+      }
+      
+      // 5. ITEMS DE LA FACTURA
+      yPosition -= 40;
+      page.drawText('DETALLE DE SERVICIOS', {
+        x: 50,
+        y: yPosition,
+        size: 16,
+        font: helveticaBoldFont,
+        color: primaryColor
+      });
+      
+      if (invoice.items && invoice.items.length > 0) {
+        yPosition -= 25;
+        
+        // Encabezados de tabla
+        page.drawText('Descripción', { x: 50, y: yPosition, size: 12, font: helveticaBoldFont, color: darkGray });
+        page.drawText('Cantidad', { x: 300, y: yPosition, size: 12, font: helveticaBoldFont, color: darkGray });
+        page.drawText('Precio', { x: 380, y: yPosition, size: 12, font: helveticaBoldFont, color: darkGray });
+        page.drawText('Total', { x: 480, y: yPosition, size: 12, font: helveticaBoldFont, color: darkGray });
+        
+        yPosition -= 20;
+        
+        // Línea separadora
+        page.drawLine({
+          start: { x: 50, y: yPosition },
+          end: { x: 550, y: yPosition },
+          thickness: 1,
+          color: lightGray
+        });
+        
+        yPosition -= 20;
+        
+        // Items
+        for (const item of invoice.items) {
+          if (yPosition < 100) {
+            // Nueva página si no hay espacio
+            const newPage = pdfDoc.addPage([595, 842]);
+            yPosition = height - 50;
+          }
+          
+          page.drawText(item.description || 'N/A', { 
+            x: 50, y: yPosition, size: 11, font: helveticaFont, color: darkGray 
+          });
+          page.drawText(String(item.quantity || 0), { 
+            x: 300, y: yPosition, size: 11, font: helveticaFont, color: darkGray 
+          });
+          page.drawText(`${(item.unitPrice || 0).toFixed(2)} €`, { 
+            x: 380, y: yPosition, size: 11, font: helveticaFont, color: darkGray 
+          });
+          page.drawText(`${(item.total || 0).toFixed(2)} €`, { 
+            x: 480, y: yPosition, size: 11, font: helveticaFont, color: darkGray 
+          });
+          
+          yPosition -= 18;
+        }
+      }
+      
+      // 6. TOTALES
+      yPosition -= 30;
+      page.drawLine({
+        start: { x: 50, y: yPosition },
+        end: { x: 550, y: yPosition },
+        thickness: 1,
+        color: lightGray
+      });
+      
+      yPosition -= 20;
+      
+      // Base imponible
+      page.drawText('Base Imponible:', { x: 380, y: yPosition, size: 12, font: helveticaFont, color: darkGray });
+      page.drawText(`${(invoice.baseImponible || 0).toFixed(2)} €`, { x: 480, y: yPosition, size: 12, font: helveticaBoldFont, color: darkGray });
+      
+      yPosition -= 18;
+      
+      // IVA
+      if (invoice.cuotaIVA && invoice.cuotaIVA > 0) {
+        page.drawText(`IVA (${invoice.tipoIVA || 21}%):`, { x: 380, y: yPosition, size: 12, font: helveticaFont, color: darkGray });
+        page.drawText(`${(invoice.cuotaIVA || 0).toFixed(2)} €`, { x: 480, y: yPosition, size: 12, font: helveticaBoldFont, color: darkGray });
+        yPosition -= 18;
+      }
+      
+      // Descuento
+      if (invoice.descuento && invoice.descuento > 0) {
+        page.drawText(`Descuento (${invoice.descuento}%):`, { x: 380, y: yPosition, size: 12, font: helveticaFont, color: darkGray });
+        const descuentoCalculado = (invoice.baseImponible || 0) * (invoice.descuento / 100);
+        page.drawText(`-${descuentoCalculado.toFixed(2)} €`, { x: 480, y: yPosition, size: 12, font: helveticaBoldFont, color: darkGray });
+        yPosition -= 18;
+      }
+      
+      // Retención
+      if (invoice.retencion && invoice.retencion > 0) {
+        page.drawText(`Retención (${invoice.retencion}%):`, { x: 380, y: yPosition, size: 12, font: helveticaFont, color: darkGray });
+        const retencionCalculada = (invoice.baseImponible || 0) * (invoice.retencion / 100);
+        page.drawText(`-${retencionCalculada.toFixed(2)} €`, { x: 480, y: yPosition, size: 12, font: helveticaBoldFont, color: darkGray });
+        yPosition -= 18;
+      }
+      
+      // Línea separadora
+      yPosition -= 10;
+      page.drawLine({
+        start: { x: 380, y: yPosition },
+        end: { x: 550, y: yPosition },
+        thickness: 2,
+        color: primaryColor
+      });
+      
+      yPosition -= 20;
+      
+      // Total final
+      page.drawText('IMPORTE TOTAL:', { x: 380, y: yPosition, size: 16, font: helveticaBoldFont, color: primaryColor });
+      page.drawText(`${(invoice.importeTotal || 0).toFixed(2)} €`, { x: 480, y: yPosition, size: 16, font: helveticaBoldFont, color: primaryColor });
+      
+      // 7. ESTADO Y FECHA
+      yPosition -= 40;
+      page.drawText(`Estado: ${invoice.estado || 'EMITIDA'}`, {
+        x: 50,
+        y: yPosition,
+        size: 12,
+        font: helveticaFont,
+        color: darkGray
+      });
+      
+      yPosition -= 18;
+      page.drawText(`Fecha de emisión: ${fechaText}`, {
+        x: 50,
+        y: yPosition,
+        size: 12,
+        font: helveticaFont,
+        color: darkGray
+      });
+      
+      // 8. GENERAR QR
+      try {
+        const QRCode = await import('qrcode');
+        
+        // Datos para el QR
+        const qrData = [
+          `NIF:${invoice.emisor?.email || ''}`,
+          `NUM:${invoice.numeroFactura || ''}`,
+          `FEC:${invoice.fechaFactura ? new Date(invoice.fechaFactura).toISOString().slice(0, 10) : ''}`,
+          `IMP:${(invoice.importeTotal || 0).toFixed(2)}`,
+          `TIPO:${invoice.tipoFactura || 'F'}`,
+          `ESTADO:${invoice.estado || 'EMITIDA'}`
+        ].join('|');
+        
+        const qrImageDataUrl = await QRCode.toDataURL(qrData, { 
+          errorCorrectionLevel: 'M', 
+          width: 150,
+          margin: 2
+        });
+        
+        const qrImageBase64 = qrImageDataUrl.replace(/^data:image\/png;base64,/, '');
+        const qrImageBytes = Buffer.from(qrImageBase64, 'base64');
+        
+        // Insertar QR en la esquina superior derecha
+        const qrImage = await pdfDoc.embedPng(qrImageBytes);
+        const qrDims = qrImage.scale(0.4);
+        page.drawImage(qrImage, {
+          x: width - 120,
+          y: height - 120,
+          width: qrDims.width,
+          height: qrDims.height
+        });
+        
+        // Texto explicativo del QR
+        page.drawText('Código QR para verificación', {
+          x: width - 120,
+          y: height - 140,
+          size: 8,
+          font: helveticaFont,
+          color: darkGray
+        });
+        
+      } catch (qrError) {
+        this.logger.warn('Error generando QR, continuando sin QR:', qrError);
+      }
+      
+      // Generar el PDF
+      const pdfBytes = await pdfDoc.save();
+      this.logger.log('PDF profesional vectorial generado exitosamente');
+      return Buffer.from(pdfBytes);
       
     } catch (error) {
-      this.logger.error('Error generando PDF profesional para cliente:', error);
-      
-      // Fallback al PDF simple si falla el profesional
-      this.logger.log('Usando fallback al PDF simple para cliente');
-      return this.generateInvoicePdfWithQR(invoice);
+      this.logger.error('Error generando PDF profesional vectorial:', error);
+      throw new Error(`Error generando PDF profesional vectorial: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -2304,6 +2604,30 @@ export class InvoicesService {
     } catch (error) {
       console.error('❌ Error generando número de factura rectificativa:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Genera un PDF profesional para el cliente (mismo que usa el abogado)
+   * @param invoice Factura a procesar
+   * @returns Buffer del PDF generado
+   */
+  async generateInvoicePdfForClient(invoice: any): Promise<Buffer> {
+    try {
+      this.logger.log('Generando PDF profesional para cliente');
+      
+      // Usar el servicio de generación de PDF profesional
+      const pdfBuffer = await this.pdfGeneratorService.generateInvoicePdf(invoice);
+      
+      this.logger.log('PDF profesional para cliente generado exitosamente');
+      return pdfBuffer;
+      
+    } catch (error) {
+      this.logger.error('Error generando PDF profesional para cliente:', error);
+      
+      // Fallback al PDF simple si falla el profesional
+      this.logger.log('Usando fallback al PDF simple para cliente');
+      return this.generateInvoicePdfWithQR(invoice);
     }
   }
 } 
