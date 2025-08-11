@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import chatbotApi from '../../api/chatbot';
 import AppointmentCalendar from '../AppointmentCalendar';
+import './ChatbotWidget.css';
 
 interface ChatMessage {
   text: string;
@@ -457,34 +458,20 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
           </div>
 
           {/* Mensajes */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 chatbot-messages-area">
             {messages.map((message, index) => (
               <div
                 key={index}
                 className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-xs px-3 py-2 rounded-lg ${
+                  className={`max-w-xs px-3 py-2 rounded-lg chatbot-message ${
                     message.isUser
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-800'
+                      ? 'chatbot-user-message'
+                      : 'chatbot-bot-message'
                   }`}
-                  style={{ 
-                    userSelect: 'text', 
-                    WebkitUserSelect: 'text', 
-                    MozUserSelect: 'text', 
-                    msUserSelect: 'text' 
-                  }}
                 >
-                  <p 
-                    className="text-sm" 
-                    style={{ 
-                      userSelect: 'text', 
-                      WebkitUserSelect: 'text', 
-                      MozUserSelect: 'text', 
-                      msUserSelect: 'text' 
-                    }}
-                  >
+                  <p className="text-sm">
                     {message.text}
                   </p>
                   <p className={`text-xs mt-1 ${

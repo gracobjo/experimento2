@@ -1,0 +1,60 @@
+/* Estilos para mejorar la selección de texto en el chatbot */
+
+.chatbot-message {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text !important;
+}
+
+.chatbot-message p {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text !important;
+  pointer-events: auto !important;
+}
+
+.chatbot-message:hover {
+  cursor: text !important;
+}
+
+/* Asegurar que el texto sea seleccionable en todos los navegadores */
+.chatbot-message * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+/* Estilos para el área de mensajes */
+.chatbot-messages-area {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+/* Permitir selección de texto en mensajes del bot */
+.chatbot-bot-message {
+  background-color: #f3f4f6 !important;
+  color: #1f2937 !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text !important;
+}
+
+/* Permitir selección de texto en mensajes del usuario */
+.chatbot-user-message {
+  background-color: #2563eb !important;
+  color: white !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text !important;
+}
