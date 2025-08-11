@@ -25,7 +25,7 @@ Se creó `frontend/public/config.js` que se carga antes que la aplicación:
 
 ```javascript
 window.APP_CONFIG = {
-  API_URL: 'https://experimento2-production.up.railway.app',
+  API_URL: 'https://experimento2-production-54c0.up.railway.app',
   CHATBOT_URL: 'https://chatbot-legal-production-b91c.up.railway.app',
   FRONTEND_URL: 'https://experimento2-fenm.vercel.app',
   ENDPOINTS: {
@@ -52,7 +52,7 @@ Se modificó `frontend/src/api/axios.ts` para usar la configuración en tiempo d
 
 ```typescript
 const api = axios.create({
-  baseURL: `${(window as any).APP_CONFIG?.API_URL || (import.meta as any).env.VITE_API_URL || 'https://experimento2-production.up.railway.app'}/api`,
+  baseURL: `${(window as any).APP_CONFIG?.API_URL || (import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api`,
 });
 ```
 
@@ -122,11 +122,11 @@ Se eliminó un console.log en `CaseDetailPage.tsx` que mostraba URLs incorrectas
   ```
   🔧 Configuración de la aplicación cargada: {...}
   🔧 Configuración de axios: {...}
-  🔧 Base URL final: https://experimento2-production.up.railway.app/api
+  🔧 Base URL final: https://experimento2-production-54c0.up.railway.app/api
   ```
 
 ### 2. **Verificar las Llamadas API**
-- Las llamadas deberían ir a `https://experimento2-production.up.railway.app/api/...`
+- Las llamadas deberían ir a `https://experimento2-production-54c0.up.railway.app/api/...`
 - No deberían ir a `https://experimento2-fenm.vercel.app/api/...`
 
 ### 3. **Probar Endpoints Específicos**

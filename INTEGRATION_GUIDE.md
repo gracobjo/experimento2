@@ -8,7 +8,7 @@ Esta guía documenta la integración completa del chatbot inteligente con el fro
 
 ### **Servicios Desplegados:**
 - **Frontend:** `https://experimento2-fenm.vercel.app`
-- **Backend:** `https://experimento2-production.up.railway.app`
+- **Backend:** `https://experimento2-production-54c0.up.railway.app`
 - **Chatbot:** `https://chatbot-legal-production-b91c.up.railway.app`
 
 ## 🔧 Configuración del Chatbot
@@ -16,7 +16,7 @@ Esta guía documenta la integración completa del chatbot inteligente con el fro
 ### **Variables de Entorno Configuradas:**
 ```env
 # URLs del sistema
-BACKEND_URL=https://experimento2-production.up.railway.app
+BACKEND_URL=https://experimento2-production-54c0.up.railway.app
 FRONTEND_URL=https://experimento2-fenm.vercel.app
 
 # Configuración del servidor
@@ -28,7 +28,7 @@ LOG_LEVEL=INFO
 CLEANUP_INTERVAL=300
 
 # CORS
-ALLOWED_ORIGINS=http://localhost:5173,https://experimento2-fenm.vercel.app,https://experimento2-production.up.railway.app
+ALLOWED_ORIGINS=http://localhost:5173,https://experimento2-fenm.vercel.app,https://experimento2-production-54c0.up.railway.app
 ```
 
 ## 📊 Endpoints del Chatbot
@@ -358,19 +358,19 @@ curl -X POST https://chatbot-legal-production-b91c.up.railway.app/chat \
 
 ### **Frontend (.env):**
 ```env
-VITE_API_URL=https://experimento2-production.up.railway.app/api
+VITE_API_URL=https://experimento2-production-54c0.up.railway.app/api
 VITE_CHATBOT_URL=https://chatbot-legal-production-b91c.up.railway.app
 ```
 
 ### **Chatbot (Railway):**
 ```env
-BACKEND_URL=https://experimento2-production.up.railway.app
+BACKEND_URL=https://experimento2-production-54c0.up.railway.app
 FRONTEND_URL=https://experimento2-fenm.vercel.app
 PORT=8000
 HOST=0.0.0.0
 LOG_LEVEL=INFO
 CLEANUP_INTERVAL=300
-ALLOWED_ORIGINS=http://localhost:5173,https://experimento2-fenm.vercel.app,https://experimento2-production.up.railway.app
+ALLOWED_ORIGINS=http://localhost:5173,https://experimento2-fenm.vercel.app,https://experimento2-production-54c0.up.railway.app
 ```
 
 ## 🚀 Comandos de Despliegue
@@ -413,9 +413,9 @@ git push origin main
 ## 🎯 URLs Finales
 
 - **Frontend:** `https://experimento2-fenm.vercel.app`
-- **Backend:** `https://experimento2-production.up.railway.app`
+- **Backend:** `https://experimento2-production-54c0.up.railway.app`
 - **Chatbot:** `https://chatbot-legal-production-b91c.up.railway.app`
-- **API Docs:** `https://experimento2-production.up.railway.app/api`
+- **API Docs:** `https://experimento2-production-54c0.up.railway.app/api`
 
 ---
 

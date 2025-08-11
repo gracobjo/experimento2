@@ -3,7 +3,7 @@
 
 window.APP_CONFIG = {
   // URL de la API del backend
-  API_URL: 'https://experimento2-production.up.railway.app',
+  API_URL: 'https://experimento2-production-54c0.up.railway.app',
   
   // URL del chatbot
   CHATBOT_URL: 'https://chatbot-legal-production-b91c.up.railway.app',

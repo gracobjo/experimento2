@@ -75,7 +75,7 @@ Se agregó un panel informativo que muestra:
 Se confirmó que la instancia `api` está configurada correctamente:
 
 #### Configuración Actual:
-- **Base URL**: `https://experimento2-production.up.railway.app/api`
+- **Base URL**: `https://experimento2-production-54c0.up.railway.app/api`
 - **Interceptores**: Manejo automático de tokens y errores
 - **Fallback**: URL por defecto si no hay variables de entorno
 
@@ -126,7 +126,7 @@ Los tests deberían mostrar:
 ## Próximos Pasos Recomendados
 
 ### 1. **Verificar el Estado del Backend**
-- Confirmar que `https://experimento2-production.up.railway.app` esté funcionando
+- Confirmar que `https://experimento2-production-54c0.up.railway.app` esté funcionando
 - Verificar que el endpoint `/api/appointments` exista y responda
 
 ### 2. **Revisar la Base de Datos**

@@ -13,9 +13,9 @@ Sistema integral de gestión legal desplegado en **Railway (Backend)** y **Verce
 - **URL de Login:** https://experimento2-fenm.vercel.app/login
 
 ### **Backend (Railway)**
-- **URL API:** https://experimento2-production.up.railway.app
-- **Documentación Swagger:** https://experimento2-production.up.railway.app/docs
-- **Health Check:** https://experimento2-production.up.railway.app/health
+- **URL API:** https://experimento2-production-54c0.up.railway.app
+- **Documentación Swagger:** https://experimento2-production-54c0.up.railway.app/docs
+- **Health Check:** https://experimento2-production-54c0.up.railway.app/health
 
 ---
 
@@ -139,7 +139,7 @@ CORS_ORIGIN=https://experimento2-fenm.vercel.app
 
 ### **Variables de Entorno (Frontend)**
 ```env
-VITE_API_URL=https://experimento2-production.up.railway.app
+VITE_API_URL=https://experimento2-production-54c0.up.railway.app
 ```
 
 ### **CORS Configuration**
@@ -150,7 +150,7 @@ app.enableCors({
       'http://localhost:5173',
       'http://localhost:3000',
       'https://experimento2-fenm.vercel.app',
-      'https://experimento2-production.up.railway.app'
+      'https://experimento2-production-54c0.up.railway.app'
     ];
     
     if (allowedOrigins.includes(origin) || 
@@ -304,7 +304,7 @@ Solución: Configuración de healthcheckTimeout y endpoints
 ### **Comandos de Debug**
 ```bash
 # Verificar estado de la base de datos
-curl https://experimento2-production.up.railway.app/db-status
+curl https://experimento2-production-54c0.up.railway.app/db-status
 
 # Verificar health check
 curl https://experimento2-production.up.railway.app/health
@@ -354,8 +354,8 @@ curl https://experimento2-production.up.railway.app/debug-env
 
 ### **Enlaces Útiles**
 - **Frontend:** https://experimento2-fenm.vercel.app
-- **Backend API:** https://experimento2-production.up.railway.app
-- **Documentación:** https://experimento2-production.up.railway.app/docs
+- **Backend API:** https://experimento2-production-54c0.up.railway.app
+- **Documentación:** https://experimento2-production-54c0.up.railway.app/docs
 - **Repositorio:** https://github.com/gracobjo/experimento2
 
 ### **Credenciales de Acceso**
