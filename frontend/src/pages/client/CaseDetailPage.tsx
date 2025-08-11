@@ -223,12 +223,12 @@ const ClientCaseDetailPage = () => {
                           </p>
                         </div>
                       </div>
-                      <a
-                        href={`${getBackendUrl()}/api${doc.fileUrl}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 text-sm"
-                      >
+                                    <a
+                href={`${getBackendUrl()}${doc.fileUrl}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 text-sm"
+              >
                         Descargar
                       </a>
                     </div>

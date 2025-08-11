@@ -367,7 +367,7 @@ const CaseDetailPage = () => {
                         </div>
                       </div>
                       <a
-                        href={`${getBackendUrl()}/api${doc.fileUrl}`}
+                        href={`${getBackendUrl()}${doc.fileUrl}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:text-blue-800 text-sm"
