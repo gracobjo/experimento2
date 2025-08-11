@@ -466,8 +466,9 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
                        ? 'bg-blue-600 text-white'
                        : 'bg-gray-100 text-gray-800'
                    }`}
+                   style={{ userSelect: 'text', WebkitUserSelect: 'text', MozUserSelect: 'text', msUserSelect: 'text' }}
                  >
-                   <p className="text-sm select-text cursor-text">{message.text}</p>
+                   <p className="text-sm" style={{ userSelect: 'text', WebkitUserSelect: 'text', MozUserSelect: 'text', msUserSelect: 'text' }}>{message.text}</p>
                   <p className={`text-xs mt-1 ${
                     message.isUser ? 'text-blue-100' : 'text-gray-500'
                   }`}>
