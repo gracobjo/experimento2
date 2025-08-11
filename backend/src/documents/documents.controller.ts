@@ -253,9 +253,10 @@ export class DocumentsController {
   }
 
   @Get(':id')
+  @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
   @ApiOperation({ 
     summary: 'Obtener documento por ID',
-    description: 'Devuelve un documento específico por su ID'
+    description: 'Devuelve un documento específico por su ID. Los clientes solo pueden ver documentos de sus expedientes.'
   })
   @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
   @ApiResponse({ 
@@ -278,15 +279,17 @@ export class DocumentsController {
     }
   })
   @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Acceso prohibido' })
   @ApiResponse({ status: 404, description: 'Documento no encontrado' })
   findOne(@Param('id') id: string, @Request() req) {
     return this.documentsService.findOne(id, req.user.id, req.user.role);
   }
 
   @Get(':id/download')
+  @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
   @ApiOperation({ 
     summary: 'Descargar documento',
-    description: 'Descarga un documento específico'
+    description: 'Descarga un documento específico. Los clientes solo pueden descargar documentos de sus expedientes.'
   })
   @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
   @ApiResponse({ 
@@ -298,6 +301,7 @@ export class DocumentsController {
     }
   })
   @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Acceso prohibido' })
   @ApiResponse({ status: 404, description: 'Documento no encontrado' })
   async downloadDocument(
     @Param('id') id: string,
