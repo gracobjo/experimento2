@@ -55,6 +55,7 @@ import InvoicesPage from './pages/lawyer/InvoicesPage';
 import ProvisionFondosPage from './pages/lawyer/ProvisionFondosPage';
 import ProvisionesPage from './pages/client/ProvisionesPage';
 import AppointmentsPage from './pages/client/AppointmentsPage';
+import AppointmentDetailPage from './pages/client/AppointmentDetailPage';
 import DashboardLawyer from './pages/lawyer/DashboardLawyer';
 import UnauthorizedPage from './pages/auth/UnauthorizedPage';
 import PaymentsPage from './pages/client/PaymentsPage';
@@ -145,6 +146,7 @@ function App() {
                   <Route path="documents" element={<ClientDocumentsPage />} />
                   <Route path="provisiones" element={<ProvisionesPage />} />
                   <Route path="appointments" element={<AppointmentsPage />} />
+                  <Route path="appointments/:id" element={<AppointmentDetailPage />} />
                   <Route path="chat" element={<ChatPage />} />
                   <Route path="teleassistance" element={<ClientTeleassistancePage />} />
                   <Route path="teleassistance/request" element={<TeleassistanceRequestPage />} />
