@@ -455,14 +455,14 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
                 key={index}
                 className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
               >
-                <div
-                  className={`max-w-xs px-3 py-2 rounded-lg ${
-                    message.isUser
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}
-                >
-                  <p className="text-sm">{message.text}</p>
+                                 <div
+                   className={`max-w-xs px-3 py-2 rounded-lg ${
+                     message.isUser
+                       ? 'bg-blue-600 text-white'
+                       : 'bg-gray-100 text-gray-800'
+                   }`}
+                 >
+                   <p className="text-sm select-text cursor-text">{message.text}</p>
                   <p className={`text-xs mt-1 ${
                     message.isUser ? 'text-blue-100' : 'text-gray-500'
                   }`}>
