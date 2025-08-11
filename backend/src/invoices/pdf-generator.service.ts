@@ -46,6 +46,9 @@ export class PdfGeneratorService {
   async generateInvoicePdf(invoice: any): Promise<Buffer> {
     try {
       this.logger.log('Iniciando generación de PDF profesional');
+      this.logger.log(`Template path encontrado: ${this.templatePath}`);
+      this.logger.log(`Invoice ID: ${invoice.id}`);
+      this.logger.log(`Invoice número: ${invoice.numeroFactura}`);
 
       // 1. Generar QR
       // QR: ahora como JSON con datos fiscales y URL de verificación
@@ -74,9 +77,11 @@ export class PdfGeneratorService {
       const htmlContent = await this.generateHtml(templateData);
 
       // 4. Convertir HTML a PDF usando Puppeteer
+      this.logger.log('Convirtiendo HTML a PDF con Puppeteer...');
       const pdfBuffer = await this.htmlToPdf(htmlContent);
 
       this.logger.log('PDF generado exitosamente');
+      this.logger.log(`Tamaño del buffer final: ${pdfBuffer.length} bytes`);
       return pdfBuffer;
 
     } catch (error) {
@@ -507,6 +512,8 @@ export class PdfGeneratorService {
     let browser;
     try {
       this.logger.log('[PUPPETEER] Iniciando Puppeteer...');
+      this.logger.log(`[PUPPETEER] Longitud del HTML: ${htmlContent.length} caracteres`);
+      this.logger.log(`[PUPPETEER] Primeros 200 caracteres del HTML: ${htmlContent.substring(0, 200)}...`);
       browser = await puppeteer.launch({
         headless: true,
         args: [
@@ -663,6 +670,10 @@ export class PdfGeneratorService {
 
       this.logger.log(`[PUPPETEER] PDF generado. Tipo: ${typeof pdfBuffer}, Es Buffer: ${Buffer.isBuffer(pdfBuffer)}, Tamaño: ${pdfBuffer?.length || 'undefined'} bytes`);
       return pdfBuffer;
+    } catch (error) {
+      this.logger.error('[PUPPETEER] Error generando PDF:', error);
+      this.logger.error('[PUPPETEER] Stack trace:', (error as any).stack);
+      throw error;
     } finally {
       if (browser) await browser.close();
     }

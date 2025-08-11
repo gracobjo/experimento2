@@ -1232,15 +1232,18 @@ export class InvoicesService {
   async generateInvoicePdf(invoice: any): Promise<Buffer> {
     try {
       this.logger.log('Generando PDF profesional de la factura');
+      this.logger.log('Llamando a pdfGeneratorService.generateInvoicePdf()...');
       
       // Usar el servicio de generación de PDF profesional
       const pdfBuffer = await this.pdfGeneratorService.generateInvoicePdf(invoice);
       
       this.logger.log('PDF profesional generado exitosamente');
+      this.logger.log(`Tamaño del buffer: ${pdfBuffer.length} bytes`);
       return pdfBuffer;
       
     } catch (error) {
       this.logger.error('Error generando PDF profesional:', error);
+      this.logger.error('Stack trace:', (error as any).stack);
       
       // Fallback al PDF simple si falla el profesional
       this.logger.log('Usando fallback al PDF simple');
