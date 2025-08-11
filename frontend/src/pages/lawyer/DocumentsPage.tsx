@@ -52,6 +52,7 @@ const DocumentsPage = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadForm, setUploadForm] = useState({
+    title: '',
     expedienteId: '',
     description: ''
   });
@@ -139,13 +140,13 @@ const DocumentsPage = () => {
   const closeUploadModal = () => {
     setShowUploadModal(false);
     setSelectedFiles([]);
-    setUploadForm({ expedienteId: '', description: '' });
+    setUploadForm({ title: '', expedienteId: '', description: '' });
     setError(null);
   };
 
   const handleUpload = async () => {
-    if (selectedFiles.length === 0 || !uploadForm.expedienteId) {
-      setError('Por favor selecciona archivos y un expediente');
+    if (selectedFiles.length === 0 || !uploadForm.expedienteId || !uploadForm.title.trim()) {
+      setError('Por favor selecciona archivos, un expediente y un título para el documento');
       return;
     }
 
@@ -157,6 +158,7 @@ const DocumentsPage = () => {
       const uploadPromises = selectedFiles.map(file => {
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('title', uploadForm.title);
         formData.append('expedienteId', uploadForm.expedienteId);
         if (uploadForm.description) {
           formData.append('description', uploadForm.description);
@@ -598,6 +600,20 @@ const DocumentsPage = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Título del Documento *
+                </label>
+                <input
+                  type="text"
+                  value={uploadForm.title}
+                  onChange={(e) => setUploadForm(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Título del documento..."
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Expediente
                 </label>
                 <select
@@ -662,13 +678,13 @@ const DocumentsPage = () => {
               >
                 Cancelar
               </button>
-              <button
-                onClick={handleUpload}
-                disabled={uploading || selectedFiles.length === 0 || !uploadForm.expedienteId}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {uploading ? 'Subiendo...' : 'Subir Documentos'}
-              </button>
+                              <button
+                  onClick={handleUpload}
+                  disabled={uploading || selectedFiles.length === 0 || !uploadForm.expedienteId || !uploadForm.title.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {uploading ? 'Subiendo...' : 'Subir Documentos'}
+                </button>
             </div>
           </div>
         </div>
