@@ -4,14 +4,14 @@
 
 **Error actual:**
 ```
-Access to XMLHttpRequest at 'https://experimento2-production.up.railway.app/socket.io/?EIO=4&transport=polling&t=zebfun2u' from origin 'https://experimento2-fenm.vercel.app' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'http://localhost:5173' that is not equal to the supplied origin.
+Access to XMLHttpRequest at 'experimento2-production-54c0.up.railway.app/socket.io/?EIO=4&transport=polling&t=zebfun2u' from origin 'https://experimento2-fenm.vercel.app' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'http://localhost:5173' that is not equal to the supplied origin.
 ```
 
 ## 📋 Análisis del Problema
 
 ### ¿Qué está pasando?
 1. **Frontend**: Hosted on Vercel at `https://experimento2-fenm.vercel.app`
-2. **Backend**: Hosted on Railway at `https://experimento2-production.up.railway.app`
+2. **Backend**: Hosted on Railway at `experimento2-production-54c0.up.railway.app`
 3. **CORS Issue**: El backend solo permite `http://localhost:5173` en lugar del dominio de Vercel
 
 ### ¿Por qué ocurre?
@@ -41,7 +41,7 @@ const corsOrigins = process.env.CORS_ORIGIN
       'http://localhost:3000',
       'http://localhost:8080',
       'https://experimento2-fenm.vercel.app',
-      'https://experimento2-production.up.railway.app',
+      'experimento2-production-54c0.up.railway.app',
       /^https:\/\/.*\.vercel\.app$/,
       /^https:\/\/.*\.railway\.app$/
     ];
@@ -73,7 +73,7 @@ app.enableCors({
           'http://localhost:5173',
           'http://localhost:3000',
           'https://experimento2-fenm.vercel.app',
-          'https://experimento2-production.up.railway.app',
+          'experimento2-production-54c0.up.railway.app',
           /^https:\/\/.*\.vercel\.app$/,
           /^https:\/\/.*\.railway\.app$/
         ],
@@ -90,7 +90,7 @@ app.enableCors({
 3. Ve a la pestaña "Variables"
 4. Agrega/modifica la variable:
    ```
-   CORS_ORIGIN=http://localhost:5173,http://localhost:3000,https://experimento2-fenm.vercel.app,https://experimento2-production.up.railway.app
+   CORS_ORIGIN=http://localhost:5173,http://localhost:3000,https://experimento2-fenm.vercel.app,experimento2-production-54c0.up.railway.app
    ```
 
 #### Usando Railway CLI:
@@ -99,7 +99,7 @@ app.enableCors({
 npm install -g @railway/cli
 
 # Configurar CORS
-railway variables set CORS_ORIGIN="http://localhost:5173,http://localhost:3000,https://experimento2-fenm.vercel.app,https://experimento2-production.up.railway.app"
+railway variables set CORS_ORIGIN="http://localhost:5173,http://localhost:3000,https://experimento2-fenm.vercel.app,experimento2-production-54c0.up.railway.app"
 
 # Reiniciar servicio
 railway service restart
@@ -128,7 +128,7 @@ node scripts/fix-cors-railway.js
    - Ve a tu proyecto en Railway
    - Selecciona el servicio backend
    - Variables → Agregar `CORS_ORIGIN`
-   - Valor: `http://localhost:5173,http://localhost:3000,https://experimento2-fenm.vercel.app,https://experimento2-production.up.railway.app`
+   - Valor: `http://localhost:5173,http://localhost:3000,https://experimento2-fenm.vercel.app,experimento2-production-54c0.up.railway.app`
    - Reiniciar servicio
 
 2. **Verificar cambios:**
@@ -143,13 +143,13 @@ curl -H "Origin: https://experimento2-fenm.vercel.app" \
      -H "Access-Control-Request-Method: POST" \
      -H "Access-Control-Request-Headers: Content-Type" \
      -X OPTIONS \
-     https://experimento2-production.up.railway.app/api/auth/login
+     experimento2-production-54c0.up.railway.app/api/auth/login
 ```
 
 ### 2. Verificar WebSocket Connection
 ```javascript
 // En la consola del navegador
-const socket = io('https://experimento2-production.up.railway.app', {
+const socket = io('experimento2-production-54c0.up.railway.app', {
   withCredentials: true,
   auth: {
     user: { id: 'test', role: 'CLIENTE', name: 'Test User' }
@@ -195,7 +195,7 @@ railway logs
 3. **Probar con curl:**
    ```bash
    curl -I -H "Origin: https://experimento2-fenm.vercel.app" \
-        https://experimento2-production.up.railway.app/api/health
+        experimento2-production-54c0.up.railway.app/api/health
    ```
 
 4. **Verificar configuración de Railway:**

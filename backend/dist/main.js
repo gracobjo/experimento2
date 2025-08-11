@@ -67,7 +67,7 @@ async function bootstrap() {
             'http://localhost:3000',
             'http://localhost:8080',
             'https://experimento2-fenm.vercel.app',
-            'https://experimento2-production.up.railway.app',
+            'experimento2-production-54c0.up.railway.app',
             /^https:\/\/.*\.vercel\.app$/,
             /^https:\/\/.*\.railway\.app$/
         ];
@@ -230,7 +230,7 @@ async function bootstrap() {
     const port = process.env.PORT || 3000;
     await app.listen(port, '0.0.0.0');
     console.log(`🚀 Servidor corriendo en puerto ${port}`);
-    console.log(`🌍 CORS origins configurados: http://localhost:5173, http://localhost:3000, https://experimento2-fenm.vercel.app, https://experimento2-production.up.railway.app, *.vercel.app, *.railway.app`);
+    console.log(`🌍 CORS origins configurados: http://localhost:5173, http://localhost:3000, https://experimento2-fenm.vercel.app, experimento2-production-54c0.up.railway.app, *.vercel.app, *.railway.app`);
     console.log(`📁 Archivos estáticos disponibles en /uploads`);
     console.log(`📚 Documentación Swagger disponible en /docs`);
     console.log(`💚 Health check disponible en /health`);
@@ -13899,7 +13899,7 @@ exports.ChatGateway = ChatGateway = __decorate([
                     'http://localhost:5173',
                     'http://localhost:3000',
                     'https://experimento2-fenm.vercel.app',
-                    'https://experimento2-production.up.railway.app',
+                    'experimento2-production-54c0.up.railway.app',
                     /^https:\/\/.*\.vercel\.app$/,
                     /^https:\/\/.*\.railway\.app$/
                 ],

@@ -19,7 +19,7 @@ Esta carpeta contiene todos los diagramas UML del sistema de gestión legal, inc
 
 **URLs del Sistema:**
 - Frontend: `https://experimento2-fenm.vercel.app`
-- Backend: `https://experimento2-production.up.railway.app`
+- Backend: `experimento2-production-54c0.up.railway.app`
 - Chatbot: `https://chatbot-legal-production-b91c.up.railway.app`
 
 ### 2. 🏛️ **Diagrama de Clases** (`class-diagram.mmd`)

@@ -11,7 +11,7 @@
     "restartPolicyMaxRetries": 10
   },
   "variables": {
-    "CORS_ORIGIN": "https://experimento2-fenm.vercel.app,https://experimento2-production.up.railway.app,https://experimento2-production-54c0.up.railway.app,http://localhost:5173,http://localhost:3000",
+    "CORS_ORIGIN": "https://experimento2-fenm.vercel.app,experimento2-production-54c0.up.railway.app,https://experimento2-production-54c0.up.railway.app,http://localhost:5173,http://localhost:3000",
     "BACKEND_URL": "https://experimento2-production-54c0.up.railway.app",
     "FRONTEND_URL": "https://experimento2-fenm.vercel.app"
   }

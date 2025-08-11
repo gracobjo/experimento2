@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import QuickActions from '../../components/QuickActions';
 import NotesList from '../../components/NotesList';
 import FileUpload from '../../components/forms/FileUpload';
+import { getBackendUrl } from '../../config/endpoints';
 
 interface Case {
   id: string;
@@ -366,7 +367,7 @@ const CaseDetailPage = () => {
                         </div>
                       </div>
                       <a
-                        href={doc.fileUrl}
+                        href={`${getBackendUrl()}/api${doc.fileUrl}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:text-blue-800 text-sm"

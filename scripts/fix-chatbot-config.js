@@ -13,10 +13,10 @@ console.log('🔧 Verificando configuración del chatbot...');
 
 // Configuración correcta
 const correctConfig = {
-  BACKEND_URL: 'https://experimento2-production.up.railway.app',
+  BACKEND_URL: 'experimento2-production-54c0.up.railway.app',
   CHATBOT_PORT: '8000',
   CHATBOT_HOST: '0.0.0.0',
-  CORS_ORIGINS: 'https://experimento2-fenm.vercel.app,https://experimento2-production.up.railway.app,http://localhost:5173,http://localhost:3000'
+  CORS_ORIGINS: 'https://experimento2-fenm.vercel.app,experimento2-production-54c0.up.railway.app,http://localhost:5173,http://localhost:3000'
 };
 
 // Verificar archivo de configuración
@@ -85,7 +85,7 @@ if (fs.existsSync(mainPath)) {
     console.log('🔄 Actualizando URL del backend en main.py...');
     mainContent = mainContent.replace(
       'BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:3000")',
-      'BACKEND_URL = os.getenv("BACKEND_URL", "https://experimento2-production.up.railway.app")'
+      'BACKEND_URL = os.getenv("BACKEND_URL", "experimento2-production-54c0.up.railway.app")'
     );
     fs.writeFileSync(mainPath, mainContent);
     console.log('✅ URL del backend actualizada');
@@ -103,5 +103,5 @@ console.log('3. Prueba el flujo de citas desde el frontend');
 
 console.log('\n🔍 Para verificar la configuración:');
 console.log('- Chatbot: https://chatbot-legal-production-b91c.up.railway.app/health');
-console.log('- Backend: https://experimento2-production.up.railway.app/health');
+console.log('- Backend: experimento2-production-54c0.up.railway.app/health');
 console.log('- Frontend: https://experimento2-fenm.vercel.app');

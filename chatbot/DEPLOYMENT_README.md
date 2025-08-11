@@ -67,7 +67,7 @@ chatbot/
 ### **3. Variables de Entorno Requeridas**
 ```env
 # URLs del sistema
-BACKEND_URL=https://experimento2-production.up.railway.app
+BACKEND_URL=experimento2-production-54c0.up.railway.app
 FRONTEND_URL=https://experimento2-fenm.vercel.app
 
 # Configuración del servidor
@@ -79,7 +79,7 @@ LOG_LEVEL=INFO
 CLEANUP_INTERVAL=300
 
 # CORS
-ALLOWED_ORIGINS=http://localhost:5173,https://experimento2-fenm.vercel.app,https://experimento2-production.up.railway.app
+ALLOWED_ORIGINS=http://localhost:5173,https://experimento2-fenm.vercel.app,experimento2-production-54c0.up.railway.app
 
 # Servicios de IA (opcionales)
 HF_API_TOKEN=your_huggingface_token_here
@@ -324,7 +324,7 @@ railway logs
 
 ### **2. Configurar Variables de Entorno**
 ```env
-BACKEND_URL=https://experimento2-production.up.railway.app
+BACKEND_URL=experimento2-production-54c0.up.railway.app
 FRONTEND_URL=https://experimento2-fenm.vercel.app
 PORT=8000
 ```

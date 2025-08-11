@@ -25,7 +25,7 @@ interface ConnectedUser {
           'http://localhost:5173',
           'http://localhost:3000',
           'https://experimento2-fenm.vercel.app',
-          'https://experimento2-production.up.railway.app',
+          'experimento2-production-54c0.up.railway.app',
           /^https:\/\/.*\.vercel\.app$/,
           /^https:\/\/.*\.railway\.app$/
         ],

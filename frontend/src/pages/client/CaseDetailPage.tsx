@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import QuickActions from '../../components/QuickActions';
 import LawyerContactModal from '../../components/LawyerContactModal';
+import { getBackendUrl } from '../../config/endpoints';
 
 interface Case {
   id: string;
@@ -223,7 +224,7 @@ const ClientCaseDetailPage = () => {
                         </div>
                       </div>
                       <a
-                        href={doc.fileUrl}
+                        href={`${getBackendUrl()}/api${doc.fileUrl}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:text-blue-800 text-sm"

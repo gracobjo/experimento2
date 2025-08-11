@@ -307,10 +307,10 @@ Solución: Configuración de healthcheckTimeout y endpoints
 curl https://experimento2-production-54c0.up.railway.app/db-status
 
 # Verificar health check
-curl https://experimento2-production.up.railway.app/health
+curl experimento2-production-54c0.up.railway.app/health
 
 # Verificar variables de entorno
-curl https://experimento2-production.up.railway.app/debug-env
+curl experimento2-production-54c0.up.railway.app/debug-env
 ```
 
 ---

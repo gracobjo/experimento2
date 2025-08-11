@@ -55,7 +55,7 @@ echo "🔍 Verificando conexión con el backend..."
 python -c "
 import requests
 import os
-backend_url = os.getenv('BACKEND_URL', 'https://experimento2-production.up.railway.app')
+backend_url = os.getenv('BACKEND_URL', 'experimento2-production-54c0.up.railway.app')
 try:
     response = requests.get(f'{backend_url}/health', timeout=10)
     if response.status_code == 200:

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/axios';
+import { getBackendUrl } from '../../config/endpoints';
 
 interface Document {
   id: string;
@@ -288,7 +289,7 @@ const DocumentsManagementPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <a
-                          href={doc.fileUrl}
+                          href={`${getBackendUrl()}/api${doc.fileUrl}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-600 hover:text-blue-900"

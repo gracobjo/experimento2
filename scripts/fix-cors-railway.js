@@ -14,7 +14,7 @@ const corsOrigins = [
   'http://localhost:5173',
   'http://localhost:3000', 
   'https://experimento2-fenm.vercel.app',
-  'https://experimento2-production.up.railway.app'
+  'experimento2-production-54c0.up.railway.app'
 ].join(',');
 
 console.log('🔧 Configurando CORS en Railway...');

@@ -30,62 +30,13 @@ async function bootstrap() {
         'http://localhost:3000',
         'http://localhost:8080',
         'https://experimento2-fenm.vercel.app',
-        'https://experimento2-production.up.railway.app',
-        'https://experimento2-production-54c0.up.railway.app',
+        'experimento2-production-54c0.up.railway.app',
         /^https:\/\/.*\.vercel\.app$/,
         /^https:\/\/.*\.railway\.app$/
       ];
 
-  console.log('🔧 [CORS] Configurando CORS con orígenes:', corsOrigins);
-  console.log('🔧 [CORS] CORS_ORIGIN env:', process.env.CORS_ORIGIN || 'No configurado');
-
   app.enableCors({
-    origin: (origin, callback) => {
-      console.log('🔧 [CORS] Petición desde origen:', origin);
-      
-      // Permitir peticiones sin origen (como herramientas de desarrollo)
-      if (!origin) {
-        console.log('🔧 [CORS] Sin origen - permitiendo');
-        return callback(null, true);
-      }
-      
-      // Verificar si el origen está en la lista permitida
-      let isAllowed = false;
-      
-      for (const allowedOrigin of corsOrigins) {
-        if (typeof allowedOrigin === 'string') {
-          if (allowedOrigin === origin) {
-            isAllowed = true;
-            break;
-          }
-        } else if (allowedOrigin instanceof RegExp) {
-          if (allowedOrigin.test(origin)) {
-            isAllowed = true;
-            break;
-          }
-        }
-      }
-      
-      // Logging detallado para debug
-      console.log('🔧 [CORS] Verificando origen:', origin);
-      console.log('🔧 [CORS] Orígenes permitidos:', corsOrigins);
-      console.log('🔧 [CORS] ¿Está permitido?', isAllowed);
-      
-      if (isAllowed) {
-        console.log('🔧 [CORS] Origen permitido:', origin);
-        callback(null, true);
-      } else {
-        console.log('🔧 [CORS] Origen bloqueado:', origin);
-        // FALLBACK: Si no está en la lista, verificar patrones adicionales
-        if (origin.includes('vercel.app') || origin.includes('railway.app')) {
-          console.log('🔧 [CORS] FALLBACK: Origen permitido por patrón:', origin);
-          callback(null, true);
-        } else {
-          console.log('🔧 [CORS] Origen definitivamente bloqueado:', origin);
-          callback(new Error('Not allowed by CORS'));
-        }
-      }
-    },
+    origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
@@ -264,65 +215,10 @@ async function bootstrap() {
   // Servir archivos estáticos desde la carpeta uploads
   app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
-  // Endpoint de debug CORS usando express directamente
-  app.use('/debug-cors', (req, res) => {
-    const origin = req.headers.origin;
-    const corsOrigins = process.env.CORS_ORIGIN
-      ? process.env.CORS_ORIGIN.split(',')
-      : [
-          'http://localhost:5173',
-          'http://localhost:3000',
-          'http://localhost:8080',
-          'https://experimento2-fenm.vercel.app',
-          'https://experimento2-production.up.railway.app',
-          'https://experimento2-production-54c0.up.railway.app',
-          /^https:\/\/.*\.vercel\.app$/,
-          /^https:\/\/.*\.railway\.app$/
-        ];
-    
-         // Usar la misma lógica que la función CORS principal
-     let isOriginAllowed = false;
-     
-     for (const allowedOrigin of corsOrigins) {
-       if (typeof allowedOrigin === 'string') {
-         if (allowedOrigin === origin) {
-           isOriginAllowed = true;
-           break;
-         }
-       } else if (allowedOrigin instanceof RegExp) {
-         if (allowedOrigin.test(origin)) {
-           isOriginAllowed = true;
-           break;
-         }
-       }
-     }
-     
-     // Aplicar el mismo fallback que la función CORS principal
-     if (!isOriginAllowed && origin && (origin.includes('vercel.app') || origin.includes('railway.app'))) {
-       isOriginAllowed = true;
-     }
-     
-     res.json({
-       message: 'Debug CORS',
-       timestamp: new Date().toISOString(),
-       requestOrigin: origin,
-       corsOrigins: corsOrigins,
-       corsOriginEnv: process.env.CORS_ORIGIN || 'No configurado',
-       headers: req.headers,
-       isOriginAllowed: isOriginAllowed,
-       debugInfo: {
-         originType: typeof origin,
-         originLength: origin ? origin.length : 0,
-         corsOriginsCount: corsOrigins.length,
-         corsOriginsTypes: corsOrigins.map(o => typeof o)
-       }
-     });
-  });
-
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 Servidor corriendo en puerto ${port}`);
-  console.log(`🌍 CORS origins configurados: http://localhost:5173, http://localhost:3000, https://experimento2-fenm.vercel.app, https://experimento2-production.up.railway.app, *.vercel.app, *.railway.app`);
+  console.log(`🌍 CORS origins configurados: http://localhost:5173, http://localhost:3000, https://experimento2-fenm.vercel.app, experimento2-production-54c0.up.railway.app, *.vercel.app, *.railway.app`);
   console.log(`📁 Archivos estáticos disponibles en /uploads`);
   console.log(`📚 Documentación Swagger disponible en /docs`);
   console.log(`💚 Health check disponible en /health`);

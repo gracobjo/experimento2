@@ -7,7 +7,7 @@ El chatbot ahora lee la variable de entorno `CORS_ORIGIN` para configurar CORS d
 ## 🔧 **Variables de Entorno Requeridas en Railway:**
 
 ```bash
-CORS_ORIGIN=https://experimento2-fenm.vercel.app,https://experimento2-production.up.railway.app,https://experimento2-production-54c0.up.railway.app,http://localhost:5173,http://localhost:3000
+CORS_ORIGIN=https://experimento2-fenm.vercel.app,experimento2-production-54c0.up.railway.app,https://experimento2-production-54c0.up.railway.app,http://localhost:5173,http://localhost:3000
 BACKEND_URL=https://experimento2-production-54c0.up.railway.app
 FRONTEND_URL=https://experimento2-fenm.vercel.app
 ```
@@ -43,8 +43,8 @@ GET https://tu-chatbot.up.railway.app/test-cors
 {
   "message": "CORS test successful",
   "timestamp": "2025-01-27T...",
-  "cors_origins": "https://experimento2-fenm.vercel.app,https://experimento2-production.up.railway.app,...",
-  "allowed_origins": ["https://experimento2-fenm.vercel.app", "https://experimento2-production.up.railway.app", ...]
+  "cors_origins": "https://experimento2-fenm.vercel.app,experimento2-production-54c0.up.railway.app,...",
+  "allowed_origins": ["https://experimento2-fenm.vercel.app", "experimento2-production-54c0.up.railway.app", ...]
 }
 ```
 
@@ -69,7 +69,7 @@ Content-Type: application/json
 
 ### **Logs esperados al iniciar:**
 ```
-[CORS] Configurando con dominios: ['https://experimento2-fenm.vercel.app', 'https://experimento2-production.up.railway.app', ...]
+[CORS] Configurando con dominios: ['https://experimento2-fenm.vercel.app', 'experimento2-production-54c0.up.railway.app', ...]
 ```
 
 ## ✅ **Verificación Final:**

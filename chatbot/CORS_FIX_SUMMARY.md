@@ -39,7 +39,7 @@ else:
         "http://localhost:5173",
         "http://localhost:3000",
         "https://experimento2-fenm.vercel.app",
-        "https://experimento2-production.up.railway.app",
+        "experimento2-production-54c0.up.railway.app",
         "https://experimento2-production-54c0.up.railway.app",
         "https://chatbot-legal-production-b91c.up.railway.app",
         "https://chatbot-legal-production.up.railway.app",
@@ -119,7 +119,7 @@ async def test_cors():
 ```json
 {
   "variables": {
-    "CORS_ORIGIN": "https://experimento2-fenm.vercel.app,https://experimento2-production.up.railway.app,https://experimento2-production-54c0.up.railway.app,http://localhost:5173,http://localhost:3000",
+    "CORS_ORIGIN": "https://experimento2-fenm.vercel.app,experimento2-production-54c0.up.railway.app,https://experimento2-production-54c0.up.railway.app,http://localhost:5173,http://localhost:3000",
     "BACKEND_URL": "https://experimento2-production-54c0.up.railway.app",
     "FRONTEND_URL": "https://experimento2-fenm.vercel.app"
   }
@@ -130,7 +130,7 @@ async def test_cors():
 
 ```bash
 # En Railway - Variables del Chatbot
-CORS_ORIGIN=https://experimento2-fenm.vercel.app,https://experimento2-production.up.railway.app,https://experimento2-production-54c0.up.railway.app,http://localhost:5173,http://localhost:3000
+CORS_ORIGIN=https://experimento2-fenm.vercel.app,experimento2-production-54c0.up.railway.app,https://experimento2-production-54c0.up.railway.app,http://localhost:5173,http://localhost:3000
 BACKEND_URL=https://experimento2-production-54c0.up.railway.app
 FRONTEND_URL=https://experimento2-fenm.vercel.app
 ```
@@ -144,7 +144,7 @@ GET https://chatbot-legal-production-b91c.up.railway.app/test-cors
 
 ### **2. Logs al Iniciar:**
 ```
-[CORS] Configurando con dominios: ['https://experimento2-fenm.vercel.app', 'https://experimento2-production.up.railway.app', ...]
+[CORS] Configurando con dominios: ['https://experimento2-fenm.vercel.app', 'experimento2-production-54c0.up.railway.app', ...]
 ```
 
 ### **3. Chat Funcionando:**

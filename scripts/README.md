@@ -89,7 +89,7 @@ El script incluye un mapeo automático de iconos:
 
 ```javascript
 // Verificar servicios en la API
-fetch('https://experimento2-production.up.railway.app/api/parametros/services')
+fetch('experimento2-production-54c0.up.railway.app/api/parametros/services')
   .then(response => response.json())
   .then(data => console.log('Servicios:', data))
   .catch(error => console.error('Error:', error));

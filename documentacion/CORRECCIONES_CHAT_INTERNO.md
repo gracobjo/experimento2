@@ -169,7 +169,7 @@ const handleSendMessage = async (e: React.FormEvent) => {
 
 ## 📝 Notas Técnicas
 
-- **WebSocket URL**: `https://experimento2-production.up.railway.app`
+- **WebSocket URL**: `experimento2-production-54c0.up.railway.app`
 - **Autenticación**: Token JWT desde localStorage
 - **Eventos WebSocket**: `send_message`, `new_message`, `typing_start`, `typing_stop`
 - **Validaciones**: Mensaje no vacío, conversación seleccionada, socket conectado

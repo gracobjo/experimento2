@@ -76,7 +76,7 @@ print(f"[DEBUG] HF_API_TOKEN loaded: {bool(HF_API_TOKEN)}")
 HF_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
 
 # Configuración del backend
-BACKEND_URL = os.getenv("BACKEND_URL", "https://experimento2-production.up.railway.app")
+BACKEND_URL = os.getenv("BACKEND_URL", "experimento2-production-54c0.up.railway.app")
 
 # Descargar recursos necesarios de NLTK
 nltk.download('punkt', quiet=True)
@@ -107,7 +107,7 @@ else:
         "http://localhost:5173",
         "http://localhost:3000",
         "https://experimento2-fenm.vercel.app",
-        "https://experimento2-production.up.railway.app",
+        "experimento2-production-54c0.up.railway.app",
         "https://experimento2-production-54c0.up.railway.app",
         "https://chatbot-legal-production-b91c.up.railway.app",
         "https://chatbot-legal-production-b91c.up.railway.app",

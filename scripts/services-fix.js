@@ -32,7 +32,7 @@
 function diagnoseServices() {
   console.log('=== DIAGNÓSTICO DE SERVICIOS ===');
   
-  fetch('https://experimento2-production.up.railway.app/api/parametros/services')
+  fetch('experimento2-production-54c0.up.railway.app/api/parametros/services')
     .then(response => response.json())
     .then(services => {
       console.log('Servicios completos:', services);
@@ -63,7 +63,7 @@ function diagnoseServices() {
  */
 async function updateDashboardServices() {
   try {
-    const response = await fetch('https://experimento2-production.up.railway.app/api/parametros/services');
+    const response = await fetch('experimento2-production-54c0.up.railway.app/api/parametros/services');
     const services = await response.json();
     
     const serviceSection = document.querySelector('.bg-white.p-6.rounded-lg.border');
@@ -154,7 +154,7 @@ function getIcon(iconName) {
  */
 async function updateServicesWithIcons() {
   try {
-    const response = await fetch('https://experimento2-production.up.railway.app/api/parametros/services');
+    const response = await fetch('experimento2-production-54c0.up.railway.app/api/parametros/services');
     const services = await response.json();
     
     console.log('Servicios con iconos originales:', services.map(s => ({ title: s.TITLE, icon: s.ICON })));
@@ -242,7 +242,7 @@ async function updateServicesWithIcons() {
   
   async function updateServices() {
     try {
-      const response = await fetch('https://experimento2-production.up.railway.app/api/parametros/services');
+      const response = await fetch('experimento2-production-54c0.up.railway.app/api/parametros/services');
       const services = await response.json();
       
       // Actualizar dashboard

@@ -78,21 +78,21 @@ else:
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:3000")
 
 # Después
-BACKEND_URL = os.getenv("BACKEND_URL", "https://experimento2-production.up.railway.app")
+BACKEND_URL = os.getenv("BACKEND_URL", "experimento2-production-54c0.up.railway.app")
 ```
 
 #### Archivo de configuración `chatbot/config/config.env`:
 
 ```env
 # Configuración del Backend
-BACKEND_URL=https://experimento2-production.up.railway.app
+BACKEND_URL=experimento2-production-54c0.up.railway.app
 
 # Configuración del Chatbot
 CHATBOT_PORT=8000
 CHATBOT_HOST=0.0.0.0
 
 # Configuración de CORS
-CORS_ORIGINS=https://experimento2-fenm.vercel.app,https://experimento2-production.up.railway.app,http://localhost:5173,http://localhost:3000
+CORS_ORIGINS=https://experimento2-fenm.vercel.app,experimento2-production-54c0.up.railway.app,http://localhost:5173,http://localhost:3000
 ```
 
 ### 3. **Corrección del Foco en el Input**
@@ -226,7 +226,7 @@ node scripts/fix-chatbot-config.js
 
 ```bash
 # Verificar backend
-curl https://experimento2-production.up.railway.app/health
+curl experimento2-production-54c0.up.railway.app/health
 
 # Verificar chatbot
 curl https://chatbot-legal-production-b91c.up.railway.app/health
