@@ -769,7 +769,7 @@ const InvoicesPage = () => {
       aplicarIVA: inv.aplicarIVA !== false, // default true si no existe
       retencion: inv.retencion ?? '',
       descuento: inv.descuento ?? '',
-      tipoImpuesto: inv.tipoImpuesto || (inv.retencion && inv.retencion > 0 ? 'retencion' : 'iva'),
+      tipoImpuesto: inv.tipoImpuesto || (inv.retencion && Number(inv.retencion) > 0 ? 'retencion' : 'iva'),
       // Formatear fechaOperacion para el input de tipo date (yyyy-MM-dd)
       fechaOperacion: inv.fechaOperacion ? inv.fechaOperacion.slice(0, 10) : '',
     };
@@ -915,6 +915,7 @@ const InvoicesPage = () => {
     const [html, setHtml] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isPrinting, setIsPrinting] = useState(false);
 
     useEffect(() => {
       const fetchHtml = async () => {
@@ -954,41 +955,167 @@ const InvoicesPage = () => {
         }
       };
       fetchHtml();
+
+      // Listener para mensajes de impresión completada
+      const handlePrintMessage = (event: MessageEvent) => {
+        if (event.data === 'print-completed') {
+          console.log('[FRONTEND] Impresión completada, reseteando estado');
+          setIsPrinting(false);
+        }
+      };
+
+      window.addEventListener('message', handlePrintMessage);
+
+      return () => {
+        window.removeEventListener('message', handlePrintMessage);
+      };
     }, [invoice.id]);
 
     const handlePrint = () => {
+      // Verificar que el HTML esté cargado
+      if (!html || html.trim() === '') {
+        console.error('[FRONTEND] No hay HTML disponible para imprimir');
+        alert('Error: No hay contenido disponible para imprimir. Por favor, espere a que se cargue la factura.');
+        return;
+      }
+
+      // Evitar múltiples clics
+      if (isPrinting) {
+        console.log('[FRONTEND] Impresión ya en progreso');
+        return;
+      }
+
+      setIsPrinting(true);
+      console.log('[FRONTEND] Iniciando impresión con HTML de longitud:', html.length);
+      
+      // Timeout de seguridad para resetear el estado
+      setTimeout(() => {
+        console.warn('[FRONTEND] Timeout de seguridad para impresión');
+        setIsPrinting(false);
+      }, 30000); // 30 segundos
+      
       // Crear una nueva ventana para imprimir solo el contenido de la factura
-      const printWindow = window.open('', '_blank');
+      const printWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
       if (printWindow) {
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Factura ${invoice.numeroFactura}</title>
-            <style>
-              @media print {
-                body { margin: 0; padding: 0; }
-                .no-print { display: none !important; }
-              }
-              body { font-family: Arial, sans-serif; }
-            </style>
-          </head>
-          <body>
-            ${html}
-          </body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
+        try {
+          // Escribir el contenido completo con estilos
+          printWindow.document.write(`
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Factura ${invoice.numeroFactura}</title>
+              <style>
+                @media print {
+                  body { 
+                    margin: 0; 
+                    padding: 0; 
+                    font-size: 12pt;
+                  }
+                  .no-print { display: none !important; }
+                  .invoice-content { 
+                    padding: 0; 
+                    margin: 0; 
+                    box-shadow: none; 
+                    border-radius: 0; 
+                  }
+                  @page {
+                    margin: 1cm;
+                    size: A4;
+                  }
+                }
+                body { 
+                  font-family: Arial, sans-serif; 
+                  margin: 0;
+                  padding: 20px;
+                  background: white;
+                }
+                .invoice-content {
+                  background: white;
+                  padding: 20px;
+                  border-radius: 8px;
+                  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                }
+                .print-header {
+                  text-align: center;
+                  margin-bottom: 20px;
+                  padding: 10px;
+                  background: #f8f9fa;
+                  border-radius: 5px;
+                  display: none;
+                }
+                @media print {
+                  .print-header { display: block; }
+                }
+              </style>
+            </head>
+            <body>
+              <div class="print-header">
+                <h2>Factura ${invoice.numeroFactura}</h2>
+                <p>Fecha: ${invoice.fechaFactura ? new Date(invoice.fechaFactura).toLocaleDateString('es-ES') : 'N/A'}</p>
+                <p>Estado: ${invoice.estado?.toUpperCase() || 'N/A'}</p>
+              </div>
+              <div class="invoice-content">
+                ${html}
+              </div>
+              <script>
+                // Esperar a que se cargue todo el contenido antes de imprimir
+                window.onload = function() {
+                  setTimeout(function() {
+                    window.print();
+                    // Cerrar la ventana después de un breve delay
+                    setTimeout(function() {
+                      window.close();
+                      // Notificar al padre que la impresión se completó
+                      if (window.opener) {
+                        window.opener.postMessage('print-completed', '*');
+                      }
+                    }, 1000);
+                  }, 500);
+                };
+              </script>
+            </body>
+            </html>
+          `);
+          
+          printWindow.document.close();
+          printWindow.focus();
+          
+          // Log para debug
+          console.log('[FRONTEND] Ventana de impresión creada correctamente');
+          
+        } catch (error) {
+          console.error('[FRONTEND] Error al crear ventana de impresión:', error);
+          printWindow.close();
+          
+          // Fallback: usar window.print() directamente
+          console.log('[FRONTEND] Usando fallback de impresión directa');
+          try {
+            window.print();
+            // Resetear estado después de un delay
+            setTimeout(() => setIsPrinting(false), 2000);
+          } catch (fallbackError) {
+            console.error('[FRONTEND] Error en fallback de impresión:', fallbackError);
+            setIsPrinting(false);
+            alert('Error al imprimir. Por favor, intente nuevamente.');
+          }
+        }
       } else {
+        console.warn('[FRONTEND] No se pudo abrir ventana de impresión, usando fallback');
         // Fallback si no se puede abrir ventana
-        window.print();
+        alert('No se pudo abrir la ventana de impresión. Se usará la impresión del navegador.');
+        try {
+          window.print();
+          // Resetear estado después de un delay
+          setTimeout(() => setIsPrinting(false), 2000);
+        } catch (fallbackError) {
+          console.error('[FRONTEND] Error en fallback de impresión:', fallbackError);
+          setIsPrinting(false);
+          alert('Error al imprimir. Por favor, intente nuevamente.');
+        }
       }
     };
-
-
 
     if (loading) return <div className="p-8 text-center">Cargando previsualización...</div>;
     if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
@@ -1019,14 +1146,32 @@ const InvoicesPage = () => {
         <div className="flex gap-4 mt-8 justify-center no-print">
           <button 
             onClick={handlePrint} 
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            disabled={!html || html.trim() === '' || isPrinting}
+            className={`px-4 py-2 rounded transition-colors ${
+              !html || html.trim() === '' || isPrinting
+                ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+            title={
+              !html || html.trim() === '' 
+                ? 'Espere a que se cargue la factura' 
+                : isPrinting 
+                  ? 'Imprimiendo...' 
+                  : 'Imprimir factura'
+            }
           >
-            🖨️ Imprimir
+            🖨️ {
+              !html || html.trim() === '' 
+                ? 'Cargando...' 
+                : isPrinting 
+                  ? 'Imprimiendo...' 
+                  : 'Imprimir'
+            }
           </button>
         </div>
         
         {/* Estilos CSS para impresión */}
-        <style jsx>{`
+        <style>{`
           @media print {
             .no-print { display: none !important; }
             body { margin: 0; padding: 0; }
