@@ -13,23 +13,37 @@ export class PdfGeneratorService {
   constructor(private readonly parametrosService: ParametrosService) {
     // Buscar el template en múltiples ubicaciones posibles
     const possiblePaths = [
-      // Template original con formato profesional
+      // Template principal con formato profesional (PRIORIDAD ALTA)
       path.join(process.cwd(), 'src', 'invoices', 'templates', 'invoice-template.html'),
       // En desarrollo
       path.join(__dirname, 'templates', 'invoice-template.html'),
       // En producción (después del build)
       path.join(__dirname, 'invoices', 'templates', 'invoice-template.html'),
       // Ruta absoluta desde el directorio del proyecto
-      path.join(process.cwd(), 'dist', 'invoices', 'templates', 'invoice-template.html'),
-      // Template simplificado como fallback
-      path.join(process.cwd(), 'src', 'invoices', 'templates', 'invoice-template-simple.html')
+      path.join(process.cwd(), 'dist', 'invoices', 'templates', 'invoice-template.html')
+      // REMOVIDO: Template simplificado como fallback para evitar conflictos
     ];
 
     // Encontrar la primera ruta que existe
     for (const templatePath of possiblePaths) {
       if (fs.existsSync(templatePath)) {
         this.templatePath = templatePath;
-        this.logger.log(`Template HTML usado para PDF: ${this.templatePath}`);
+        this.logger.log(`✅ Template HTML usado para PDF: ${this.templatePath}`);
+        this.logger.log(`📁 Verificando contenido del template...`);
+        
+        // Verificar que el template contiene la estructura correcta
+        try {
+          const templateContent = fs.readFileSync(templatePath, 'utf8');
+          if (templateContent.includes('totals-container')) {
+            this.logger.log(`✅ Template principal detectado - estructura de totales moderna`);
+          } else if (templateContent.includes('totals-table')) {
+            this.logger.log(`⚠️ Template con estructura antigua de tabla`);
+          } else {
+            this.logger.log(`❓ Template con estructura desconocida`);
+          }
+        } catch (error) {
+          this.logger.error(`Error leyendo template: ${error}`);
+        }
         break;
       }
     }
@@ -252,6 +266,23 @@ export class PdfGeneratorService {
       // Leer el template
       let template = fs.readFileSync(this.templatePath, 'utf8');
       this.logger.log(`[PDF-TEMPLATE] Template leído. Tamaño: ${template.length} caracteres`);
+      
+      // Verificar que se esté usando el template correcto
+      if (template.includes('totals-container')) {
+        this.logger.log(`✅ [PDF-TEMPLATE] Usando template principal con estructura moderna`);
+        this.logger.log(`✅ [PDF-TEMPLATE] Estructura de totales: totals-container + total-row-item`);
+      } else if (template.includes('totals-table')) {
+        this.logger.warn(`⚠️ [PDF-TEMPLATE] ADVERTENCIA: Usando template con estructura antigua`);
+        this.logger.warn(`⚠️ [PDF-TEMPLATE] Esto puede causar problemas de solapamiento en totales`);
+      } else {
+        this.logger.error(`❌ [PDF-TEMPLATE] Template con estructura desconocida`);
+      }
+      
+      // Log adicional para debug del template
+      this.logger.log(`🔍 [PDF-TEMPLATE] Verificando estructura del template...`);
+      this.logger.log(`🔍 [PDF-TEMPLATE] Contiene 'totals-container': ${template.includes('totals-container')}`);
+      this.logger.log(`🔍 [PDF-TEMPLATE] Contiene 'total-row-item': ${template.includes('total-row-item')}`);
+      this.logger.log(`🔍 [PDF-TEMPLATE] Contiene 'TOTAL A PAGAR': ${template.includes('TOTAL A PAGAR')}`);
 
       // Log de los datos que se van a insertar
       this.logger.log(`[PDF-TEMPLATE] Datos a insertar:`, {
@@ -542,7 +573,7 @@ export class PdfGeneratorService {
       });
       
       // Esperar a que el contenido se renderice completamente
-      await page.waitForTimeout(1000);
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // CSS optimizado para forzar una sola página A4 con fuentes muy grandes
       const compactCss = `

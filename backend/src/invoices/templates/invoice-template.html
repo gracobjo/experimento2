@@ -236,43 +236,131 @@
             margin-top: 10px;
             margin-bottom: 10px;
         }
-        .totals-table {
-            min-width: 260px;
-            width: 100%;
-            table-layout: fixed;
-            border-collapse: collapse;
+        
+        /* Contenedor de totales con mejor control de espacio */
+        .totals-container {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            min-width: 320px;
             background: white;
             border-radius: 8px;
             overflow: hidden;
-            font-size: 1rem;
             box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
-        .totals-table td {
-            padding: 7px 12px;
+        
+        /* Elementos individuales de totales */
+        .total-row-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 15px;
             border-bottom: 1px solid #e5e7eb;
-            vertical-align: middle;
+            min-height: 40px;
         }
-        .totals-table td:first-child {
-            width: 60%;
-            text-align: left;
-        }
-        .totals-table td:last-child {
-            width: 40%;
-            text-align: right;
-        }
-        .totals-table tr:last-child td {
+        
+        .total-row-item:last-child {
             border-bottom: none;
         }
+        
+        /* Etiquetas de totales */
+        .total-label {
+            flex: 1;
+            text-align: left;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        /* Valores de totales */
+        .total-value {
+            flex: 0 0 auto;
+            text-align: right;
+            font-weight: 600;
+            color: #111827;
+            margin-left: 20px;
+            min-width: 80px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* Garantizar que las etiquetas no se superpongan */
+        .total-label {
+            flex: 1;
+            text-align: left;
+            font-weight: 500;
+            color: #374151;
+            position: relative;
+            z-index: 1;
+            padding-right: 10px;
+        }
+        
+        /* Estilos para filas especiales */
         .total-row {
             background: #003366;
             color: white;
             font-weight: bold;
             font-size: 1.1rem;
         }
+        
+        .total-row .total-label,
+        .total-row .total-value {
+            color: white;
+            font-weight: bold;
+        }
+        
         .discount-row {
             background: #fef3c7;
             color: #92400e;
             font-weight: bold;
+        }
+        
+        .discount-row .total-label,
+        .discount-row .total-value {
+            color: #92400e;
+            font-weight: bold;
+        }
+        
+        /* Estilos adicionales para mejorar la presentación */
+        .total-row-item:hover {
+            background-color: #f9fafb;
+            transition: background-color 0.2s ease;
+        }
+        
+        .total-row:hover,
+        .discount-row:hover {
+            opacity: 0.95;
+            transition: opacity 0.2s ease;
+        }
+        
+        /* Asegurar que los valores monetarios tengan formato consistente */
+        .total-value {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Estilos para el total principal */
+        .total-row .total-label {
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+        }
+        
+        .total-row .total-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        
+        /* Estilo específico para evitar que TOTAL A PAGAR se comprima */
+        .total-row-item:has(.total-label:contains("TOTAL A PAGAR")) .total-label {
+            white-space: nowrap;
+            overflow: visible;
+            min-width: 0;
+        }
+        
+        /* Alternativa para navegadores que no soportan :has() */
+        .total-row-item.total-row .total-label {
+            white-space: nowrap;
+            overflow: visible;
+            min-width: 0;
         }
         /* QR integrado en el campo de firma */
         .qr-integrated {
@@ -328,6 +416,61 @@
                 font-size: 6px;
                 max-width: 70px;
                 padding: 4px 8px;
+            }
+            
+            /* Mejoras para pantallas pequeñas */
+            .totals-container {
+                min-width: 280px;
+                font-size: 0.9rem;
+            }
+            
+            .total-row-item {
+                padding: 6px 12px;
+                min-height: 35px;
+            }
+            
+            .total-value {
+                min-width: 70px;
+                margin-left: 15px;
+            }
+            
+            .total-row {
+                font-size: 1rem;
+            }
+            
+            /* Asegurar separación mínima en pantallas pequeñas */
+            .total-value {
+                min-width: 60px;
+                margin-left: 10px;
+                font-size: 0.9rem;
+            }
+            
+            .total-label {
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* Estilos para impresión - asegurar que no haya solapamiento */
+        @media print {
+            .totals-container {
+                min-width: 100%;
+                box-shadow: none;
+                border: 1px solid #e5e7eb;
+            }
+            
+            .total-row-item {
+                padding: 10px 20px;
+                min-height: 45px;
+            }
+            
+            .total-value {
+                min-width: 100px;
+                margin-left: 30px;
+            }
+            
+            .total-row .total-label,
+            .total-row .total-value {
+                font-size: 1.2rem;
             }
         }
         .qr-absolute img {
@@ -560,46 +703,42 @@
         
         <!-- Totales y descuentos -->
         <div class="totals-section">
-            <table class="totals-table">
-                <colgroup>
-                    <col style="width: 60%;">
-                    <col style="width: 40%;">
-                </colgroup>
+            <div class="totals-container">
                 {{#if descuento}}
-                <tr class="discount-row">
-                    <td>Descuento ({{descuento}}%)</td>
-                    <td class="text-right">-{{descuentoCalculado}} €</td>
-                </tr>
+                <div class="total-row-item discount-row">
+                    <span class="total-label">Descuento ({{descuento}}%)</span>
+                    <span class="total-value">-{{descuentoCalculado}} €</span>
+                </div>
                 {{/if}}
-                <tr>
-                    <td>Base Imponible</td>
-                    <td class="text-right">{{baseImponible}} €</td>
-                </tr>
-                <tr>
-                    <td>IVA ({{tipoIVA}}%)</td>
-                    <td class="text-right">{{cuotaIVA}} €</td>
-                </tr>
+                <div class="total-row-item">
+                    <span class="total-label">Base Imponible</span>
+                    <span class="total-value">{{baseImponible}} €</span>
+                </div>
+                <div class="total-row-item">
+                    <span class="total-label">IVA ({{tipoIVA}}%)</span>
+                    <span class="total-value">{{cuotaIVA}} €</span>
+                </div>
                 {{#if retencion}}
-                <tr>
-                    <td>Retención ({{retencion}}%)</td>
-                    <td class="text-right">-{{cuotaRetencion}} €</td>
-                </tr>
+                <div class="total-row-item">
+                    <span class="total-label">Retención ({{retencion}}%)</span>
+                    <span class="total-value">-{{cuotaRetencion}} €</span>
+                </div>
                 {{/if}}
-                <tr class="total-row">
-                    <td>TOTAL</td>
-                    <td class="text-right">{{subtotal}} €</td>
-                </tr>
+                <div class="total-row-item total-row">
+                    <span class="total-label">TOTAL</span>
+                    <span class="total-value">{{subtotal}} €</span>
+                </div>
                 {{#if provisiones}}
-                <tr class="discount-row">
-                    <td>Provisiones Aplicadas</td>
-                    <td class="text-right">-{{descuentoProvisiones}} €</td>
-                </tr>
-                <tr class="total-row" style="background: #059669; color: white;">
-                    <td>TOTAL A PAGAR</td>
-                    <td class="text-right">{{importeTotal}} €</td>
-                </tr>
+                <div class="total-row-item discount-row">
+                    <span class="total-label">Provisiones Aplicadas</span>
+                    <span class="total-value">-{{descuentoProvisiones}} €</span>
+                </div>
+                <div class="total-row-item total-row" style="background: #059669; color: white;">
+                    <span class="total-label">TOTAL A PAGAR</span>
+                    <span class="total-value">{{importeTotal}} €</span>
+                </div>
                 {{/if}}
-            </table>
+            </div>
         </div>
         <!-- Pie de página -->
         <div class="footer">
