@@ -303,7 +303,7 @@ const ClientDocumentsPage = () => {
       }
 
       // Hacer la petición al backend con autenticación
-                const response = await fetch(`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production.up.railway.app'}/api/documents/${documentId}/download`, {
+                const response = await fetch(`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api/documents/${documentId}/download`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
