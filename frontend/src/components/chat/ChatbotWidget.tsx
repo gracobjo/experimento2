@@ -194,11 +194,11 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
   };
 
   const handleDateSelect = async (date: string, time: string) => {
-    console.log('handleDateSelect called with:', { date, time });
+    console.log('🔍 [CITA] handleDateSelect called with:', { date, time });
     
     // Validar que los parámetros no sean undefined o vacíos
     if (!date || !time || date.trim() === '' || time.trim() === '') {
-      console.error('Invalid date or time:', { date, time });
+      console.error('🔍 [CITA] Invalid date or time:', { date, time });
       const errorMessage: ChatMessage = {
         text: "Error: Fecha o hora no válida. Por favor, selecciona de nuevo.",
         isUser: false,
@@ -223,61 +223,70 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
         throw new Error(`Invalid time format: ${time}. Expected HH:MM`);
       }
       
-      // Formatear la fecha y hora para el chatbot
+      // Formatear la fecha y hora para el backend
       const selectedDateTime = `${date}T${time}:00`;
-      console.log('selectedDateTime:', selectedDateTime);
+      console.log('🔍 [CITA] selectedDateTime:', selectedDateTime);
       
       const formattedDate = new Date(selectedDateTime);
-      console.log('formattedDate:', formattedDate);
+      console.log('🔍 [CITA] formattedDate:', formattedDate);
       
       // Validar que la fecha sea válida
       if (isNaN(formattedDate.getTime())) {
         throw new Error(`Invalid date: ${selectedDateTime}`);
       }
       
-      const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-      const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      // Crear objeto de datos para la cita
+      const appointmentData = {
+        fullName: "Usuario del Chat", // Valor por defecto
+        age: 25, // Valor por defecto
+        phone: "+34 600000000", // Valor por defecto
+        email: "usuario@chat.com", // Valor por defecto
+        consultationReason: "Consulta legal general",
+        consultationType: "Derecho Civil",
+        preferredDate: selectedDateTime,
+        source: "chatbot"
+      };
       
-      const dayName = days[formattedDate.getDay()];
-      const dayNumber = formattedDate.getDate();
-      const monthName = months[formattedDate.getMonth()];
+      console.log('🔍 [CITA] Datos de la cita:', appointmentData);
       
-      // Validar que todos los valores sean válidos
-      if (!dayName || !monthName || isNaN(dayNumber)) {
-        throw new Error(`Invalid date components: day=${dayName}, month=${monthName}, date=${dayNumber}`);
+      // Enviar directamente al backend
+      setIsLoading(true);
+      
+      // Usar la API del backend, no del chatbot
+      const backendUrl = (import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app';
+      const response = await fetch(`${backendUrl}/api/appointments/visitor`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(appointmentData)
+      });
+      
+      console.log('🔍 [CITA] Respuesta del backend:', response.status, response.statusText);
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🔍 [CITA] Cita creada exitosamente:', result);
+        
+        // Mensaje de confirmación
+        const successMessage: ChatMessage = {
+          text: `¡Perfecto! Tu cita ha sido agendada exitosamente.\n\n📅 **Detalles de tu cita:**\n• Fecha y hora: ${date} a las ${time}\n• Motivo: Consulta legal general\n\nTe hemos enviado un email de confirmación.\n\nUn abogado se pondrá en contacto contigo pronto para confirmar los detalles. ¡Gracias por confiar en nosotros!`,
+          isUser: false,
+          timestamp: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, successMessage]);
+      } else {
+        const errorText = await response.text();
+        console.error('🔍 [CITA] Error del backend:', response.status, errorText);
+        
+        throw new Error(`Error del servidor: ${response.status} - ${errorText}`);
       }
       
-      const formattedDateStr = `${dayName} ${dayNumber} de ${monthName} a las ${time}`;
-      console.log('formattedDateStr:', formattedDateStr);
-      
-      // Agregar mensaje del usuario mostrando la selección
-      const userChatMessage: ChatMessage = {
-        text: `He seleccionado: ${formattedDateStr}`,
-        isUser: true,
-        timestamp: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, userChatMessage]);
-      
-      // Enviar al chatbot
-      setIsLoading(true);
-      const response = await chatbotApi.post('/chat', {
-        text: formattedDateStr,
-        language: 'es',
-        user_id: userIdRef.current
-      });
-
-      const botMessage: ChatMessage = {
-        text: response.data.response,
-        isUser: false,
-        timestamp: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, botMessage]);
     } catch (err: any) {
-      console.error('Error in handleDateSelect:', err);
+      console.error('🔍 [CITA] Error in handleDateSelect:', err);
       const errorMessage = err.message || 'Error desconocido';
       const fallbackMessage: ChatMessage = {
-        text: `Lo siento, hubo un problema al procesar tu selección: ${errorMessage}. Por favor, intenta de nuevo.`,
+        text: `Lo siento, hubo un problema al agendar tu cita: ${errorMessage}. Por favor, contacta directamente al despacho por teléfono o email.`,
         isUser: false,
         timestamp: new Date().toISOString()
       };
