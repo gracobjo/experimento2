@@ -237,6 +237,48 @@ const DocumentsPage = () => {
     return '📎';
   };
 
+  // Función para descargar documento con autenticación
+  const handleDownload = async (documentId: string, originalName: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('No hay token de autenticación. Por favor, inicia sesión de nuevo.');
+        return;
+      }
+
+      // Hacer la petición al backend con autenticación
+      const response = await fetch(`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api/documents/${documentId}/download`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          alert('Sesión expirada. Por favor, inicia sesión de nuevo.');
+          return;
+        }
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      // Crear blob y descargar
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = originalName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+    } catch (error) {
+      console.error('Error descargando documento:', error);
+      alert(`Error al descargar el documento: ${error.message}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -500,17 +542,15 @@ const DocumentsPage = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <a
-                          href={`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api/documents/${doc.id}/download`}
+                        <button
+                          onClick={() => handleDownload(doc.id, doc.originalName)}
                           className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                          target="_blank"
-                          rel="noopener noreferrer"
                         >
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
                           Ver
-                        </a>
+                        </button>
                         <button
                           onClick={() => handleDelete(doc.id)}
                           className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"

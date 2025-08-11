@@ -293,6 +293,48 @@ const ClientDocumentsPage = () => {
     }
   };
 
+  // Función para descargar documento con autenticación
+  const handleDownload = async (documentId: string, originalName: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('No hay token de autenticación. Por favor, inicia sesión de nuevo.');
+        return;
+      }
+
+      // Hacer la petición al backend con autenticación
+      const response = await fetch(`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api/documents/${documentId}/download`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          alert('Sesión expirada. Por favor, inicia sesión de nuevo.');
+          return;
+        }
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      // Crear blob y descargar
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = originalName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+    } catch (error) {
+      console.error('Error descargando documento:', error);
+      alert(`Error al descargar el documento: ${error.message}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -435,14 +477,12 @@ const ClientDocumentsPage = () => {
                 </div>
                 
                 <div className="flex space-x-2">
-                  <a
-                    href={`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api/documents/${doc.id}/download`}
+                  <button
+                    onClick={() => handleDownload(doc.id, doc.originalName)}
                     className="flex-1 px-3 py-2 bg-blue-600 text-white text-center text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                    target="_blank"
-                    rel="noopener noreferrer"
                   >
                     Descargar
-                  </a>
+                  </button>
                   <button 
                     onClick={() => handleDeleteDocument(doc.id)}
                     className="px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
