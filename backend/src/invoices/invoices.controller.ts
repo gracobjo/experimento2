@@ -207,9 +207,18 @@ export class InvoicesController {
       console.log('[PDF-QR] Permisos verificados correctamente');
       console.log('[PDF-QR] Datos de la factura:', JSON.stringify(invoice, null, 2));
       
-      // Generar el PDF profesional (mismo que usa el abogado)
-      console.log('[PDF-PROFESIONAL] Iniciando generación de PDF profesional...');
-      const pdfBuffer = await this.invoicesService.generateInvoicePdf(invoice);
+      // Generar el PDF según el rol del usuario
+      let pdfBuffer: Buffer;
+      
+      if (req.user.role === 'CLIENTE') {
+        // Cliente: PDF profesional (mismo que usa el abogado)
+        console.log('[PDF-CLIENTE] Generando PDF profesional para cliente...');
+        pdfBuffer = await this.invoicesService.generateInvoicePdfForClient(invoice);
+      } else {
+        // Abogado/Admin: PDF básico con QR (como antes)
+        console.log('[PDF-ABOGADO] Generando PDF básico con QR...');
+        pdfBuffer = await this.invoicesService.generateInvoicePdfWithQR(invoice);
+      }
       
       // Verificar que el buffer es válido
       if (!Buffer.isBuffer(pdfBuffer)) {
