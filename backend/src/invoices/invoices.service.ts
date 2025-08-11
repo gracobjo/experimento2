@@ -1252,6 +1252,32 @@ export class InvoicesService {
   }
 
   /**
+   * Genera un PDF profesional de la factura SIN fallback (para descarga)
+   * @param invoice Factura a procesar
+   * @returns Buffer del PDF generado
+   */
+  async generateInvoicePdfProfessional(invoice: any): Promise<Buffer> {
+    try {
+      this.logger.log('Generando PDF profesional de la factura (sin fallback)');
+      this.logger.log('Llamando a pdfGeneratorService.generateInvoicePdf()...');
+      
+      // Usar el servicio de generación de PDF profesional
+      const pdfBuffer = await this.pdfGeneratorService.generateInvoicePdf(invoice);
+      
+      this.logger.log('PDF profesional generado exitosamente');
+      this.logger.log(`Tamaño del buffer: ${pdfBuffer.length} bytes`);
+      return pdfBuffer;
+      
+    } catch (error) {
+      this.logger.error('Error generando PDF profesional (sin fallback):', error);
+      this.logger.error('Stack trace:', (error as any).stack);
+      
+      // NO hacer fallback, lanzar error para que se maneje en el controlador
+      throw new Error(`Error generando PDF profesional: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
    * Genera un PDF profesional para el cliente (mismo que usa el abogado)
    * @param invoice Factura a procesar
    * @returns Buffer del PDF generado

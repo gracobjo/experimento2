@@ -46,11 +46,11 @@ const core_1 = __webpack_require__(1);
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
 const app_module_1 = __webpack_require__(4);
-const express = __importStar(__webpack_require__(48));
-const path = __importStar(__webpack_require__(45));
-const helmet_1 = __importDefault(__webpack_require__(132));
-const express_rate_limit_1 = __importDefault(__webpack_require__(133));
-const compression_1 = __importDefault(__webpack_require__(134));
+const express = __importStar(__webpack_require__(49));
+const path = __importStar(__webpack_require__(46));
+const helmet_1 = __importDefault(__webpack_require__(134));
+const express_rate_limit_1 = __importDefault(__webpack_require__(135));
+const compression_1 = __importDefault(__webpack_require__(136));
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.use(express.json({ limit: '10mb' }));
@@ -65,30 +65,14 @@ async function bootstrap() {
         : [
             'http://localhost:5173',
             'http://localhost:3000',
+            'http://localhost:8080',
             'https://experimento2-fenm.vercel.app',
             'https://experimento2-production.up.railway.app',
-            'https://*.vercel.app',
-            'https://*.railway.app',
-            'https://*.netlify.app'
+            /^https:\/\/.*\.vercel\.app$/,
+            /^https:\/\/.*\.railway\.app$/
         ];
     app.enableCors({
-        origin: (origin, callback) => {
-            if (!origin)
-                return callback(null, true);
-            const allowedOrigins = [
-                'http://localhost:5173',
-                'http://localhost:3000',
-                'https://experimento2-fenm.vercel.app',
-                'https://experimento2-production.up.railway.app'
-            ];
-            if (allowedOrigins.includes(origin)) {
-                return callback(null, true);
-            }
-            if (origin.includes('vercel.app') || origin.includes('railway.app')) {
-                return callback(null, true);
-            }
-            return callback(new Error('Not allowed by CORS'));
-        },
+        origin: corsOrigins,
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
@@ -246,7 +230,7 @@ async function bootstrap() {
     const port = process.env.PORT || 3000;
     await app.listen(port, '0.0.0.0');
     console.log(`🚀 Servidor corriendo en puerto ${port}`);
-    console.log(`🌍 CORS origins configurados: ${corsOrigins.join(', ')}`);
+    console.log(`🌍 CORS origins configurados: http://localhost:5173, http://localhost:3000, https://experimento2-fenm.vercel.app, https://experimento2-production.up.railway.app, *.vercel.app, *.railway.app`);
     console.log(`📁 Archivos estáticos disponibles en /uploads`);
     console.log(`📚 Documentación Swagger disponible en /docs`);
     console.log(`💚 Health check disponible en /health`);
@@ -293,20 +277,20 @@ const app_service_1 = __webpack_require__(7);
 const health_module_1 = __webpack_require__(10);
 const auth_module_1 = __webpack_require__(12);
 const users_module_1 = __webpack_require__(30);
-const cases_module_1 = __webpack_require__(37);
-const documents_module_1 = __webpack_require__(42);
-const appointments_module_1 = __webpack_require__(50);
-const tasks_module_1 = __webpack_require__(58);
-const reports_module_1 = __webpack_require__(63);
-const admin_module_1 = __webpack_require__(66);
-const chat_module_1 = __webpack_require__(79);
-const prisma_module_1 = __webpack_require__(36);
-const parametros_module_1 = __webpack_require__(86);
-const invoices_module_1 = __webpack_require__(89);
-const provision_fondos_module_1 = __webpack_require__(114);
-const contact_module_1 = __webpack_require__(118);
-const teleassistance_module_1 = __webpack_require__(121);
-const notes_module_1 = __webpack_require__(126);
+const cases_module_1 = __webpack_require__(38);
+const documents_module_1 = __webpack_require__(43);
+const appointments_module_1 = __webpack_require__(51);
+const tasks_module_1 = __webpack_require__(60);
+const reports_module_1 = __webpack_require__(65);
+const admin_module_1 = __webpack_require__(68);
+const chat_module_1 = __webpack_require__(81);
+const prisma_module_1 = __webpack_require__(37);
+const parametros_module_1 = __webpack_require__(88);
+const invoices_module_1 = __webpack_require__(91);
+const provision_fondos_module_1 = __webpack_require__(116);
+const contact_module_1 = __webpack_require__(120);
+const teleassistance_module_1 = __webpack_require__(123);
+const notes_module_1 = __webpack_require__(128);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -669,7 +653,7 @@ const auth_controller_1 = __webpack_require__(21);
 const jwt_strategy_1 = __webpack_require__(28);
 const users_module_1 = __webpack_require__(30);
 const email_service_1 = __webpack_require__(17);
-const prisma_module_1 = __webpack_require__(36);
+const prisma_module_1 = __webpack_require__(37);
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -1101,6 +1085,48 @@ let UsersService = class UsersService {
                 }
             }
         });
+    }
+    async updateMyClientProfile(userId, updateClientProfileDto) {
+        try {
+            const updatedUser = await this.prisma.user.update({
+                where: { id: userId },
+                data: {
+                    name: updateClientProfileDto.name,
+                    email: updateClientProfileDto.email,
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                },
+            });
+            const updatedClient = await this.prisma.client.update({
+                where: { userId },
+                data: {
+                    phone: updateClientProfileDto.phone,
+                    address: updateClientProfileDto.address,
+                },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                        }
+                    }
+                }
+            });
+            return updatedClient;
+        }
+        catch (error) {
+            if (error.code === 'P2025') {
+                throw new common_1.NotFoundException('Perfil de cliente no encontrado');
+            }
+            if (error.code === 'P2002') {
+                throw new common_1.ConflictException('El correo electrónico ya está registrado');
+            }
+            throw error;
+        }
     }
     async findLawyers() {
         return this.prisma.user.findMany({
@@ -1741,6 +1767,343 @@ let EmailService = class EmailService {
             return false;
         }
     }
+    async sendAppointmentConfirmationEmail(data) {
+        const formatDate = (date) => {
+            return date.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        };
+        const mailOptions = {
+            from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+            to: data.clientEmail,
+            subject: 'Cita Confirmada - Despacho de Abogados',
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #27ae60;">Cita Confirmada</h2>
+          <p>Hola ${data.clientName},</p>
+          <p>Tu cita ha sido confirmada exitosamente.</p>
+          
+          <div style="background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #155724; margin-top: 0;">Detalles de la Cita</h3>
+            <p><strong>Abogado:</strong> ${data.lawyerName}</p>
+            <p><strong>Fecha y Hora:</strong> ${formatDate(data.appointmentDate)}</p>
+            ${data.location ? `<p><strong>Ubicación:</strong> ${data.location}</p>` : ''}
+            ${data.notes ? `<p><strong>Notas:</strong> ${data.notes}</p>` : ''}
+          </div>
+          
+          <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #0c5460; margin-top: 0;">Recordatorios Importantes</h3>
+            <ul style="color: #0c5460;">
+              <li>Llega 10 minutos antes de la hora programada</li>
+              <li>Trae todos los documentos relevantes</li>
+              <li>Si necesitas cancelar, hazlo con al menos 24 horas de anticipación</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:${data.lawyerName.toLowerCase().replace(' ', '.')}@despachoabogados.com?subject=Consulta sobre cita del ${formatDate(data.appointmentDate)}" 
+               style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Contactar con el Abogado
+            </a>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+            <p><strong>Teléfono:</strong> +34 612 345 678</p>
+            <p><strong>Email:</strong> info@despachoabogados.com</p>
+            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+            <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Despacho de Abogados García & Asociados<br>
+            Más de 15 años de experiencia en servicios legales
+          </p>
+        </div>
+      `,
+        };
+        try {
+            await this.transporter.sendMail(mailOptions);
+            return true;
+        }
+        catch (error) {
+            console.error('Error sending appointment confirmation email:', error);
+            return false;
+        }
+    }
+    async sendAppointmentScheduledByLawyerEmail(data) {
+        const formatDate = (date) => {
+            return date.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        };
+        const mailOptions = {
+            from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+            to: data.clientEmail,
+            subject: 'Nueva Cita Programada - Despacho de Abogados',
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #3498db;">Nueva Cita Programada</h2>
+          <p>Hola ${data.clientName},</p>
+          <p>Se ha programado una nueva cita para ti.</p>
+          
+          <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #0c5460; margin-top: 0;">Detalles de la Cita</h3>
+            <p><strong>Abogado:</strong> ${data.lawyerName}</p>
+            <p><strong>Fecha y Hora:</strong> ${formatDate(data.appointmentDate)}</p>
+            ${data.location ? `<p><strong>Ubicación:</strong> ${data.location}</p>` : ''}
+            ${data.notes ? `<p><strong>Notas:</strong> ${data.notes}</p>` : ''}
+          </div>
+          
+          <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #856404; margin-top: 0;">Acción Requerida</h3>
+            <p>Por favor, confirma si puedes asistir a esta cita respondiendo a este email o contactando con nosotros.</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:${data.lawyerName.toLowerCase().replace(' ', '.')}@despachoabogados.com?subject=Confirmación de cita del ${formatDate(data.appointmentDate)}" 
+               style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Confirmar Cita
+            </a>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+            <p><strong>Teléfono:</strong> +34 612 345 678</p>
+            <p><strong>Email:</strong> info@despachoabogados.com</p>
+            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+            <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Despacho de Abogados García & Asociados<br>
+            Más de 15 años de experiencia en servicios legales
+          </p>
+        </div>
+      `,
+        };
+        try {
+            await this.transporter.sendMail(mailOptions);
+            return true;
+        }
+        catch (error) {
+            console.error('Error sending appointment scheduled by lawyer email:', error);
+            return false;
+        }
+    }
+    async sendAppointmentUpdatedEmail(data) {
+        const formatDate = (date) => {
+            return date.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        };
+        const mailOptions = {
+            from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+            to: data.clientEmail,
+            subject: 'Cita Actualizada - Despacho de Abogados',
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #f39c12;">Cita Actualizada</h2>
+          <p>Hola ${data.clientName},</p>
+          <p>Tu cita ha sido actualizada.</p>
+          
+          <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #856404; margin-top: 0;">Detalles Actualizados</h3>
+            <p><strong>Abogado:</strong> ${data.lawyerName}</p>
+            <p><strong>Fecha y Hora:</strong> ${formatDate(data.appointmentDate)}</p>
+            ${data.location ? `<p><strong>Ubicación:</strong> ${data.location}</p>` : ''}
+            ${data.notes ? `<p><strong>Notas:</strong> ${data.notes}</p>` : ''}
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:${data.lawyerName.toLowerCase().replace(' ', '.')}@despachoabogados.com?subject=Consulta sobre cita actualizada del ${formatDate(data.appointmentDate)}" 
+               style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Contactar con el Abogado
+            </a>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+            <p><strong>Teléfono:</strong> +34 612 345 678</p>
+            <p><strong>Email:</strong> info@despachoabogados.com</p>
+            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+            <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Despacho de Abogados García & Asociados<br>
+            Más de 15 años de experiencia en servicios legales
+          </p>
+        </div>
+      `,
+        };
+        try {
+            await this.transporter.sendMail(mailOptions);
+            return true;
+        }
+        catch (error) {
+            console.error('Error sending appointment updated email:', error);
+            return false;
+        }
+    }
+    async sendAppointmentCancelledEmail(data) {
+        const formatDate = (date) => {
+            return date.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        };
+        const mailOptions = {
+            from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+            to: data.clientEmail,
+            subject: 'Cita Cancelada - Despacho de Abogados',
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #e74c3c;">Cita Cancelada</h2>
+          <p>Hola ${data.clientName},</p>
+          <p>Tu cita ha sido cancelada.</p>
+          
+          <div style="background-color: #f8d7da; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #721c24; margin-top: 0;">Información de la Cancelación</h3>
+            <p><strong>Abogado:</strong> ${data.lawyerName}</p>
+            <p><strong>Fecha Cancelada:</strong> ${formatDate(data.appointmentDate)}</p>
+            ${data.location ? `<p><strong>Ubicación:</strong> ${data.location}</p>` : ''}
+            <p><strong>Cancelada por:</strong> ${data.cancelledBy}</p>
+          </div>
+          
+          <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #0c5460; margin-top: 0;">¿Qué puedes hacer?</h3>
+            <ul style="color: #0c5460;">
+              <li>Programar una nueva cita en nuestro sistema</li>
+              <li>Contactar con nosotros para más información</li>
+              <li>Consultar sobre otros servicios que ofrecemos</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:info@despachoabogados.com?subject=Nueva cita después de cancelación" 
+               style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Programar Nueva Cita
+            </a>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+            <p><strong>Teléfono:</strong> +34 612 345 678</p>
+            <p><strong>Email:</strong> info@despachoabogados.com</p>
+            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+            <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Despacho de Abogados García & Asociados<br>
+            Más de 15 años de experiencia en servicios legales
+          </p>
+        </div>
+      `,
+        };
+        try {
+            await this.transporter.sendMail(mailOptions);
+            return true;
+        }
+        catch (error) {
+            console.error('Error sending appointment cancelled email:', error);
+            return false;
+        }
+    }
+    async sendAppointmentConfirmedEmail(data) {
+        const formatDate = (date) => {
+            return date.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        };
+        const mailOptions = {
+            from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+            to: data.clientEmail,
+            subject: 'Cita Confirmada - Despacho de Abogados',
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #27ae60;">Cita Confirmada</h2>
+          <p>Hola ${data.clientName},</p>
+          <p>Tu cita ha sido confirmada por el abogado.</p>
+          
+          <div style="background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #155724; margin-top: 0;">Detalles de la Cita</h3>
+            <p><strong>Abogado:</strong> ${data.lawyerName}</p>
+            <p><strong>Fecha y Hora:</strong> ${formatDate(data.appointmentDate)}</p>
+            ${data.location ? `<p><strong>Ubicación:</strong> ${data.location}</p>` : ''}
+            ${data.notes ? `<p><strong>Notas:</strong> ${data.notes}</p>` : ''}
+          </div>
+          
+          <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #0c5460; margin-top: 0;">Recordatorios Importantes</h3>
+            <ul style="color: #0c5460;">
+              <li>Llega 10 minutos antes de la hora programada</li>
+              <li>Trae todos los documentos relevantes</li>
+              <li>Si necesitas cancelar, hazlo con al menos 24 horas de anticipación</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:${data.lawyerName.toLowerCase().replace(' ', '.')}@despachoabogados.com?subject=Consulta sobre cita confirmada del ${formatDate(data.appointmentDate)}" 
+               style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Contactar con el Abogado
+            </a>
+          </div>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+            <p><strong>Teléfono:</strong> +34 612 345 678</p>
+            <p><strong>Email:</strong> info@despachoabogados.com</p>
+            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+            <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+          </div>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #7f8c8d; font-size: 12px;">
+            Despacho de Abogados García & Asociados<br>
+            Más de 15 años de experiencia en servicios legales
+          </p>
+        </div>
+      `,
+        };
+        try {
+            await this.transporter.sendMail(mailOptions);
+            return true;
+        }
+        catch (error) {
+            console.error('Error sending appointment confirmed email:', error);
+            return false;
+        }
+    }
 };
 exports.EmailService = EmailService;
 exports.EmailService = EmailService = __decorate([
@@ -2265,7 +2628,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c;
+var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UsersController = void 0;
 const common_1 = __webpack_require__(2);
@@ -2273,9 +2636,10 @@ const swagger_1 = __webpack_require__(3);
 const users_service_1 = __webpack_require__(16);
 const create_user_dto_1 = __webpack_require__(32);
 const update_user_dto_1 = __webpack_require__(33);
+const update_client_profile_dto_1 = __webpack_require__(34);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(34);
-const roles_decorator_1 = __webpack_require__(35);
+const roles_guard_1 = __webpack_require__(35);
+const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
 let UsersController = class UsersController {
     constructor(usersService) {
@@ -2303,6 +2667,9 @@ let UsersController = class UsersController {
     }
     getMyClientProfile(req) {
         return this.usersService.getMyClientProfile(req.user.id);
+    }
+    updateMyClientProfile(req, updateClientProfileDto) {
+        return this.usersService.updateMyClientProfile(req.user.id, updateClientProfileDto);
     }
     findLawyers() {
         return this.usersService.findLawyers();
@@ -2555,6 +2922,48 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "getMyClientProfile", null);
 __decorate([
+    (0, common_1.Patch)('clients/profile'),
+    (0, roles_decorator_1.Roles)(client_1.Role.CLIENTE),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar perfil del cliente',
+        description: 'Permite al cliente actualizar su información personal'
+    }),
+    (0, swagger_1.ApiBody)({ type: update_client_profile_dto_1.UpdateClientProfileDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Perfil actualizado exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                userId: { type: 'string' },
+                dni: { type: 'string' },
+                phone: { type: 'string' },
+                address: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' },
+                user: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        name: { type: 'string' },
+                        email: { type: 'string' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Perfil no encontrado' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_c = typeof update_client_profile_dto_1.UpdateClientProfileDto !== "undefined" && update_client_profile_dto_1.UpdateClientProfileDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "updateMyClientProfile", null);
+__decorate([
     (0, common_1.Get)('lawyers'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
     (0, swagger_1.ApiOperation)({
@@ -2646,7 +3055,7 @@ __decorate([
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, typeof (_c = typeof update_user_dto_1.UpdateUserDto !== "undefined" && update_user_dto_1.UpdateUserDto) === "function" ? _c : Object]),
+    __metadata("design:paramtypes", [String, typeof (_d = typeof update_user_dto_1.UpdateUserDto !== "undefined" && update_user_dto_1.UpdateUserDto) === "function" ? _d : Object]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "update", null);
 __decorate([
@@ -2832,13 +3241,72 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UpdateClientProfileDto = void 0;
+const swagger_1 = __webpack_require__(3);
+const class_validator_1 = __webpack_require__(23);
+class UpdateClientProfileDto {
+}
+exports.UpdateClientProfileDto = UpdateClientProfileDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Nombre completo del cliente',
+        example: 'Juan Pérez García'
+    }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateClientProfileDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Email del cliente',
+        example: 'juan.perez@email.com'
+    }),
+    (0, class_validator_1.IsEmail)(),
+    __metadata("design:type", String)
+], UpdateClientProfileDto.prototype, "email", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Número de teléfono del cliente',
+        example: '+34 600 123 456',
+        required: false
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateClientProfileDto.prototype, "phone", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Dirección del cliente',
+        example: 'Calle Mayor 123, 28001 Madrid',
+        required: false
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateClientProfileDto.prototype, "address", void 0);
+
+
+/***/ }),
+/* 35 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
 var RolesGuard_1;
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RolesGuard = void 0;
 const common_1 = __webpack_require__(2);
 const core_1 = __webpack_require__(1);
-const roles_decorator_1 = __webpack_require__(35);
+const roles_decorator_1 = __webpack_require__(36);
 let RolesGuard = RolesGuard_1 = class RolesGuard {
     constructor(reflector) {
         this.reflector = reflector;
@@ -2878,7 +3346,7 @@ exports.RolesGuard = RolesGuard = RolesGuard_1 = __decorate([
 
 
 /***/ }),
-/* 35 */
+/* 36 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
@@ -2891,7 +3359,7 @@ exports.Roles = Roles;
 
 
 /***/ }),
-/* 36 */
+/* 37 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2918,7 +3386,7 @@ exports.PrismaModule = PrismaModule = __decorate([
 
 
 /***/ }),
-/* 37 */
+/* 38 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2931,8 +3399,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CasesModule = void 0;
 const common_1 = __webpack_require__(2);
-const cases_service_1 = __webpack_require__(38);
-const cases_controller_1 = __webpack_require__(39);
+const cases_service_1 = __webpack_require__(39);
+const cases_controller_1 = __webpack_require__(40);
 let CasesModule = class CasesModule {
 };
 exports.CasesModule = CasesModule;
@@ -2946,7 +3414,7 @@ exports.CasesModule = CasesModule = __decorate([
 
 
 /***/ }),
-/* 38 */
+/* 39 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3022,6 +3490,69 @@ let CasesService = class CasesService {
                 },
                 documents: true,
             },
+        });
+    }
+    async findMyCases(currentUserId, userRole) {
+        console.log(`🔍 CasesService.findMyCases - currentUserId: ${currentUserId}, userRole: ${userRole}`);
+        let whereClause = {};
+        if (userRole === 'CLIENTE') {
+            console.log(`👤 Buscando perfil de cliente para userId: ${currentUserId}`);
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            console.log(`📋 Perfil de cliente encontrado:`, client);
+            if (!client) {
+                console.log(`❌ No se encontró perfil de cliente para userId: ${currentUserId}`);
+                throw new common_1.NotFoundException('Cliente no encontrado');
+            }
+            whereClause = { clientId: client.id };
+            console.log(`🔍 Filtro aplicado: clientId = ${client.id}`);
+        }
+        else if (userRole === 'ABOGADO') {
+            whereClause = { lawyerId: currentUserId };
+            console.log(`👨‍💼 Filtro aplicado: lawyerId = ${currentUserId}`);
+        }
+        else if (userRole === 'ADMIN') {
+            console.log(`👑 Admin - sin filtro aplicado`);
+        }
+        console.log(`🔍 Consulta final:`, whereClause);
+        return this.prisma.expediente.findMany({
+            where: whereClause,
+            include: {
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                },
+                documents: {
+                    orderBy: {
+                        uploadedAt: 'desc'
+                    },
+                    take: 5
+                },
+                _count: {
+                    select: {
+                        documents: true,
+                        tasks: true,
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
         });
     }
     async findAll(currentUserId, userRole) {
@@ -3595,7 +4126,7 @@ exports.CasesService = CasesService = __decorate([
 
 
 /***/ }),
-/* 39 */
+/* 40 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3616,12 +4147,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CasesController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const cases_service_1 = __webpack_require__(38);
-const create_case_dto_1 = __webpack_require__(40);
-const update_case_dto_1 = __webpack_require__(41);
+const cases_service_1 = __webpack_require__(39);
+const create_case_dto_1 = __webpack_require__(41);
+const update_case_dto_1 = __webpack_require__(42);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(34);
-const roles_decorator_1 = __webpack_require__(35);
+const roles_guard_1 = __webpack_require__(35);
+const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
 let CasesController = class CasesController {
     constructor(casesService) {
@@ -3629,6 +4160,9 @@ let CasesController = class CasesController {
     }
     create(createCaseDto, req) {
         return this.casesService.create(createCaseDto, req.user.id);
+    }
+    findMyCases(req) {
+        return this.casesService.findMyCases(req.user.id, req.user.role);
     }
     findAll(req) {
         console.log(`🎯 CasesController.findAll - User ID: ${req.user.id}, Role: ${req.user.role}`);
@@ -3741,6 +4275,61 @@ __decorate([
     __metadata("design:paramtypes", [typeof (_b = typeof create_case_dto_1.CreateCaseDto !== "undefined" && create_case_dto_1.CreateCaseDto) === "function" ? _b : Object, Object]),
     __metadata("design:returntype", void 0)
 ], CasesController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)('my'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener mis casos',
+        description: 'Devuelve los casos del usuario autenticado (CLIENTE ve sus expedientes, ABOGADO ve sus casos asignados)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de casos del usuario',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    status: { type: 'string', enum: ['ABIERTO', 'EN_PROCESO', 'CERRADO'] },
+                    clientId: { type: 'string' },
+                    lawyerId: { type: 'string' },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    client: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            user: {
+                                type: 'object',
+                                properties: {
+                                    name: { type: 'string' },
+                                    email: { type: 'string' }
+                                }
+                            }
+                        }
+                    },
+                    lawyer: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            name: { type: 'string' },
+                            email: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Usuario no encontrado' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], CasesController.prototype, "findMyCases", null);
 __decorate([
     (0, common_1.Get)(),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
@@ -4251,7 +4840,7 @@ exports.CasesController = CasesController = __decorate([
 
 
 /***/ }),
-/* 40 */
+/* 41 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4326,7 +4915,7 @@ __decorate([
 
 
 /***/ }),
-/* 41 */
+/* 42 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4405,7 +4994,7 @@ __decorate([
 
 
 /***/ }),
-/* 42 */
+/* 43 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4418,9 +5007,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DocumentsModule = void 0;
 const common_1 = __webpack_require__(2);
-const documents_service_1 = __webpack_require__(43);
-const documents_controller_1 = __webpack_require__(46);
-const prisma_module_1 = __webpack_require__(36);
+const documents_service_1 = __webpack_require__(44);
+const documents_controller_1 = __webpack_require__(47);
+const prisma_module_1 = __webpack_require__(37);
 let DocumentsModule = class DocumentsModule {
 };
 exports.DocumentsModule = DocumentsModule;
@@ -4435,7 +5024,7 @@ exports.DocumentsModule = DocumentsModule = __decorate([
 
 
 /***/ }),
-/* 43 */
+/* 44 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4486,8 +5075,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DocumentsService = void 0;
 const common_1 = __webpack_require__(2);
 const prisma_service_1 = __webpack_require__(8);
-const fs = __importStar(__webpack_require__(44));
-const path = __importStar(__webpack_require__(45));
+const fs = __importStar(__webpack_require__(45));
+const path = __importStar(__webpack_require__(46));
 let DocumentsService = class DocumentsService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -4587,6 +5176,138 @@ let DocumentsService = class DocumentsService {
             }
         });
         return document;
+    }
+    async findMyDocuments(currentUserId, userRole) {
+        if (userRole === 'ADMIN') {
+            return this.prisma.document.findMany({
+                include: {
+                    expediente: {
+                        include: {
+                            client: {
+                                include: {
+                                    user: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            email: true,
+                                        }
+                                    }
+                                }
+                            },
+                            lawyer: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    email: true,
+                                }
+                            }
+                        }
+                    },
+                    uploadedByUser: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                        }
+                    }
+                },
+                orderBy: {
+                    uploadedAt: 'desc'
+                }
+            });
+        }
+        else if (userRole === 'ABOGADO') {
+            return this.prisma.document.findMany({
+                where: {
+                    expediente: {
+                        lawyerId: currentUserId
+                    }
+                },
+                include: {
+                    expediente: {
+                        include: {
+                            client: {
+                                include: {
+                                    user: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            email: true,
+                                        }
+                                    }
+                                }
+                            },
+                            lawyer: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    email: true,
+                                }
+                            }
+                        }
+                    },
+                    uploadedByUser: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                        }
+                    }
+                },
+                orderBy: {
+                    uploadedAt: 'desc'
+                }
+            });
+        }
+        else {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            if (!client) {
+                throw new common_1.ForbiddenException('No eres cliente');
+            }
+            return this.prisma.document.findMany({
+                where: {
+                    expediente: {
+                        clientId: client.id
+                    }
+                },
+                include: {
+                    expediente: {
+                        include: {
+                            client: {
+                                include: {
+                                    user: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            email: true,
+                                        }
+                                    }
+                                }
+                            },
+                            lawyer: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    email: true,
+                                }
+                            }
+                        }
+                    },
+                    uploadedByUser: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                        }
+                    }
+                },
+                orderBy: {
+                    uploadedAt: 'desc'
+                }
+            });
+        }
     }
     async findAll(currentUserId, userRole) {
         let whereClause = {};
@@ -4715,6 +5436,7 @@ let DocumentsService = class DocumentsService {
             include: {
                 expediente: {
                     include: {
+                        client: true,
                         lawyer: true,
                     }
                 }
@@ -4729,7 +5451,12 @@ let DocumentsService = class DocumentsService {
             }
         }
         else if (userRole === 'CLIENTE') {
-            throw new common_1.ForbiddenException('Los clientes no pueden eliminar documentos');
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            if (!client || document.expediente.clientId !== client.id) {
+                throw new common_1.ForbiddenException('Solo puedes eliminar documentos de tus propios expedientes');
+            }
         }
         const filePath = path.join(process.cwd(), this.UPLOAD_DIR, document.filename);
         if (fs.existsSync(filePath)) {
@@ -4814,19 +5541,19 @@ exports.DocumentsService = DocumentsService = __decorate([
 
 
 /***/ }),
-/* 44 */
+/* 45 */
 /***/ ((module) => {
 
 module.exports = require("fs");
 
 /***/ }),
-/* 45 */
+/* 46 */
 /***/ ((module) => {
 
 module.exports = require("path");
 
 /***/ }),
-/* 46 */
+/* 47 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4846,14 +5573,14 @@ var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DocumentsController = void 0;
 const common_1 = __webpack_require__(2);
-const platform_express_1 = __webpack_require__(47);
-const express_1 = __webpack_require__(48);
+const platform_express_1 = __webpack_require__(48);
+const express_1 = __webpack_require__(49);
 const swagger_1 = __webpack_require__(3);
-const documents_service_1 = __webpack_require__(43);
-const upload_document_dto_1 = __webpack_require__(49);
+const documents_service_1 = __webpack_require__(44);
+const upload_document_dto_1 = __webpack_require__(50);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(34);
-const roles_decorator_1 = __webpack_require__(35);
+const roles_guard_1 = __webpack_require__(35);
+const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
 let DocumentsController = class DocumentsController {
     constructor(documentsService) {
@@ -4861,6 +5588,9 @@ let DocumentsController = class DocumentsController {
     }
     async uploadDocument(file, uploadDocumentDto, req) {
         return this.documentsService.uploadDocument(file, uploadDocumentDto, req.user.id, req.user.role);
+    }
+    findMyDocuments(req) {
+        return this.documentsService.findMyDocuments(req.user.id, req.user.role);
     }
     findAll(req) {
         return this.documentsService.findAll(req.user.id, req.user.role);
@@ -4981,6 +5711,50 @@ __decorate([
             }
         }
     }),
+    (0, common_1.Get)('my'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener mis documentos',
+        description: 'Devuelve los documentos del usuario autenticado (CLIENTE ve documentos de sus expedientes, ABOGADO ve documentos de sus casos)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de documentos del usuario',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    filename: { type: 'string' },
+                    originalName: { type: 'string' },
+                    fileUrl: { type: 'string' },
+                    fileSize: { type: 'number' },
+                    mimeType: { type: 'string' },
+                    description: { type: 'string' },
+                    expedienteId: { type: 'string' },
+                    uploadedBy: { type: 'string' },
+                    uploadedAt: { type: 'string', format: 'date-time' },
+                    expediente: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            title: { type: 'string' },
+                            status: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], DocumentsController.prototype, "findMyDocuments", null);
+__decorate([
     (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
@@ -5059,9 +5833,10 @@ __decorate([
 ], DocumentsController.prototype, "findByExpediente", null);
 __decorate([
     (0, common_1.Get)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
     (0, swagger_1.ApiOperation)({
         summary: 'Obtener documento por ID',
-        description: 'Devuelve un documento específico por su ID'
+        description: 'Devuelve un documento específico por su ID. Los clientes solo pueden ver documentos de sus expedientes.'
     }),
     (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
     (0, swagger_1.ApiResponse)({
@@ -5084,6 +5859,7 @@ __decorate([
         }
     }),
     (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Documento no encontrado' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
@@ -5093,9 +5869,10 @@ __decorate([
 ], DocumentsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Get)(':id/download'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
     (0, swagger_1.ApiOperation)({
         summary: 'Descargar documento',
-        description: 'Descarga un documento específico'
+        description: 'Descarga un documento específico. Los clientes solo pueden descargar documentos de sus expedientes.'
     }),
     (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
     (0, swagger_1.ApiResponse)({
@@ -5107,6 +5884,7 @@ __decorate([
         }
     }),
     (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Documento no encontrado' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
@@ -5117,10 +5895,10 @@ __decorate([
 ], DocumentsController.prototype, "downloadDocument", null);
 __decorate([
     (0, common_1.Delete)(':id'),
-    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
     (0, swagger_1.ApiOperation)({
         summary: 'Eliminar documento',
-        description: 'Elimina un documento del sistema (solo ADMIN y ABOGADO)'
+        description: 'Elimina un documento del sistema (ADMIN, ABOGADO y CLIENTE pueden eliminar sus propios documentos)'
     }),
     (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
     (0, swagger_1.ApiResponse)({
@@ -5152,19 +5930,19 @@ exports.DocumentsController = DocumentsController = __decorate([
 
 
 /***/ }),
-/* 47 */
+/* 48 */
 /***/ ((module) => {
 
 module.exports = require("@nestjs/platform-express");
 
 /***/ }),
-/* 48 */
+/* 49 */
 /***/ ((module) => {
 
 module.exports = require("express");
 
 /***/ }),
-/* 49 */
+/* 50 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5218,7 +5996,7 @@ __decorate([
 
 
 /***/ }),
-/* 50 */
+/* 51 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5231,11 +6009,11 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AppointmentsModule = void 0;
 const common_1 = __webpack_require__(2);
-const appointments_controller_1 = __webpack_require__(51);
-const appointments_service_1 = __webpack_require__(52);
-const visitor_appointments_controller_1 = __webpack_require__(55);
-const visitor_appointments_service_1 = __webpack_require__(56);
-const prisma_module_1 = __webpack_require__(36);
+const appointments_controller_1 = __webpack_require__(52);
+const appointments_service_1 = __webpack_require__(53);
+const visitor_appointments_controller_1 = __webpack_require__(57);
+const visitor_appointments_service_1 = __webpack_require__(58);
+const prisma_module_1 = __webpack_require__(37);
 const email_service_1 = __webpack_require__(17);
 let AppointmentsModule = class AppointmentsModule {
 };
@@ -5251,7 +6029,7 @@ exports.AppointmentsModule = AppointmentsModule = __decorate([
 
 
 /***/ }),
-/* 51 */
+/* 52 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5267,27 +6045,40 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c;
+var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AppointmentsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const appointments_service_1 = __webpack_require__(52);
+const appointments_service_1 = __webpack_require__(53);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const create_appointment_dto_1 = __webpack_require__(53);
-const create_lawyer_appointment_dto_1 = __webpack_require__(54);
+const create_appointment_dto_1 = __webpack_require__(54);
+const create_lawyer_appointment_dto_1 = __webpack_require__(55);
+const update_appointment_dto_1 = __webpack_require__(56);
 let AppointmentsController = class AppointmentsController {
     constructor(appointmentsService) {
         this.appointmentsService = appointmentsService;
     }
+    async findMyAppointments(req) {
+        return this.appointmentsService.findMyAppointments(req.user);
+    }
     async findAll(req) {
         return this.appointmentsService.findAll(req.user);
+    }
+    async findOne(id, req) {
+        return this.appointmentsService.findOne(id, req.user);
     }
     async create(createAppointmentDto, req) {
         return this.appointmentsService.create(createAppointmentDto, req.user);
     }
     async createAsLawyer(createLawyerAppointmentDto, req) {
         return this.appointmentsService.createAsLawyer(createLawyerAppointmentDto, req.user);
+    }
+    async update(id, updateAppointmentDto, req) {
+        return this.appointmentsService.update(id, updateAppointmentDto, req.user);
+    }
+    async confirm(id, req) {
+        return this.appointmentsService.confirm(id, req.user);
     }
     async delete(id, req) {
         return this.appointmentsService.delete(id, req.user);
@@ -5297,6 +6088,59 @@ let AppointmentsController = class AppointmentsController {
     }
 };
 exports.AppointmentsController = AppointmentsController;
+__decorate([
+    (0, common_1.Get)('my'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener mis citas',
+        description: 'Devuelve las citas del usuario autenticado (CLIENTE ve sus citas, ABOGADO ve sus citas asignadas)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Lista de citas del usuario',
+        schema: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    date: { type: 'string', format: 'date-time' },
+                    location: { type: 'string' },
+                    notes: { type: 'string' },
+                    clientId: { type: 'string' },
+                    lawyerId: { type: 'string' },
+                    client: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            user: {
+                                type: 'object',
+                                properties: {
+                                    name: { type: 'string' },
+                                    email: { type: 'string' }
+                                }
+                            }
+                        }
+                    },
+                    lawyer: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            name: { type: 'string' },
+                            email: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AppointmentsController.prototype, "findMyAppointments", null);
 __decorate([
     (0, common_1.Get)(),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
@@ -5349,6 +6193,58 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AppointmentsController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener una cita específica',
+        description: 'Devuelve los detalles de una cita específica según los permisos del usuario'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Detalles de la cita',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                date: { type: 'string', format: 'date-time' },
+                location: { type: 'string' },
+                notes: { type: 'string' },
+                clientId: { type: 'string' },
+                lawyerId: { type: 'string' },
+                client: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        user: {
+                            type: 'object',
+                            properties: {
+                                name: { type: 'string' },
+                                email: { type: 'string' }
+                            }
+                        }
+                    }
+                },
+                lawyer: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        name: { type: 'string' },
+                        email: { type: 'string' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'No tienes permisos para ver esta cita' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Cita no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AppointmentsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Post)(),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
@@ -5414,6 +6310,73 @@ __decorate([
     __metadata("design:paramtypes", [typeof (_c = typeof create_lawyer_appointment_dto_1.CreateLawyerAppointmentDto !== "undefined" && create_lawyer_appointment_dto_1.CreateLawyerAppointmentDto) === "function" ? _c : Object, Object]),
     __metadata("design:returntype", Promise)
 ], AppointmentsController.prototype, "createAsLawyer", null);
+__decorate([
+    (0, common_1.Put)(':id'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Actualizar cita',
+        description: 'Permite actualizar los detalles de una cita existente'
+    }),
+    (0, swagger_1.ApiBody)({ type: update_appointment_dto_1.UpdateAppointmentDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Cita actualizada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                date: { type: 'string', format: 'date-time' },
+                location: { type: 'string' },
+                notes: { type: 'string' },
+                clientId: { type: 'string' },
+                lawyerId: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Datos inválidos' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'No tienes permisos para editar esta cita' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Cita no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_d = typeof update_appointment_dto_1.UpdateAppointmentDto !== "undefined" && update_appointment_dto_1.UpdateAppointmentDto) === "function" ? _d : Object, Object]),
+    __metadata("design:returntype", Promise)
+], AppointmentsController.prototype, "update", null);
+__decorate([
+    (0, common_1.Put)(':id/confirm'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Confirmar cita',
+        description: 'Permite a un abogado confirmar una cita existente'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Cita confirmada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                date: { type: 'string', format: 'date-time' },
+                location: { type: 'string' },
+                notes: { type: 'string' },
+                status: { type: 'string' },
+                clientId: { type: 'string' },
+                lawyerId: { type: 'string' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Solo los abogados pueden confirmar citas' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Cita no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AppointmentsController.prototype, "confirm", null);
 __decorate([
     (0, common_1.Delete)(':id'),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
@@ -5485,7 +6448,7 @@ exports.AppointmentsController = AppointmentsController = __decorate([
 
 
 /***/ }),
-/* 52 */
+/* 53 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5509,7 +6472,7 @@ let AppointmentsService = class AppointmentsService {
         this.prisma = prisma;
         this.emailService = emailService;
     }
-    async findAll(user) {
+    async findMyAppointments(user) {
         if (user.role === 'ADMIN') {
             return this.prisma.appointment.findMany({
                 include: {
@@ -5524,55 +6487,18 @@ let AppointmentsService = class AppointmentsService {
             });
         }
         else if (user.role === 'ABOGADO') {
-            const [regularAppointments, visitorAppointments] = await Promise.all([
-                this.prisma.appointment.findMany({
-                    where: { lawyerId: user.id },
-                    include: {
-                        lawyer: { select: { id: true, name: true, email: true } },
-                        client: {
-                            include: {
-                                user: { select: { id: true, name: true, email: true } }
-                            }
+            return this.prisma.appointment.findMany({
+                where: { lawyerId: user.id },
+                include: {
+                    lawyer: { select: { id: true, name: true, email: true } },
+                    client: {
+                        include: {
+                            user: { select: { id: true, name: true, email: true } }
                         }
-                    },
-                    orderBy: { date: 'desc' }
-                }),
-                this.prisma.visitorAppointment.findMany({
-                    where: { assignedLawyerId: user.id },
-                    include: {
-                        assignedLawyer: { select: { id: true, name: true, email: true } }
-                    },
-                    orderBy: { createdAt: 'desc' }
-                })
-            ]);
-            const formattedVisitorAppointments = visitorAppointments.map(apt => ({
-                id: apt.id,
-                date: apt.confirmedDate || apt.preferredDate,
-                location: apt.location,
-                notes: apt.notes,
-                clientId: null,
-                lawyerId: apt.assignedLawyerId,
-                client: {
-                    id: apt.id,
-                    user: {
-                        name: apt.fullName,
-                        email: apt.email
                     }
                 },
-                lawyer: apt.assignedLawyer,
-                type: 'VISITOR',
-                status: apt.status,
-                fullName: apt.fullName,
-                email: apt.email,
-                phone: apt.phone,
-                consultationReason: apt.consultationReason,
-                consultationType: apt.consultationType,
-                age: apt.age,
-                preferredDate: apt.preferredDate,
-                confirmedDate: apt.confirmedDate
-            }));
-            const allAppointments = [...regularAppointments, ...formattedVisitorAppointments];
-            return allAppointments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                orderBy: { date: 'desc' }
+            });
         }
         else {
             const client = await this.prisma.client.findUnique({
@@ -5594,20 +6520,117 @@ let AppointmentsService = class AppointmentsService {
             });
         }
     }
+    async findAll(user) {
+        if (user.role === 'ADMIN') {
+            return this.prisma.appointment.findMany({
+                include: {
+                    lawyer: { select: { id: true, name: true, email: true } },
+                    client: {
+                        include: {
+                            user: { select: { id: true, name: true, email: true } }
+                        }
+                    }
+                },
+                orderBy: { date: 'desc' }
+            });
+        }
+        else if (user.role === 'ABOGADO') {
+            return this.prisma.appointment.findMany({
+                where: { lawyerId: user.id },
+                include: {
+                    lawyer: { select: { id: true, name: true, email: true } },
+                    client: {
+                        include: {
+                            user: { select: { id: true, name: true, email: true } }
+                        }
+                    }
+                },
+                orderBy: { date: 'desc' }
+            });
+        }
+        else {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: user.id }
+            });
+            if (!client)
+                throw new common_1.ForbiddenException('No eres cliente');
+            return this.prisma.appointment.findMany({
+                where: { clientId: client.id },
+                include: {
+                    lawyer: { select: { id: true, name: true, email: true } },
+                    client: {
+                        include: {
+                            user: { select: { id: true, name: true, email: true } }
+                        }
+                    }
+                },
+                orderBy: { date: 'desc' }
+            });
+        }
+    }
+    async findOne(id, user) {
+        const appointment = await this.prisma.appointment.findUnique({
+            where: { id },
+            include: {
+                lawyer: { select: { id: true, name: true, email: true } },
+                client: {
+                    include: {
+                        user: { select: { id: true, name: true, email: true } }
+                    }
+                }
+            }
+        });
+        if (!appointment) {
+            throw new common_1.NotFoundException('Cita no encontrada');
+        }
+        if (user.role === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: user.id }
+            });
+            if (!client || appointment.clientId !== client.id) {
+                throw new common_1.ForbiddenException('No tienes permisos para ver esta cita');
+            }
+        }
+        else if (user.role === 'ABOGADO') {
+            if (appointment.lawyerId !== user.id) {
+                throw new common_1.ForbiddenException('No tienes permisos para ver esta cita');
+            }
+        }
+        return appointment;
+    }
     async create(dto, user) {
         if (user.role !== 'CLIENTE')
             throw new common_1.ForbiddenException('Solo los clientes pueden agendar citas');
-        const client = await this.prisma.client.findUnique({ where: { userId: user.id } });
+        const client = await this.prisma.client.findUnique({
+            where: { userId: user.id },
+            include: { user: true }
+        });
         if (!client)
             throw new common_1.ForbiddenException('No eres cliente');
         const lawyer = await this.prisma.user.findUnique({ where: { id: dto.lawyerId, role: 'ABOGADO' } });
         if (!lawyer)
             throw new common_1.NotFoundException('Abogado no encontrado');
+        const appointmentDate = new Date(dto.date);
+        if (appointmentDate <= new Date()) {
+            throw new common_1.BadRequestException('La fecha de la cita debe ser futura');
+        }
+        const conflictingAppointment = await this.prisma.appointment.findFirst({
+            where: {
+                lawyerId: dto.lawyerId,
+                date: {
+                    gte: new Date(appointmentDate.getTime() - 60 * 60 * 1000),
+                    lte: new Date(appointmentDate.getTime() + 60 * 60 * 1000),
+                }
+            }
+        });
+        if (conflictingAppointment) {
+            throw new common_1.BadRequestException('El abogado no está disponible en ese horario');
+        }
         const appointment = await this.prisma.appointment.create({
             data: {
                 clientId: client.id,
                 lawyerId: dto.lawyerId,
-                date: new Date(dto.date),
+                date: appointmentDate,
                 location: dto.location || null,
                 notes: dto.notes || null,
             },
@@ -5620,6 +6643,19 @@ let AppointmentsService = class AppointmentsService {
                 }
             }
         });
+        try {
+            await this.emailService.sendAppointmentConfirmationEmail({
+                clientName: client.user.name,
+                clientEmail: client.user.email,
+                lawyerName: lawyer.name,
+                appointmentDate: appointmentDate,
+                location: dto.location,
+                notes: dto.notes
+            });
+        }
+        catch (error) {
+            console.error('Error sending confirmation email:', error);
+        }
         return appointment;
     }
     async createAsLawyer(dto, user) {
@@ -5639,11 +6675,27 @@ let AppointmentsService = class AppointmentsService {
         if (!lawyer) {
             throw new common_1.ForbiddenException('No eres abogado');
         }
+        const appointmentDate = new Date(dto.date);
+        if (appointmentDate <= new Date()) {
+            throw new common_1.BadRequestException('La fecha de la cita debe ser futura');
+        }
+        const conflictingAppointment = await this.prisma.appointment.findFirst({
+            where: {
+                lawyerId: user.id,
+                date: {
+                    gte: new Date(appointmentDate.getTime() - 60 * 60 * 1000),
+                    lte: new Date(appointmentDate.getTime() + 60 * 60 * 1000),
+                }
+            }
+        });
+        if (conflictingAppointment) {
+            throw new common_1.BadRequestException('No estás disponible en ese horario');
+        }
         const appointment = await this.prisma.appointment.create({
             data: {
                 clientId: dto.clientId,
                 lawyerId: user.id,
-                date: new Date(dto.date),
+                date: appointmentDate,
                 location: dto.location || null,
                 notes: dto.notes || null,
             },
@@ -5656,21 +6708,147 @@ let AppointmentsService = class AppointmentsService {
                 }
             }
         });
+        try {
+            await this.emailService.sendAppointmentScheduledByLawyerEmail({
+                clientName: client.user.name,
+                clientEmail: client.user.email,
+                lawyerName: lawyer.name,
+                appointmentDate: appointmentDate,
+                location: dto.location,
+                notes: dto.notes
+            });
+        }
+        catch (error) {
+            console.error('Error sending notification email:', error);
+        }
         return appointment;
     }
-    async delete(id, user) {
+    async update(id, updateDto, user) {
         const appointment = await this.prisma.appointment.findUnique({
             where: { id },
             include: {
-                client: { include: { user: true } },
-                lawyer: true
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true
+                            }
+                        }
+                    }
+                },
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
             }
         });
         if (!appointment) {
             throw new common_1.NotFoundException('Cita no encontrada');
         }
         if (user.role === 'CLIENTE') {
-            const client = await this.prisma.client.findUnique({ where: { userId: user.id } });
+            const client = await this.prisma.client.findUnique({
+                where: { userId: user.id }
+            });
+            if (!client || appointment.clientId !== client.id) {
+                throw new common_1.ForbiddenException('No tienes permisos para editar esta cita');
+            }
+        }
+        else if (user.role === 'ABOGADO') {
+            if (appointment.lawyerId !== user.id) {
+                throw new common_1.ForbiddenException('No tienes permisos para editar esta cita');
+            }
+        }
+        else if (user.role !== 'ADMIN') {
+            throw new common_1.ForbiddenException('No tienes permisos para editar citas');
+        }
+        if (updateDto.date) {
+            const newDate = new Date(updateDto.date);
+            if (newDate <= new Date()) {
+                throw new common_1.BadRequestException('La fecha de la cita debe ser futura');
+            }
+            const conflictingAppointment = await this.prisma.appointment.findFirst({
+                where: {
+                    lawyerId: appointment.lawyerId,
+                    id: { not: id },
+                    date: {
+                        gte: new Date(newDate.getTime() - 60 * 60 * 1000),
+                        lte: new Date(newDate.getTime() + 60 * 60 * 1000),
+                    }
+                }
+            });
+            if (conflictingAppointment) {
+                throw new common_1.BadRequestException('El abogado no está disponible en ese horario');
+            }
+        }
+        const updatedAppointment = await this.prisma.appointment.update({
+            where: { id },
+            data: {
+                date: updateDto.date ? new Date(updateDto.date) : undefined,
+                location: updateDto.location !== undefined ? updateDto.location : undefined,
+                notes: updateDto.notes !== undefined ? updateDto.notes : undefined,
+            },
+            include: {
+                lawyer: { select: { id: true, name: true, email: true } },
+                client: {
+                    include: {
+                        user: { select: { id: true, name: true, email: true } }
+                    }
+                }
+            }
+        });
+        if (updateDto.date && appointment.date.getTime() !== new Date(updateDto.date).getTime()) {
+            try {
+                await this.emailService.sendAppointmentUpdatedEmail({
+                    clientName: appointment.client.user.name,
+                    clientEmail: appointment.client.user.email,
+                    lawyerName: appointment.lawyer.name,
+                    appointmentDate: new Date(updateDto.date),
+                    location: updateDto.location || appointment.location,
+                    notes: updateDto.notes
+                });
+            }
+            catch (error) {
+                console.error('Error sending update notification email:', error);
+            }
+        }
+        return updatedAppointment;
+    }
+    async delete(id, user) {
+        const appointment = await this.prisma.appointment.findUnique({
+            where: { id },
+            include: {
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true
+                            }
+                        }
+                    }
+                },
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        if (!appointment) {
+            throw new common_1.NotFoundException('Cita no encontrada');
+        }
+        if (user.role === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: user.id }
+            });
             if (!client || appointment.clientId !== client.id) {
                 throw new common_1.ForbiddenException('No tienes permisos para cancelar esta cita');
             }
@@ -5682,6 +6860,19 @@ let AppointmentsService = class AppointmentsService {
         }
         else if (user.role !== 'ADMIN') {
             throw new common_1.ForbiddenException('No tienes permisos para cancelar citas');
+        }
+        try {
+            await this.emailService.sendAppointmentCancelledEmail({
+                clientName: appointment.client.user.name,
+                clientEmail: appointment.client.user.email,
+                lawyerName: appointment.lawyer.name,
+                appointmentDate: appointment.date,
+                location: appointment.location,
+                cancelledBy: user.role === 'CLIENTE' ? 'cliente' : 'abogado'
+            });
+        }
+        catch (error) {
+            console.error('Error sending cancellation email:', error);
         }
         await this.prisma.appointment.delete({
             where: { id }
@@ -5721,12 +6912,29 @@ let AppointmentsService = class AppointmentsService {
         if (appointment.lawyerId !== user.id) {
             throw new common_1.ForbiddenException('No tienes permisos para reprogramar esta cita');
         }
+        const newDate = new Date(rescheduleData.date);
+        if (newDate <= new Date()) {
+            throw new common_1.BadRequestException('La fecha de la cita debe ser futura');
+        }
+        const conflictingAppointment = await this.prisma.appointment.findFirst({
+            where: {
+                lawyerId: appointment.lawyerId,
+                id: { not: id },
+                date: {
+                    gte: new Date(newDate.getTime() - 60 * 60 * 1000),
+                    lte: new Date(newDate.getTime() + 60 * 60 * 1000),
+                }
+            }
+        });
+        if (conflictingAppointment) {
+            throw new common_1.BadRequestException('No estás disponible en ese horario');
+        }
         const originalDate = appointment.date;
         const originalLocation = appointment.location;
         const updatedAppointment = await this.prisma.appointment.update({
             where: { id },
             data: {
-                date: new Date(rescheduleData.date),
+                date: newDate,
                 location: rescheduleData.location || appointment.location,
                 notes: rescheduleData.notes || appointment.notes,
             },
@@ -5746,13 +6954,75 @@ let AppointmentsService = class AppointmentsService {
                 lawyerName: appointment.lawyer.name,
                 originalDate: originalDate,
                 originalLocation: originalLocation,
-                newDate: new Date(rescheduleData.date),
+                newDate: newDate,
                 newLocation: rescheduleData.location || appointment.location,
                 notes: rescheduleData.notes
             });
         }
         catch (error) {
             console.error('Error sending reschedule notification email:', error);
+        }
+        return updatedAppointment;
+    }
+    async confirm(id, user) {
+        const appointment = await this.prisma.appointment.findUnique({
+            where: { id },
+            include: {
+                client: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true
+                            }
+                        }
+                    }
+                },
+                lawyer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        if (!appointment) {
+            throw new common_1.NotFoundException('Cita no encontrada');
+        }
+        if (user.role !== 'ABOGADO') {
+            throw new common_1.ForbiddenException('Solo los abogados pueden confirmar citas');
+        }
+        if (appointment.lawyerId !== user.id) {
+            throw new common_1.ForbiddenException('No tienes permisos para confirmar esta cita');
+        }
+        const updatedAppointment = await this.prisma.appointment.update({
+            where: { id },
+            data: {
+                status: 'CONFIRMADA',
+            },
+            include: {
+                lawyer: { select: { id: true, name: true, email: true } },
+                client: {
+                    include: {
+                        user: { select: { id: true, name: true, email: true } }
+                    }
+                }
+            }
+        });
+        try {
+            await this.emailService.sendAppointmentConfirmedEmail({
+                clientName: appointment.client.user.name,
+                clientEmail: appointment.client.user.email,
+                lawyerName: appointment.lawyer.name,
+                appointmentDate: appointment.date,
+                location: appointment.location,
+                notes: appointment.notes
+            });
+        }
+        catch (error) {
+            console.error('Error sending confirmation email:', error);
         }
         return updatedAppointment;
     }
@@ -5765,7 +7035,7 @@ exports.AppointmentsService = AppointmentsService = __decorate([
 
 
 /***/ }),
-/* 53 */
+/* 54 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5829,7 +7099,7 @@ __decorate([
 
 
 /***/ }),
-/* 54 */
+/* 55 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5893,7 +7163,61 @@ __decorate([
 
 
 /***/ }),
-/* 55 */
+/* 56 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UpdateAppointmentDto = void 0;
+const class_validator_1 = __webpack_require__(23);
+const swagger_1 = __webpack_require__(3);
+class UpdateAppointmentDto {
+}
+exports.UpdateAppointmentDto = UpdateAppointmentDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Nueva fecha y hora de la cita',
+        example: '2024-01-15T10:00:00.000Z',
+        required: false
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsDateString)(),
+    __metadata("design:type", String)
+], UpdateAppointmentDto.prototype, "date", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Nueva ubicación de la cita',
+        example: 'Oficina principal, Calle Mayor 123',
+        required: false
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], UpdateAppointmentDto.prototype, "location", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Nuevas notas o comentarios sobre la cita',
+        example: 'Cita para revisar documentos del caso',
+        required: false
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateAppointmentDto.prototype, "notes", void 0);
+
+
+/***/ }),
+/* 57 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5914,11 +7238,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VisitorAppointmentsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const visitor_appointments_service_1 = __webpack_require__(56);
-const create_visitor_appointment_dto_1 = __webpack_require__(57);
+const visitor_appointments_service_1 = __webpack_require__(58);
+const create_visitor_appointment_dto_1 = __webpack_require__(59);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(34);
-const roles_decorator_1 = __webpack_require__(35);
+const roles_guard_1 = __webpack_require__(35);
+const roles_decorator_1 = __webpack_require__(36);
 let VisitorAppointmentsController = class VisitorAppointmentsController {
     constructor(visitorAppointmentsService) {
         this.visitorAppointmentsService = visitorAppointmentsService;
@@ -5981,11 +7305,11 @@ __decorate([
 __decorate([
     (0, common_1.Get)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('ADMIN', 'ABOGADO'),
+    (0, roles_decorator_1.Roles)('ADMIN', 'ABOGADO', 'CLIENTE'),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
     (0, swagger_1.ApiOperation)({
         summary: 'Obtener citas de visitantes',
-        description: 'Devuelve las citas de visitantes según el rol del usuario'
+        description: 'Devuelve las citas de visitantes según el rol del usuario. Los clientes solo ven sus propias citas.'
     }),
     (0, swagger_1.ApiResponse)({
         status: 200,
@@ -6018,11 +7342,11 @@ __decorate([
 __decorate([
     (0, common_1.Get)(':id'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('ADMIN', 'ABOGADO'),
+    (0, roles_decorator_1.Roles)('ADMIN', 'ABOGADO', 'CLIENTE'),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
     (0, swagger_1.ApiOperation)({
         summary: 'Obtener cita de visitante por ID',
-        description: 'Devuelve una cita específica de visitante'
+        description: 'Devuelve una cita específica de visitante. Los clientes solo pueden ver sus propias citas.'
     }),
     (0, swagger_1.ApiResponse)({
         status: 200,
@@ -6208,7 +7532,7 @@ exports.VisitorAppointmentsController = VisitorAppointmentsController = __decora
 
 
 /***/ }),
-/* 56 */
+/* 58 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -6292,6 +7616,12 @@ let VisitorAppointmentsService = class VisitorAppointmentsService {
                 orderBy: { createdAt: 'desc' }
             });
         }
+        else if (user.role === 'CLIENTE') {
+            return this.prisma.visitorAppointment.findMany({
+                where: { email: user.email },
+                orderBy: { createdAt: 'desc' }
+            });
+        }
         else {
             return [];
         }
@@ -6307,6 +7637,9 @@ let VisitorAppointmentsService = class VisitorAppointmentsService {
             return appointment;
         }
         else if (user.role === 'ABOGADO' && appointment.assignedLawyerId === user.id) {
+            return appointment;
+        }
+        else if (user.role === 'CLIENTE' && appointment.email === user.email) {
             return appointment;
         }
         else {
@@ -6415,7 +7748,7 @@ exports.VisitorAppointmentsService = VisitorAppointmentsService = __decorate([
 
 
 /***/ }),
-/* 57 */
+/* 59 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -6493,7 +7826,7 @@ __decorate([
 
 
 /***/ }),
-/* 58 */
+/* 60 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -6506,9 +7839,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TasksModule = void 0;
 const common_1 = __webpack_require__(2);
-const tasks_controller_1 = __webpack_require__(59);
-const tasks_service_1 = __webpack_require__(60);
-const prisma_module_1 = __webpack_require__(36);
+const tasks_controller_1 = __webpack_require__(61);
+const tasks_service_1 = __webpack_require__(62);
+const prisma_module_1 = __webpack_require__(37);
 let TasksModule = class TasksModule {
 };
 exports.TasksModule = TasksModule;
@@ -6523,7 +7856,7 @@ exports.TasksModule = TasksModule = __decorate([
 
 
 /***/ }),
-/* 59 */
+/* 61 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -6544,9 +7877,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TasksController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const tasks_service_1 = __webpack_require__(60);
-const create_task_dto_1 = __webpack_require__(61);
-const update_task_dto_1 = __webpack_require__(62);
+const tasks_service_1 = __webpack_require__(62);
+const create_task_dto_1 = __webpack_require__(63);
+const update_task_dto_1 = __webpack_require__(64);
 const jwt_auth_guard_1 = __webpack_require__(27);
 let TasksController = class TasksController {
     constructor(tasksService) {
@@ -6904,7 +8237,7 @@ exports.TasksController = TasksController = __decorate([
 
 
 /***/ }),
-/* 60 */
+/* 62 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -6922,7 +8255,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TasksService = void 0;
 const common_1 = __webpack_require__(2);
 const prisma_service_1 = __webpack_require__(8);
-const create_task_dto_1 = __webpack_require__(61);
+const create_task_dto_1 = __webpack_require__(63);
 let TasksService = class TasksService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -7447,7 +8780,7 @@ exports.TasksService = TasksService = __decorate([
 
 
 /***/ }),
-/* 61 */
+/* 63 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7517,7 +8850,7 @@ __decorate([
 
 
 /***/ }),
-/* 62 */
+/* 64 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7534,7 +8867,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateTaskDto = void 0;
 const swagger_1 = __webpack_require__(3);
-const create_task_dto_1 = __webpack_require__(61);
+const create_task_dto_1 = __webpack_require__(63);
 const class_validator_1 = __webpack_require__(23);
 class UpdateTaskDto extends (0, swagger_1.PartialType)(create_task_dto_1.CreateTaskDto) {
 }
@@ -7547,7 +8880,7 @@ __decorate([
 
 
 /***/ }),
-/* 63 */
+/* 65 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7560,9 +8893,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReportsModule = void 0;
 const common_1 = __webpack_require__(2);
-const reports_controller_1 = __webpack_require__(64);
-const reports_service_1 = __webpack_require__(65);
-const prisma_module_1 = __webpack_require__(36);
+const reports_controller_1 = __webpack_require__(66);
+const reports_service_1 = __webpack_require__(67);
+const prisma_module_1 = __webpack_require__(37);
 let ReportsModule = class ReportsModule {
 };
 exports.ReportsModule = ReportsModule;
@@ -7577,7 +8910,7 @@ exports.ReportsModule = ReportsModule = __decorate([
 
 
 /***/ }),
-/* 64 */
+/* 66 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7598,7 +8931,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReportsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const reports_service_1 = __webpack_require__(65);
+const reports_service_1 = __webpack_require__(67);
 const jwt_auth_guard_1 = __webpack_require__(27);
 let ReportsController = class ReportsController {
     constructor(reportsService) {
@@ -7683,7 +9016,7 @@ exports.ReportsController = ReportsController = __decorate([
 
 
 /***/ }),
-/* 65 */
+/* 67 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7809,7 +9142,7 @@ exports.ReportsService = ReportsService = __decorate([
 
 
 /***/ }),
-/* 66 */
+/* 68 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7822,16 +9155,16 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AdminModule = void 0;
 const common_1 = __webpack_require__(2);
-const admin_controller_1 = __webpack_require__(67);
-const admin_service_1 = __webpack_require__(68);
-const layouts_controller_1 = __webpack_require__(69);
-const layouts_controller_2 = __webpack_require__(69);
-const layouts_service_1 = __webpack_require__(70);
-const menu_config_controller_1 = __webpack_require__(73);
-const menu_config_service_1 = __webpack_require__(74);
-const site_config_controller_1 = __webpack_require__(76);
-const site_config_service_1 = __webpack_require__(77);
-const prisma_module_1 = __webpack_require__(36);
+const admin_controller_1 = __webpack_require__(69);
+const admin_service_1 = __webpack_require__(70);
+const layouts_controller_1 = __webpack_require__(71);
+const layouts_controller_2 = __webpack_require__(71);
+const layouts_service_1 = __webpack_require__(72);
+const menu_config_controller_1 = __webpack_require__(75);
+const menu_config_service_1 = __webpack_require__(76);
+const site_config_controller_1 = __webpack_require__(78);
+const site_config_service_1 = __webpack_require__(79);
+const prisma_module_1 = __webpack_require__(37);
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
@@ -7862,7 +9195,7 @@ exports.AdminModule = AdminModule = __decorate([
 
 
 /***/ }),
-/* 67 */
+/* 69 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7883,10 +9216,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AdminController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const admin_service_1 = __webpack_require__(68);
+const admin_service_1 = __webpack_require__(70);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(34);
-const roles_decorator_1 = __webpack_require__(35);
+const roles_guard_1 = __webpack_require__(35);
+const roles_decorator_1 = __webpack_require__(36);
 let AdminController = class AdminController {
     constructor(adminService) {
         this.adminService = adminService;
@@ -8667,7 +10000,7 @@ exports.AdminController = AdminController = __decorate([
 
 
 /***/ }),
-/* 68 */
+/* 70 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9235,7 +10568,7 @@ exports.AdminService = AdminService = __decorate([
 
 
 /***/ }),
-/* 69 */
+/* 71 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9257,11 +10590,11 @@ exports.AdminLayoutsController = exports.LayoutsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(34);
-const roles_decorator_1 = __webpack_require__(35);
+const roles_guard_1 = __webpack_require__(35);
+const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
-const layouts_service_1 = __webpack_require__(70);
-const layout_dto_1 = __webpack_require__(71);
+const layouts_service_1 = __webpack_require__(72);
+const layout_dto_1 = __webpack_require__(73);
 let LayoutsController = class LayoutsController {
     constructor(layoutsService) {
         this.layoutsService = layoutsService;
@@ -9597,7 +10930,7 @@ exports.AdminLayoutsController = AdminLayoutsController = __decorate([
 
 
 /***/ }),
-/* 70 */
+/* 72 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9996,7 +11329,7 @@ exports.LayoutsService = LayoutsService = __decorate([
 
 
 /***/ }),
-/* 71 */
+/* 73 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10012,7 +11345,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateLayoutDto = exports.CreateLayoutDto = exports.LayoutConfigDto = exports.ComponentConfigDto = void 0;
 const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(72);
+const class_transformer_1 = __webpack_require__(74);
 const swagger_1 = __webpack_require__(3);
 class ComponentConfigDto {
 }
@@ -10150,13 +11483,13 @@ __decorate([
 
 
 /***/ }),
-/* 72 */
+/* 74 */
 /***/ ((module) => {
 
 module.exports = require("class-transformer");
 
 /***/ }),
-/* 73 */
+/* 75 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10178,11 +11511,11 @@ exports.MenuConfigController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(34);
-const roles_decorator_1 = __webpack_require__(35);
+const roles_guard_1 = __webpack_require__(35);
+const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
-const menu_config_service_1 = __webpack_require__(74);
-const menu_config_dto_1 = __webpack_require__(75);
+const menu_config_service_1 = __webpack_require__(76);
+const menu_config_dto_1 = __webpack_require__(77);
 let MenuConfigController = class MenuConfigController {
     constructor(menuConfigService) {
         this.menuConfigService = menuConfigService;
@@ -10391,7 +11724,7 @@ exports.MenuConfigController = MenuConfigController = __decorate([
 
 
 /***/ }),
-/* 74 */
+/* 76 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10675,7 +12008,7 @@ exports.MenuConfigService = MenuConfigService = __decorate([
 
 
 /***/ }),
-/* 75 */
+/* 77 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10693,7 +12026,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MenuConfigResponseDto = exports.UpdateMenuConfigDto = exports.CreateMenuConfigDto = exports.MenuItemDto = void 0;
 const swagger_1 = __webpack_require__(3);
 const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(72);
+const class_transformer_1 = __webpack_require__(74);
 const client_1 = __webpack_require__(9);
 class MenuItemDto {
 }
@@ -10853,7 +12186,7 @@ __decorate([
 
 
 /***/ }),
-/* 76 */
+/* 78 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10875,10 +12208,10 @@ exports.SiteConfigController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(34);
-const roles_decorator_1 = __webpack_require__(35);
-const site_config_service_1 = __webpack_require__(77);
-const site_config_dto_1 = __webpack_require__(78);
+const roles_guard_1 = __webpack_require__(35);
+const roles_decorator_1 = __webpack_require__(36);
+const site_config_service_1 = __webpack_require__(79);
+const site_config_dto_1 = __webpack_require__(80);
 let SiteConfigController = class SiteConfigController {
     constructor(siteConfigService) {
         this.siteConfigService = siteConfigService;
@@ -11164,7 +12497,7 @@ exports.SiteConfigController = SiteConfigController = __decorate([
 
 
 /***/ }),
-/* 77 */
+/* 79 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11508,7 +12841,7 @@ exports.SiteConfigService = SiteConfigService = __decorate([
 
 
 /***/ }),
-/* 78 */
+/* 80 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11664,7 +12997,7 @@ __decorate([
 
 
 /***/ }),
-/* 79 */
+/* 81 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11677,10 +13010,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatModule = void 0;
 const common_1 = __webpack_require__(2);
-const chat_controller_1 = __webpack_require__(80);
-const chat_service_1 = __webpack_require__(81);
-const chat_gateway_1 = __webpack_require__(83);
-const prisma_module_1 = __webpack_require__(36);
+const chat_controller_1 = __webpack_require__(82);
+const chat_service_1 = __webpack_require__(83);
+const chat_gateway_1 = __webpack_require__(85);
+const prisma_module_1 = __webpack_require__(37);
 let ChatModule = class ChatModule {
 };
 exports.ChatModule = ChatModule;
@@ -11695,7 +13028,7 @@ exports.ChatModule = ChatModule = __decorate([
 
 
 /***/ }),
-/* 80 */
+/* 82 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11716,9 +13049,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const chat_service_1 = __webpack_require__(81);
+const chat_service_1 = __webpack_require__(83);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const create_message_dto_1 = __webpack_require__(82);
+const create_message_dto_1 = __webpack_require__(84);
 let ChatController = class ChatController {
     constructor(chatService) {
         this.chatService = chatService;
@@ -11956,7 +13289,7 @@ exports.ChatController = ChatController = __decorate([
 
 
 /***/ }),
-/* 81 */
+/* 83 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12355,7 +13688,7 @@ exports.ChatService = ChatService = __decorate([
 
 
 /***/ }),
-/* 82 */
+/* 84 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12387,7 +13720,7 @@ __decorate([
 
 
 /***/ }),
-/* 83 */
+/* 85 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12406,9 +13739,9 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 var _a, _b, _c, _d, _e, _f;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatGateway = void 0;
-const websockets_1 = __webpack_require__(84);
-const socket_io_1 = __webpack_require__(85);
-const chat_service_1 = __webpack_require__(81);
+const websockets_1 = __webpack_require__(86);
+const socket_io_1 = __webpack_require__(87);
+const chat_service_1 = __webpack_require__(83);
 let ChatGateway = class ChatGateway {
     constructor(chatService) {
         this.chatService = chatService;
@@ -12560,7 +13893,16 @@ __decorate([
 exports.ChatGateway = ChatGateway = __decorate([
     (0, websockets_1.WebSocketGateway)({
         cors: {
-            origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+            origin: process.env.CORS_ORIGIN
+                ? process.env.CORS_ORIGIN.split(',')
+                : [
+                    'http://localhost:5173',
+                    'http://localhost:3000',
+                    'https://experimento2-fenm.vercel.app',
+                    'https://experimento2-production.up.railway.app',
+                    /^https:\/\/.*\.vercel\.app$/,
+                    /^https:\/\/.*\.railway\.app$/
+                ],
             credentials: true,
         },
     }),
@@ -12569,19 +13911,19 @@ exports.ChatGateway = ChatGateway = __decorate([
 
 
 /***/ }),
-/* 84 */
+/* 86 */
 /***/ ((module) => {
 
 module.exports = require("@nestjs/websockets");
 
 /***/ }),
-/* 85 */
+/* 87 */
 /***/ ((module) => {
 
 module.exports = require("socket.io");
 
 /***/ }),
-/* 86 */
+/* 88 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12594,9 +13936,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ParametrosModule = void 0;
 const common_1 = __webpack_require__(2);
-const parametros_service_1 = __webpack_require__(87);
-const parametros_controller_1 = __webpack_require__(88);
-const prisma_module_1 = __webpack_require__(36);
+const parametros_service_1 = __webpack_require__(89);
+const parametros_controller_1 = __webpack_require__(90);
+const prisma_module_1 = __webpack_require__(37);
 let ParametrosModule = class ParametrosModule {
 };
 exports.ParametrosModule = ParametrosModule;
@@ -12611,7 +13953,7 @@ exports.ParametrosModule = ParametrosModule = __decorate([
 
 
 /***/ }),
-/* 87 */
+/* 89 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12685,6 +14027,7 @@ let ParametrosService = class ParametrosService {
         return legalParams;
     }
     async findServices() {
+        console.log('[PARAMETROS] findServices - Iniciando búsqueda de servicios...');
         const services = await this.prisma.parametro.findMany({
             where: {
                 clave: {
@@ -12695,22 +14038,34 @@ let ParametrosService = class ParametrosService {
                 clave: 'asc'
             }
         });
+        console.log('[PARAMETROS] findServices - Parámetros encontrados con SERVICE_:', services.length);
+        console.log('[PARAMETROS] findServices - Claves encontradas:', services.map(s => s.clave));
         const servicesMap = new Map();
         services.forEach(service => {
             const parts = service.clave.split('_');
+            console.log('[PARAMETROS] findServices - Procesando clave:', service.clave, 'parts:', parts);
             if (parts.length >= 3) {
                 const serviceId = parts[1];
                 const field = parts[2];
+                console.log('[PARAMETROS] findServices - serviceId:', serviceId, 'field:', field);
                 if (!servicesMap.has(serviceId)) {
                     servicesMap.set(serviceId, {
                         id: serviceId,
-                        orden: parseInt(parts[1]) || 0
+                        orden: parseInt(serviceId) || 0
                     });
+                    console.log('[PARAMETROS] findServices - Nuevo servicio creado:', serviceId, 'orden:', parseInt(serviceId) || 0);
                 }
                 servicesMap.get(serviceId)[field] = service.valor;
+                console.log('[PARAMETROS] findServices - Campo agregado:', field, '=', service.valor);
+            }
+            else {
+                console.log('[PARAMETROS] findServices - Clave ignorada (formato incorrecto):', service.clave);
             }
         });
-        return Array.from(servicesMap.values()).sort((a, b) => a.orden - b.orden);
+        const result = Array.from(servicesMap.values()).sort((a, b) => a.orden - b.orden);
+        console.log('[PARAMETROS] findServices - Resultado final:', result);
+        console.log('[PARAMETROS] findServices - Servicios procesados:', result.length);
+        return result;
     }
     async updateService(serviceId, serviceData) {
         const updates = [
@@ -12826,7 +14181,7 @@ exports.ParametrosService = ParametrosService = __decorate([
 
 
 /***/ }),
-/* 88 */
+/* 90 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12847,10 +14202,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ParametrosController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const parametros_service_1 = __webpack_require__(87);
+const parametros_service_1 = __webpack_require__(89);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(34);
-const roles_decorator_1 = __webpack_require__(35);
+const roles_guard_1 = __webpack_require__(35);
+const roles_decorator_1 = __webpack_require__(36);
 let ParametrosController = class ParametrosController {
     constructor(parametrosService) {
         this.parametrosService = parametrosService;
@@ -13399,7 +14754,7 @@ exports.ParametrosController = ParametrosController = __decorate([
 
 
 /***/ }),
-/* 89 */
+/* 91 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -13412,17 +14767,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InvoicesModule = void 0;
 const common_1 = __webpack_require__(2);
-const invoices_service_1 = __webpack_require__(90);
-const invoices_controller_1 = __webpack_require__(105);
-const facturae_controller_1 = __webpack_require__(111);
-const facturae_service_1 = __webpack_require__(97);
-const external_systems_controller_1 = __webpack_require__(112);
-const external_systems_service_1 = __webpack_require__(113);
-const pdf_generator_service_1 = __webpack_require__(99);
-const invoice_audit_service_1 = __webpack_require__(103);
-const digital_signature_service_1 = __webpack_require__(108);
+const invoices_service_1 = __webpack_require__(92);
+const invoices_controller_1 = __webpack_require__(107);
+const facturae_controller_1 = __webpack_require__(113);
+const facturae_service_1 = __webpack_require__(99);
+const external_systems_controller_1 = __webpack_require__(114);
+const external_systems_service_1 = __webpack_require__(115);
+const pdf_generator_service_1 = __webpack_require__(101);
+const invoice_audit_service_1 = __webpack_require__(105);
+const digital_signature_service_1 = __webpack_require__(110);
 const auth_module_1 = __webpack_require__(12);
-const parametros_module_1 = __webpack_require__(86);
+const parametros_module_1 = __webpack_require__(88);
 let InvoicesModule = class InvoicesModule {
 };
 exports.InvoicesModule = InvoicesModule;
@@ -13436,7 +14791,7 @@ exports.InvoicesModule = InvoicesModule = __decorate([
 
 
 /***/ }),
-/* 90 */
+/* 92 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -13488,16 +14843,16 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InvoicesService = void 0;
 const common_1 = __webpack_require__(2);
 const prisma_service_1 = __webpack_require__(8);
-const facturae_xml_util_1 = __webpack_require__(91);
-const xades_sign_util_1 = __webpack_require__(93);
-const facturae_service_1 = __webpack_require__(97);
-const pdf_generator_service_1 = __webpack_require__(99);
-const fs = __importStar(__webpack_require__(44));
+const facturae_xml_util_1 = __webpack_require__(93);
+const xades_sign_util_1 = __webpack_require__(95);
+const facturae_service_1 = __webpack_require__(99);
+const pdf_generator_service_1 = __webpack_require__(101);
+const fs = __importStar(__webpack_require__(45));
 const crypto = __importStar(__webpack_require__(20));
-const pdf_lib_1 = __webpack_require__(102);
-const QRCode = __importStar(__webpack_require__(101));
-const invoice_audit_service_1 = __webpack_require__(103);
-const invoice_status_constants_1 = __webpack_require__(104);
+const pdf_lib_1 = __webpack_require__(104);
+const QRCode = __importStar(__webpack_require__(103));
+const invoice_audit_service_1 = __webpack_require__(105);
+const invoice_status_constants_1 = __webpack_require__(106);
 let InvoicesService = InvoicesService_1 = class InvoicesService {
     constructor(prisma, pdfGeneratorService, invoiceAuditService) {
         this.prisma = prisma;
@@ -14216,7 +15571,13 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
         try {
             const invoices = await this.prisma.invoice.findMany({
                 where,
-                include: { emisor: true },
+                include: {
+                    emisor: true,
+                    receptor: true,
+                    expediente: true,
+                    items: true,
+                    provisionFondos: true
+                },
                 orderBy: { fechaFactura: 'desc' },
             });
             console.log('Facturas encontradas en DB:', invoices.length);
@@ -14228,14 +15589,41 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
             } : 'No hay facturas');
             const result = invoices.map((inv) => ({
                 id: inv.id,
-                number: inv.numeroFactura,
-                date: inv.fechaFactura,
-                amount: inv.importeTotal,
-                status: inv.estado,
-                qrUrl: inv.xmlFirmado ? `/api/invoices/${inv.id}/qr` : null,
-                pdfUrl: inv.xmlFirmado ? `/api/invoices/${inv.id}/pdf-qr` : null,
+                numeroFactura: inv.numeroFactura,
+                fechaEmision: inv.fechaFactura,
+                fechaFactura: inv.fechaFactura,
+                tipoFactura: inv.tipoFactura,
+                estado: inv.estado,
+                receptorId: inv.receptorId,
+                importeTotal: inv.importeTotal,
+                baseImponible: inv.baseImponible,
+                cuotaIVA: inv.cuotaIVA,
+                tipoIVA: inv.tipoIVA,
+                regimenIvaEmisor: inv.regimenIvaEmisor,
+                claveOperacion: inv.claveOperacion,
+                metodoPago: inv.metodoPago,
+                fechaOperacion: inv.fechaOperacion,
+                items: inv.items || [],
+                receptor: inv.receptor,
+                emisor: inv.emisor,
+                expediente: inv.expediente,
+                provisionFondos: inv.provisionFondos || [],
+                createdAt: inv.createdAt,
+                updatedAt: inv.updatedAt,
+                motivoAnulacion: inv.motivoAnulacion,
+                aplicarIVA: inv.aplicarIVA,
+                retencion: inv.retencion,
+                descuento: inv.descuento,
+                tipoImpuesto: inv.tipoImpuesto,
+                selloTiempo: inv.selloTiempo,
+                emisorId: inv.emisorId,
+                expedienteId: inv.expedienteId,
+                xml: inv.xml,
+                xmlFirmado: inv.xmlFirmado,
                 paymentDate: inv.paymentDate,
-                lawyerName: inv.emisor?.name || '',
+                fechaVencimiento: inv.fechaVencimiento,
+                concepto: inv.concepto,
+                observaciones: inv.observaciones,
             }));
             console.log('Result mapped, returning:', result.length, 'invoices');
             return result;
@@ -14442,6 +15830,50 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
             }
         };
     }
+    async generateInvoicePdf(invoice) {
+        try {
+            this.logger.log('Generando PDF profesional de la factura');
+            this.logger.log('Llamando a pdfGeneratorService.generateInvoicePdf()...');
+            const pdfBuffer = await this.pdfGeneratorService.generateInvoicePdf(invoice);
+            this.logger.log('PDF profesional generado exitosamente');
+            this.logger.log(`Tamaño del buffer: ${pdfBuffer.length} bytes`);
+            return pdfBuffer;
+        }
+        catch (error) {
+            this.logger.error('Error generando PDF profesional:', error);
+            this.logger.error('Stack trace:', error.stack);
+            this.logger.log('Usando fallback al PDF simple');
+            return this.generateInvoicePdfWithQR(invoice);
+        }
+    }
+    async generateInvoicePdfProfessional(invoice) {
+        try {
+            this.logger.log('Generando PDF profesional de la factura (sin fallback)');
+            this.logger.log('Llamando a pdfGeneratorService.generateInvoicePdf()...');
+            const pdfBuffer = await this.pdfGeneratorService.generateInvoicePdf(invoice);
+            this.logger.log('PDF profesional generado exitosamente');
+            this.logger.log(`Tamaño del buffer: ${pdfBuffer.length} bytes`);
+            return pdfBuffer;
+        }
+        catch (error) {
+            this.logger.error('Error generando PDF profesional (sin fallback):', error);
+            this.logger.error('Stack trace:', error.stack);
+            throw new Error(`Error generando PDF profesional: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+    async generateInvoicePdfForClient(invoice) {
+        try {
+            this.logger.log('Generando PDF profesional para cliente');
+            const pdfBuffer = await this.pdfGeneratorService.generateInvoicePdf(invoice);
+            this.logger.log('PDF profesional para cliente generado exitosamente');
+            return pdfBuffer;
+        }
+        catch (error) {
+            this.logger.error('Error generando PDF profesional para cliente:', error);
+            this.logger.log('Usando fallback al PDF simple para cliente');
+            return this.generateInvoicePdfWithQR(invoice);
+        }
+    }
     async generateInvoicePdfWithQR(invoice) {
         try {
             this.logger.log('Generando PDF simple y confiable');
@@ -14561,7 +15993,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
         }
     }
     async htmlToPdfWithPuppeteer(htmlContent) {
-        const puppeteer = await Promise.resolve().then(() => __importStar(__webpack_require__(100)));
+        const puppeteer = await Promise.resolve().then(() => __importStar(__webpack_require__(102)));
         let browser;
         try {
             this.logger.log('[PUPPETEER] Iniciando Puppeteer...');
@@ -15095,7 +16527,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
             `HASH:${invoiceHash}`
         ].join('|');
         console.log('🔍 [generateInvoiceHtml] QR Data generado:', qrData);
-        const qrImageDataUrl = await (await Promise.resolve().then(() => __importStar(__webpack_require__(101)))).toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
+        const qrImageDataUrl = await (await Promise.resolve().then(() => __importStar(__webpack_require__(103)))).toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
         if (invoice.facturaOriginalId) {
             console.log('🔄 [generateInvoiceHtml] Es factura rectificativa, obteniendo datos de factura original');
             const facturaOriginal = await this.prisma.invoice.findUnique({
@@ -15257,14 +16689,14 @@ exports.InvoicesService = InvoicesService = InvoicesService_1 = __decorate([
 
 
 /***/ }),
-/* 91 */
+/* 93 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.generateFacturaeXML = generateFacturaeXML;
 exports.generateFacturaeXMLFromInvoice = generateFacturaeXMLFromInvoice;
-const xmlbuilder2_1 = __webpack_require__(92);
+const xmlbuilder2_1 = __webpack_require__(94);
 function generateFacturaeXML(data) {
     const root = (0, xmlbuilder2_1.create)({ version: '1.0', encoding: 'UTF-8' })
         .ele('Facturae', {
@@ -15681,13 +17113,13 @@ function generateFacturaeXMLFromInvoice(invoice) {
 
 
 /***/ }),
-/* 92 */
+/* 94 */
 /***/ ((module) => {
 
 module.exports = require("xmlbuilder2");
 
 /***/ }),
-/* 93 */
+/* 95 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -15732,9 +17164,9 @@ exports.validateCertificate = validateCertificate;
 exports.checkCertificateStatus = checkCertificateStatus;
 exports.getTimestamp = getTimestamp;
 exports.validateSignature = validateSignature;
-const xadesjs = __importStar(__webpack_require__(94));
-const webcrypto_1 = __webpack_require__(95);
-const xmldom_1 = __webpack_require__(96);
+const xadesjs = __importStar(__webpack_require__(96));
+const webcrypto_1 = __webpack_require__(97);
+const xmldom_1 = __webpack_require__(98);
 const webcrypto = new webcrypto_1.Crypto();
 xadesjs.Application.setEngine("OpenSSL", webcrypto);
 var XAdESLevel;
@@ -15908,25 +17340,25 @@ function validateSignature(xmlContent) {
 
 
 /***/ }),
-/* 94 */
+/* 96 */
 /***/ ((module) => {
 
 module.exports = require("xadesjs");
 
 /***/ }),
-/* 95 */
+/* 97 */
 /***/ ((module) => {
 
 module.exports = require("@peculiar/webcrypto");
 
 /***/ }),
-/* 96 */
+/* 98 */
 /***/ ((module) => {
 
 module.exports = require("xmldom");
 
 /***/ }),
-/* 97 */
+/* 99 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -15976,11 +17408,11 @@ var FacturaeService_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FacturaeService = void 0;
 const common_1 = __webpack_require__(2);
-const facturae_xml_util_1 = __webpack_require__(91);
-const xades_sign_util_1 = __webpack_require__(93);
-const facturae_validator_util_1 = __webpack_require__(98);
-const fs = __importStar(__webpack_require__(44));
-const path = __importStar(__webpack_require__(45));
+const facturae_xml_util_1 = __webpack_require__(93);
+const xades_sign_util_1 = __webpack_require__(95);
+const facturae_validator_util_1 = __webpack_require__(100);
+const fs = __importStar(__webpack_require__(45));
+const path = __importStar(__webpack_require__(46));
 let FacturaeService = FacturaeService_1 = class FacturaeService {
     constructor() {
         this.logger = new common_1.Logger(FacturaeService_1.name);
@@ -16249,7 +17681,7 @@ exports.FacturaeService = FacturaeService = FacturaeService_1 = __decorate([
 
 
 /***/ }),
-/* 98 */
+/* 100 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -16288,8 +17720,8 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FacturaeValidator = void 0;
-const xmldom_1 = __webpack_require__(96);
-const path = __importStar(__webpack_require__(45));
+const xmldom_1 = __webpack_require__(98);
+const path = __importStar(__webpack_require__(46));
 class FacturaeValidator {
     static validateXML(xmlContent, options = {}) {
         const result = {
@@ -16744,7 +18176,7 @@ FacturaeValidator.FACTURAE_SCHEMA_PATH = path.join(__dirname, '../../schemas/fac
 
 
 /***/ }),
-/* 99 */
+/* 101 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -16795,11 +18227,11 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PdfGeneratorService = void 0;
 const common_1 = __webpack_require__(2);
-const puppeteer = __importStar(__webpack_require__(100));
-const fs = __importStar(__webpack_require__(44));
-const path = __importStar(__webpack_require__(45));
-const QRCode = __importStar(__webpack_require__(101));
-const parametros_service_1 = __webpack_require__(87);
+const puppeteer = __importStar(__webpack_require__(102));
+const fs = __importStar(__webpack_require__(45));
+const path = __importStar(__webpack_require__(46));
+const QRCode = __importStar(__webpack_require__(103));
+const parametros_service_1 = __webpack_require__(89);
 let PdfGeneratorService = PdfGeneratorService_1 = class PdfGeneratorService {
     constructor(parametrosService) {
         this.parametrosService = parametrosService;
@@ -16826,6 +18258,9 @@ let PdfGeneratorService = PdfGeneratorService_1 = class PdfGeneratorService {
     async generateInvoicePdf(invoice) {
         try {
             this.logger.log('Iniciando generación de PDF profesional');
+            this.logger.log(`Template path encontrado: ${this.templatePath}`);
+            this.logger.log(`Invoice ID: ${invoice.id}`);
+            this.logger.log(`Invoice número: ${invoice.numeroFactura}`);
             const verificacionUrl = `https://tudominio.com/verificar/${invoice.numeroFactura}`;
             const totalParaQR = Number(invoice.baseImponible || 0) +
                 Number(invoice.cuotaIVA || 0) -
@@ -16838,8 +18273,10 @@ let PdfGeneratorService = PdfGeneratorService_1 = class PdfGeneratorService {
             const qrImageDataUrl = await QRCode.toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
             const templateData = await this.prepareTemplateData(invoice, qrData, qrImageDataUrl);
             const htmlContent = await this.generateHtml(templateData);
+            this.logger.log('Convirtiendo HTML a PDF con Puppeteer...');
             const pdfBuffer = await this.htmlToPdf(htmlContent);
             this.logger.log('PDF generado exitosamente');
+            this.logger.log(`Tamaño del buffer final: ${pdfBuffer.length} bytes`);
             return pdfBuffer;
         }
         catch (error) {
@@ -17155,6 +18592,8 @@ let PdfGeneratorService = PdfGeneratorService_1 = class PdfGeneratorService {
         let browser;
         try {
             this.logger.log('[PUPPETEER] Iniciando Puppeteer...');
+            this.logger.log(`[PUPPETEER] Longitud del HTML: ${htmlContent.length} caracteres`);
+            this.logger.log(`[PUPPETEER] Primeros 200 caracteres del HTML: ${htmlContent.substring(0, 200)}...`);
             browser = await puppeteer.launch({
                 headless: true,
                 args: [
@@ -17296,6 +18735,11 @@ let PdfGeneratorService = PdfGeneratorService_1 = class PdfGeneratorService {
             this.logger.log(`[PUPPETEER] PDF generado. Tipo: ${typeof pdfBuffer}, Es Buffer: ${Buffer.isBuffer(pdfBuffer)}, Tamaño: ${pdfBuffer?.length || 'undefined'} bytes`);
             return pdfBuffer;
         }
+        catch (error) {
+            this.logger.error('[PUPPETEER] Error generando PDF:', error);
+            this.logger.error('[PUPPETEER] Stack trace:', error.stack);
+            throw error;
+        }
         finally {
             if (browser)
                 await browser.close();
@@ -17310,25 +18754,25 @@ exports.PdfGeneratorService = PdfGeneratorService = PdfGeneratorService_1 = __de
 
 
 /***/ }),
-/* 100 */
+/* 102 */
 /***/ ((module) => {
 
 module.exports = require("puppeteer");
 
 /***/ }),
-/* 101 */
+/* 103 */
 /***/ ((module) => {
 
 module.exports = require("qrcode");
 
 /***/ }),
-/* 102 */
+/* 104 */
 /***/ ((module) => {
 
 module.exports = require("pdf-lib");
 
 /***/ }),
-/* 103 */
+/* 105 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -17461,7 +18905,7 @@ exports.InvoiceAuditService = InvoiceAuditService = __decorate([
 
 
 /***/ }),
-/* 104 */
+/* 106 */
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -17573,7 +19017,7 @@ exports.getStatusColor = getStatusColor;
 
 
 /***/ }),
-/* 105 */
+/* 107 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -17622,25 +19066,25 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InvoicesController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const invoices_service_1 = __webpack_require__(90);
-const create_invoice_dto_1 = __webpack_require__(106);
-const update_invoice_dto_1 = __webpack_require__(107);
+const invoices_service_1 = __webpack_require__(92);
+const create_invoice_dto_1 = __webpack_require__(108);
+const update_invoice_dto_1 = __webpack_require__(109);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(34);
-const roles_decorator_1 = __webpack_require__(35);
+const roles_guard_1 = __webpack_require__(35);
+const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
-const express_1 = __webpack_require__(48);
-const invoice_audit_service_1 = __webpack_require__(103);
-const digital_signature_service_1 = __webpack_require__(108);
-const fs = __importStar(__webpack_require__(44));
-const path = __importStar(__webpack_require__(45));
-const platform_express_1 = __webpack_require__(47);
-const multer = __importStar(__webpack_require__(110));
+const express_1 = __webpack_require__(49);
+const invoice_audit_service_1 = __webpack_require__(105);
+const digital_signature_service_1 = __webpack_require__(110);
+const fs = __importStar(__webpack_require__(45));
+const path = __importStar(__webpack_require__(46));
+const platform_express_1 = __webpack_require__(48);
+const multer = __importStar(__webpack_require__(112));
 let InvoicesController = class InvoicesController {
     constructor(invoicesService, invoiceAuditService, digitalSignatureService) {
         this.invoicesService = invoicesService;
@@ -17727,8 +19171,15 @@ let InvoicesController = class InvoicesController {
             }
             console.log('[PDF-QR] Permisos verificados correctamente');
             console.log('[PDF-QR] Datos de la factura:', JSON.stringify(invoice, null, 2));
-            console.log('[PDF-QR] Iniciando generación de PDF...');
-            const pdfBuffer = await this.invoicesService.generateInvoicePdfWithQR(invoice);
+            let pdfBuffer;
+            if (req.user.role === 'CLIENTE') {
+                console.log('[PDF-CLIENTE] Generando PDF profesional para cliente...');
+                pdfBuffer = await this.invoicesService.generateInvoicePdfForClient(invoice);
+            }
+            else {
+                console.log('[PDF-ABOGADO] Generando PDF básico con QR...');
+                pdfBuffer = await this.invoicesService.generateInvoicePdfWithQR(invoice);
+            }
             if (!Buffer.isBuffer(pdfBuffer)) {
                 console.error('[PDF-QR] Error: pdfBuffer no es un Buffer válido');
                 return res.status(500).send('Error: Buffer PDF inválido');
@@ -17762,7 +19213,7 @@ let InvoicesController = class InvoicesController {
     async testPdf(id, res, req) {
         try {
             console.log('[TEST-PDF] Generando PDF de prueba...');
-            const { PDFDocument, rgb } = await Promise.resolve().then(() => __importStar(__webpack_require__(102)));
+            const { PDFDocument, rgb } = await Promise.resolve().then(() => __importStar(__webpack_require__(104)));
             const pdfDoc = await PDFDocument.create();
             const page = pdfDoc.addPage([595, 842]);
             const { width, height } = page.getSize();
@@ -18093,6 +19544,64 @@ let InvoicesController = class InvoicesController {
         const html = await this.invoicesService.generateInvoiceHtml(invoice);
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         return res.send(html);
+    }
+    async getInvoicePdfProfessional(id, res, req) {
+        try {
+            console.log('[PDF-PROFESIONAL] Iniciando generación de PDF profesional para abogado');
+            const invoice = await this.invoicesService.findOne(id);
+            if (!invoice) {
+                console.log('[PDF-PROFESIONAL] Factura no encontrada');
+                return res.status(404).send('Factura no encontrada');
+            }
+            if (req.user.role === 'ABOGADO' && invoice.emisorId !== req.user.id) {
+                console.log('[PDF-PROFESIONAL] No autorizado - ABOGADO');
+                return res.status(403).send('No autorizado para acceder a esta factura');
+            }
+            console.log('[PDF-PROFESIONAL] Permisos verificados correctamente');
+            console.log('[PDF-PROFESIONAL] Datos de la factura:', JSON.stringify(invoice, null, 2));
+            console.log('[PDF-PROFESIONAL] Generando PDF profesional...');
+            console.log('[PDF-PROFESIONAL] Llamando a invoicesService.generateInvoicePdfProfessional()...');
+            let pdfBuffer;
+            try {
+                pdfBuffer = await this.invoicesService.generateInvoicePdfProfessional(invoice);
+                console.log('[PDF-PROFESIONAL] PDF profesional generado exitosamente');
+            }
+            catch (error) {
+                console.error('[PDF-PROFESIONAL] Error en generateInvoicePdfProfessional:', error);
+                console.error('[PDF-PROFESIONAL] Stack trace:', error.stack);
+                console.log('[PDF-PROFESIONAL] Intentando con método con fallback...');
+                pdfBuffer = await this.invoicesService.generateInvoicePdf(invoice);
+                console.log('[PDF-PROFESIONAL] PDF con fallback generado exitosamente');
+            }
+            if (!Buffer.isBuffer(pdfBuffer)) {
+                console.error('[PDF-PROFESIONAL] Error: pdfBuffer no es un Buffer válido');
+                return res.status(500).send('Error: Buffer PDF inválido');
+            }
+            console.log(`[PDF-PROFESIONAL] Buffer PDF generado. Tamaño: ${pdfBuffer.length} bytes`);
+            console.log(`[PDF-PROFESIONAL] Primeros bytes: ${Array.from(pdfBuffer.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
+            const pdfHeader = pdfBuffer.slice(0, 4).toString('ascii');
+            if (pdfHeader !== '%PDF') {
+                console.error('[PDF-PROFESIONAL] Error: Buffer no es un PDF válido. Header:', pdfHeader);
+                return res.status(500).send('Error: Buffer no es un PDF válido');
+            }
+            console.log('[PDF-PROFESIONAL] Configurando headers de respuesta...');
+            res.set({
+                'Content-Type': 'application/pdf',
+                'Content-Length': pdfBuffer.length.toString(),
+                'Content-Disposition': `attachment; filename="factura_profesional_${invoice.numeroFactura || id}.pdf"`,
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            });
+            console.log('[PDF-PROFESIONAL] Enviando PDF al abogado...');
+            res.end(pdfBuffer);
+            console.log('[PDF-PROFESIONAL] PDF enviado exitosamente');
+        }
+        catch (error) {
+            console.error('[PDF-PROFESIONAL] Error al generar PDF profesional:', error);
+            console.error('[PDF-PROFESIONAL] Stack trace:', error.stack);
+            res.status(500).send({ error: error.message || error.toString() });
+        }
     }
 };
 exports.InvoicesController = InvoicesController;
@@ -18833,6 +20342,33 @@ __decorate([
     __metadata("design:paramtypes", [String, typeof (_m = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _m : Object, Object]),
     __metadata("design:returntype", Promise)
 ], InvoicesController.prototype, "getInvoiceHtmlPreview", null);
+__decorate([
+    (0, common_1.Get)(':id/pdf-professional'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ABOGADO, client_1.Role.ADMIN),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Descargar factura profesional (PDF completo)',
+        description: 'Descarga la factura en PDF profesional con diseño completo (solo ABOGADO y ADMIN)'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la factura', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'PDF profesional de la factura',
+        schema: {
+            type: 'string',
+            format: 'binary'
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Res)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_o = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _o : Object, Object]),
+    __metadata("design:returntype", Promise)
+], InvoicesController.prototype, "getInvoicePdfProfessional", null);
 exports.InvoicesController = InvoicesController = __decorate([
     (0, swagger_1.ApiTags)('invoices'),
     (0, common_1.Controller)('invoices'),
@@ -18842,7 +20378,7 @@ exports.InvoicesController = InvoicesController = __decorate([
 
 
 /***/ }),
-/* 106 */
+/* 108 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -18858,7 +20394,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateInvoiceDto = void 0;
 const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(72);
+const class_transformer_1 = __webpack_require__(74);
 const swagger_1 = __webpack_require__(3);
 class InvoiceItemDto {
 }
@@ -19180,7 +20716,7 @@ __decorate([
 
 
 /***/ }),
-/* 107 */
+/* 109 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -19197,7 +20733,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateInvoiceDto = exports.UpdateInvoiceItemDto = void 0;
 const swagger_1 = __webpack_require__(3);
 const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(72);
+const class_transformer_1 = __webpack_require__(74);
 class UpdateInvoiceItemDto {
 }
 exports.UpdateInvoiceItemDto = UpdateInvoiceItemDto;
@@ -19426,7 +20962,7 @@ __decorate([
 
 
 /***/ }),
-/* 108 */
+/* 110 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -19476,9 +21012,9 @@ var DigitalSignatureService_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DigitalSignatureService = void 0;
 const common_1 = __webpack_require__(2);
-const axios_1 = __importDefault(__webpack_require__(109));
-const fs = __importStar(__webpack_require__(44));
-const path = __importStar(__webpack_require__(45));
+const axios_1 = __importDefault(__webpack_require__(111));
+const fs = __importStar(__webpack_require__(45));
+const path = __importStar(__webpack_require__(46));
 let DigitalSignatureService = DigitalSignatureService_1 = class DigitalSignatureService {
     constructor() {
         this.logger = new common_1.Logger(DigitalSignatureService_1.name);
@@ -19670,19 +21206,19 @@ exports.DigitalSignatureService = DigitalSignatureService = DigitalSignatureServ
 
 
 /***/ }),
-/* 109 */
+/* 111 */
 /***/ ((module) => {
 
 module.exports = require("axios");
 
 /***/ }),
-/* 110 */
+/* 112 */
 /***/ ((module) => {
 
 module.exports = require("multer");
 
 /***/ }),
-/* 111 */
+/* 113 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -19736,10 +21272,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FacturaeController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const express_1 = __webpack_require__(48);
-const invoices_service_1 = __webpack_require__(90);
+const express_1 = __webpack_require__(49);
+const invoices_service_1 = __webpack_require__(92);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const xades_sign_util_1 = __webpack_require__(93);
+const xades_sign_util_1 = __webpack_require__(95);
 let FacturaeController = class FacturaeController {
     constructor(invoicesService) {
         this.invoicesService = invoicesService;
@@ -19791,7 +21327,7 @@ let FacturaeController = class FacturaeController {
     }
     async validateXML(data) {
         const { xml, checkSignature = true } = data;
-        const { FacturaeValidator } = await Promise.resolve().then(() => __importStar(__webpack_require__(98)));
+        const { FacturaeValidator } = await Promise.resolve().then(() => __importStar(__webpack_require__(100)));
         if (checkSignature) {
             return FacturaeValidator.validateSignedDocument(xml, {
                 validateSchema: true,
@@ -20176,7 +21712,7 @@ exports.FacturaeController = FacturaeController = __decorate([
 
 
 /***/ }),
-/* 112 */
+/* 114 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -20197,7 +21733,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ExternalSystemsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const external_systems_service_1 = __webpack_require__(113);
+const external_systems_service_1 = __webpack_require__(115);
 const jwt_auth_guard_1 = __webpack_require__(27);
 let ExternalSystemsController = class ExternalSystemsController {
     constructor(externalSystemsService) {
@@ -20551,7 +22087,7 @@ exports.ExternalSystemsController = ExternalSystemsController = __decorate([
 
 
 /***/ }),
-/* 113 */
+/* 115 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -20569,8 +22105,8 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ExternalSystemsService = void 0;
 const common_1 = __webpack_require__(2);
-const facturae_validator_util_1 = __webpack_require__(98);
-const invoices_service_1 = __webpack_require__(90);
+const facturae_validator_util_1 = __webpack_require__(100);
+const invoices_service_1 = __webpack_require__(92);
 let ExternalSystemsService = ExternalSystemsService_1 = class ExternalSystemsService {
     constructor(invoicesService) {
         this.invoicesService = invoicesService;
@@ -20816,7 +22352,7 @@ exports.ExternalSystemsService = ExternalSystemsService = ExternalSystemsService
 
 
 /***/ }),
-/* 114 */
+/* 116 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -20829,9 +22365,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProvisionFondosModule = void 0;
 const common_1 = __webpack_require__(2);
-const provision_fondos_controller_1 = __webpack_require__(115);
-const provision_fondos_service_1 = __webpack_require__(116);
-const prisma_module_1 = __webpack_require__(36);
+const provision_fondos_controller_1 = __webpack_require__(117);
+const provision_fondos_service_1 = __webpack_require__(118);
+const prisma_module_1 = __webpack_require__(37);
 let ProvisionFondosModule = class ProvisionFondosModule {
 };
 exports.ProvisionFondosModule = ProvisionFondosModule;
@@ -20846,7 +22382,7 @@ exports.ProvisionFondosModule = ProvisionFondosModule = __decorate([
 
 
 /***/ }),
-/* 115 */
+/* 117 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -20867,11 +22403,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProvisionFondosController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const provision_fondos_service_1 = __webpack_require__(116);
-const create_provision_fondos_dto_1 = __webpack_require__(117);
+const provision_fondos_service_1 = __webpack_require__(118);
+const create_provision_fondos_dto_1 = __webpack_require__(119);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(34);
-const roles_decorator_1 = __webpack_require__(35);
+const roles_guard_1 = __webpack_require__(35);
+const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
 let ProvisionFondosController = class ProvisionFondosController {
     constructor(service) {
@@ -21122,7 +22658,7 @@ exports.ProvisionFondosController = ProvisionFondosController = __decorate([
 
 
 /***/ }),
-/* 116 */
+/* 118 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21256,7 +22792,7 @@ exports.ProvisionFondosService = ProvisionFondosService = __decorate([
 
 
 /***/ }),
-/* 117 */
+/* 119 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21342,7 +22878,7 @@ __decorate([
 
 
 /***/ }),
-/* 118 */
+/* 120 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21355,9 +22891,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ContactModule = void 0;
 const common_1 = __webpack_require__(2);
-const contact_controller_1 = __webpack_require__(119);
-const contact_service_1 = __webpack_require__(120);
-const prisma_module_1 = __webpack_require__(36);
+const contact_controller_1 = __webpack_require__(121);
+const contact_service_1 = __webpack_require__(122);
+const prisma_module_1 = __webpack_require__(37);
 const auth_module_1 = __webpack_require__(12);
 let ContactModule = class ContactModule {
 };
@@ -21373,7 +22909,7 @@ exports.ContactModule = ContactModule = __decorate([
 
 
 /***/ }),
-/* 119 */
+/* 121 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21393,9 +22929,9 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ContactController = void 0;
 const common_1 = __webpack_require__(2);
-const platform_express_1 = __webpack_require__(47);
+const platform_express_1 = __webpack_require__(48);
 const swagger_1 = __webpack_require__(3);
-const contact_service_1 = __webpack_require__(120);
+const contact_service_1 = __webpack_require__(122);
 const jwt_auth_guard_1 = __webpack_require__(27);
 let ContactController = class ContactController {
     constructor(contactService) {
@@ -21443,7 +22979,7 @@ exports.ContactController = ContactController = __decorate([
 
 
 /***/ }),
-/* 120 */
+/* 122 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21495,8 +23031,8 @@ exports.ContactService = void 0;
 const common_1 = __webpack_require__(2);
 const prisma_service_1 = __webpack_require__(8);
 const email_service_1 = __webpack_require__(17);
-const fs = __importStar(__webpack_require__(44));
-const path = __importStar(__webpack_require__(45));
+const fs = __importStar(__webpack_require__(45));
+const path = __importStar(__webpack_require__(46));
 let ContactService = class ContactService {
     constructor(prisma, emailService) {
         this.prisma = prisma;
@@ -21699,7 +23235,7 @@ exports.ContactService = ContactService = __decorate([
 
 
 /***/ }),
-/* 121 */
+/* 123 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21712,9 +23248,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TeleassistanceModule = void 0;
 const common_1 = __webpack_require__(2);
-const teleassistance_controller_1 = __webpack_require__(122);
-const teleassistance_service_1 = __webpack_require__(123);
-const prisma_module_1 = __webpack_require__(36);
+const teleassistance_controller_1 = __webpack_require__(124);
+const teleassistance_service_1 = __webpack_require__(125);
+const prisma_module_1 = __webpack_require__(37);
 let TeleassistanceModule = class TeleassistanceModule {
 };
 exports.TeleassistanceModule = TeleassistanceModule;
@@ -21729,7 +23265,7 @@ exports.TeleassistanceModule = TeleassistanceModule = __decorate([
 
 
 /***/ }),
-/* 122 */
+/* 124 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21750,12 +23286,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TeleassistanceController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const teleassistance_service_1 = __webpack_require__(123);
-const create_teleassistance_session_dto_1 = __webpack_require__(124);
-const update_teleassistance_session_dto_1 = __webpack_require__(125);
+const teleassistance_service_1 = __webpack_require__(125);
+const create_teleassistance_session_dto_1 = __webpack_require__(126);
+const update_teleassistance_session_dto_1 = __webpack_require__(127);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(34);
-const roles_decorator_1 = __webpack_require__(35);
+const roles_guard_1 = __webpack_require__(35);
+const roles_decorator_1 = __webpack_require__(36);
 let TeleassistanceController = class TeleassistanceController {
     constructor(teleassistanceService) {
         this.teleassistanceService = teleassistanceService;
@@ -22025,7 +23561,7 @@ exports.TeleassistanceController = TeleassistanceController = __decorate([
 
 
 /***/ }),
-/* 123 */
+/* 125 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -22571,7 +24107,7 @@ exports.TeleassistanceService = TeleassistanceService = __decorate([
 
 
 /***/ }),
-/* 124 */
+/* 126 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -22658,7 +24194,7 @@ __decorate([
 
 
 /***/ }),
-/* 125 */
+/* 127 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -22716,7 +24252,7 @@ __decorate([
 
 
 /***/ }),
-/* 126 */
+/* 128 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -22729,10 +24265,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.NotesModule = void 0;
 const common_1 = __webpack_require__(2);
-const notes_controller_1 = __webpack_require__(127);
-const public_notes_controller_1 = __webpack_require__(131);
-const notes_service_1 = __webpack_require__(128);
-const prisma_module_1 = __webpack_require__(36);
+const notes_controller_1 = __webpack_require__(129);
+const public_notes_controller_1 = __webpack_require__(133);
+const notes_service_1 = __webpack_require__(130);
+const prisma_module_1 = __webpack_require__(37);
 let NotesModule = class NotesModule {
 };
 exports.NotesModule = NotesModule;
@@ -22747,7 +24283,7 @@ exports.NotesModule = NotesModule = __decorate([
 
 
 /***/ }),
-/* 127 */
+/* 129 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -22768,9 +24304,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.NotesController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const notes_service_1 = __webpack_require__(128);
-const create_note_dto_1 = __webpack_require__(129);
-const update_note_dto_1 = __webpack_require__(130);
+const notes_service_1 = __webpack_require__(130);
+const create_note_dto_1 = __webpack_require__(131);
+const update_note_dto_1 = __webpack_require__(132);
 const jwt_auth_guard_1 = __webpack_require__(27);
 let NotesController = class NotesController {
     constructor(notesService) {
@@ -22938,7 +24474,7 @@ exports.NotesController = NotesController = __decorate([
 
 
 /***/ }),
-/* 128 */
+/* 130 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23115,7 +24651,7 @@ exports.NotesService = NotesService = __decorate([
 
 
 /***/ }),
-/* 129 */
+/* 131 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23162,21 +24698,21 @@ __decorate([
 
 
 /***/ }),
-/* 130 */
+/* 132 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateNoteDto = void 0;
 const swagger_1 = __webpack_require__(3);
-const create_note_dto_1 = __webpack_require__(129);
+const create_note_dto_1 = __webpack_require__(131);
 class UpdateNoteDto extends (0, swagger_1.PartialType)(create_note_dto_1.CreateNoteDto) {
 }
 exports.UpdateNoteDto = UpdateNoteDto;
 
 
 /***/ }),
-/* 131 */
+/* 133 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23194,7 +24730,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PublicNotesController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const notes_service_1 = __webpack_require__(128);
+const notes_service_1 = __webpack_require__(130);
 let PublicNotesController = class PublicNotesController {
     constructor(notesService) {
         this.notesService = notesService;
@@ -23234,19 +24770,19 @@ exports.PublicNotesController = PublicNotesController = __decorate([
 
 
 /***/ }),
-/* 132 */
+/* 134 */
 /***/ ((module) => {
 
 module.exports = require("helmet");
 
 /***/ }),
-/* 133 */
+/* 135 */
 /***/ ((module) => {
 
 module.exports = require("express-rate-limit");
 
 /***/ }),
-/* 134 */
+/* 136 */
 /***/ ((module) => {
 
 module.exports = require("compression");

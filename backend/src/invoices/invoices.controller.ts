@@ -1210,20 +1210,20 @@ export class InvoicesController {
       
       // Generar el PDF profesional (mismo que usa la vista HTML)
       console.log('[PDF-PROFESIONAL] Generando PDF profesional...');
-      console.log('[PDF-PROFESIONAL] Llamando a invoicesService.generateInvoicePdf()...');
+      console.log('[PDF-PROFESIONAL] Llamando a invoicesService.generateInvoicePdfProfessional()...');
       
       let pdfBuffer: Buffer;
       try {
-        pdfBuffer = await this.invoicesService.generateInvoicePdf(invoice);
+        pdfBuffer = await this.invoicesService.generateInvoicePdfProfessional(invoice);
         console.log('[PDF-PROFESIONAL] PDF profesional generado exitosamente');
       } catch (error) {
-        console.error('[PDF-PROFESIONAL] Error en generateInvoicePdf:', error);
+        console.error('[PDF-PROFESIONAL] Error en generateInvoicePdfProfessional:', error);
         console.error('[PDF-PROFESIONAL] Stack trace:', (error as any).stack);
         
-        // Intentar con el método alternativo
-        console.log('[PDF-PROFESIONAL] Intentando con método alternativo...');
-        pdfBuffer = await this.invoicesService.generateInvoicePdfForClient(invoice);
-        console.log('[PDF-PROFESIONAL] PDF alternativo generado exitosamente');
+        // Si falla el PDF profesional, intentar con el método con fallback
+        console.log('[PDF-PROFESIONAL] Intentando con método con fallback...');
+        pdfBuffer = await this.invoicesService.generateInvoicePdf(invoice);
+        console.log('[PDF-PROFESIONAL] PDF con fallback generado exitosamente');
       }
       
       // Verificar que el buffer es válido
