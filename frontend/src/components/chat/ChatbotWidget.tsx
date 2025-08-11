@@ -48,14 +48,37 @@ const ChatbotWidget = () => {
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 300);
     }
   }, [isOpen, showCalendar]);
 
-  // Timeout de inactividad y advertencia
+  // Mantener foco activo después de cada mensaje del bot
+  useEffect(() => {
+    if (isOpen && messages.length > 0 && !showCalendar) {
+      const lastMessage = messages[messages.length - 1];
+      if (!lastMessage.isUser && inputRef.current) {
+        // El último mensaje es del bot, mantener foco en el input
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 200);
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 500);
+      }
+    }
+  }, [messages, isOpen, showCalendar]);
+
+  // Timeout de inactividad y advertencia - DESHABILITADO para mejor UX
   const resetInactivityTimer = () => {
+    // Limpiar timers existentes
     if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
     if (warningTimer.current) clearTimeout(warningTimer.current);
     
+    // DESHABILITADO: No cerrar automáticamente el chat
+    // Esto mejora la experiencia del usuario al agendar citas
+    /*
     // Solo iniciar timers si el chat está abierto y no se muestra el calendario
     if (isOpen && !showCalendar) {
       // A los 50s muestra advertencia
@@ -76,6 +99,7 @@ const ChatbotWidget = () => {
         }
       }, 60000);
     }
+    */
   };
 
   // Reiniciar temporizador en cada mensaje
@@ -283,9 +307,16 @@ const ChatbotWidget = () => {
       setIsLoading(false);
       // Mantener foco en el input después de enviar (solo si no se muestra el calendario)
       if (!showCalendar) {
+        // Múltiples intentos de foco para asegurar que funcione
         setTimeout(() => {
           inputRef.current?.focus();
-        }, 200); // Aumentado el tiempo para asegurar que el DOM se actualice
+        }, 100);
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 300);
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 500);
       }
     }
   };
@@ -326,7 +357,13 @@ const ChatbotWidget = () => {
       <AppointmentCalendar
         isVisible={showCalendar}
         onDateSelect={handleDateSelect}
-        onClose={() => setShowCalendar(false)}
+        onClose={() => {
+          setShowCalendar(false);
+          // Restaurar foco al input cuando se cierra el calendario
+          setTimeout(() => {
+            inputRef.current?.focus();
+          }, 100);
+        }}
       />
 
       {/* Ventana del chat */}
@@ -412,6 +449,9 @@ const ChatbotWidget = () => {
                       setTimeout(() => {
                         inputRef.current?.focus();
                       }, 100);
+                      setTimeout(() => {
+                        inputRef.current?.focus();
+                      }, 300);
                     }
                   }
                 }}
