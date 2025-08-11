@@ -27,6 +27,7 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
   console.log('🔍 [CHATBOT] Props:', { externalIsOpen, onClose: !!onClose });
   console.log('🔍 [CHATBOT] Estado interno:', { internalIsOpen });
   console.log('🔍 [CHATBOT] Estado final:', { isOpen });
+  
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -35,8 +36,10 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
   const [appointmentData, setAppointmentData] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
   // user_id persistente por sesión
   const userIdRef = useRef('user_' + Math.random().toString(36).substring(2, 12));
+  
   // Timers de inactividad
   const inactivityTimer = useRef<NodeJS.Timeout | null>(null);
   const warningTimer = useRef<NodeJS.Timeout | null>(null);
@@ -241,16 +244,16 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
         throw new Error(`Invalid date: ${date}T${formattedTime}:00`);
       }
       
-             // Crear objeto de datos para la cita
-       const appointmentData = {
-         fullName: "Usuario del Chat", // Valor por defecto
-         age: 25, // Valor por defecto
-         phone: "+34 600000000", // Valor por defecto
-         email: "usuario@chat.com", // Valor por defecto
-         consultationReason: "Consulta legal general",
-         consultationType: "Derecho Civil",
-         preferredDate: selectedDateTime
-       };
+      // Crear objeto de datos para la cita
+      const appointmentData = {
+        fullName: "Usuario del Chat", // Valor por defecto
+        age: 25, // Valor por defecto
+        phone: "+34 600000000", // Valor por defecto
+        email: "usuario@chat.com", // Valor por defecto
+        consultationReason: "Consulta legal general",
+        consultationType: "Derecho Civil",
+        preferredDate: selectedDateTime
+      };
       
       console.log('🔍 [CITA] Datos de la cita:', appointmentData);
       
@@ -415,9 +418,9 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
           className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200"
           title="Chat del despacho"
         >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
         </button>
       )}
 
@@ -460,15 +463,30 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
                 key={index}
                 className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
               >
-                                 <div
-                   className={`max-w-xs px-3 py-2 rounded-lg ${
-                     message.isUser
-                       ? 'bg-blue-600 text-white'
-                       : 'bg-gray-100 text-gray-800'
-                   }`}
-                   style={{ userSelect: 'text', WebkitUserSelect: 'text', MozUserSelect: 'text', msUserSelect: 'text' }}
-                 >
-                   <p className="text-sm" style={{ userSelect: 'text', WebkitUserSelect: 'text', MozUserSelect: 'text', msUserSelect: 'text' }}>{message.text}</p>
+                <div
+                  className={`max-w-xs px-3 py-2 rounded-lg ${
+                    message.isUser
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
+                  style={{ 
+                    userSelect: 'text', 
+                    WebkitUserSelect: 'text', 
+                    MozUserSelect: 'text', 
+                    msUserSelect: 'text' 
+                  }}
+                >
+                  <p 
+                    className="text-sm" 
+                    style={{ 
+                      userSelect: 'text', 
+                      WebkitUserSelect: 'text', 
+                      MozUserSelect: 'text', 
+                      msUserSelect: 'text' 
+                    }}
+                  >
+                    {message.text}
+                  </p>
                   <p className={`text-xs mt-1 ${
                     message.isUser ? 'text-blue-100' : 'text-gray-500'
                   }`}>
