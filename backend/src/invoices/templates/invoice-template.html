@@ -210,6 +210,15 @@
         .text-center { text-align: center; }
         .text-right { text-align: right; }
         
+        /* Aplicar estilos consistentes a números monetarios en tablas */
+        .items-table td.text-right,
+        .provisiones-table td.text-right {
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
         /* Estilos específicos para tabla de provisiones */
         .provisiones-table {
             width: 100%;
@@ -332,13 +341,18 @@
             transition: opacity 0.2s ease;
         }
         
-        /* Asegurar que los valores monetarios tengan formato consistente */
-        .total-value {
+        /* ESTILOS ESTANDARIZADOS PARA TODOS LOS NÚMEROS MONETARIOS */
+        .total-value,
+        .items-table td.text-right,
+        .provisiones-table td.text-right {
             font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            font-weight: 600;
             letter-spacing: 0.5px;
+            color: #111827;
         }
         
-        /* Estilos para el total principal */
+        /* Estilos para el total principal - mantener destacado */
         .total-row .total-label {
             font-size: 1.1rem;
             letter-spacing: 0.5px;
@@ -347,6 +361,12 @@
         .total-row .total-value {
             font-size: 1.1rem;
             font-weight: 700;
+            color: white;
+        }
+        
+        /* Estilos para filas de descuento */
+        .discount-row .total-value {
+            color: #92400e;
         }
         
         /* Estilo específico para evitar que TOTAL A PAGAR se comprima */
@@ -447,6 +467,14 @@
             
             .total-label {
                 font-size: 0.9rem;
+            }
+            
+            /* Mantener consistencia tipográfica en pantallas pequeñas */
+            .items-table td.text-right,
+            .provisiones-table td.text-right,
+            .total-value {
+                font-size: 0.9rem;
+                font-weight: 600;
             }
         }
         
