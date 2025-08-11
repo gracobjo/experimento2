@@ -280,22 +280,43 @@ async function bootstrap() {
           /^https:\/\/.*\.railway\.app$/
         ];
     
-    res.json({
-      message: 'Debug CORS',
-      timestamp: new Date().toISOString(),
-      requestOrigin: origin,
-      corsOrigins: corsOrigins,
-      corsOriginEnv: process.env.CORS_ORIGIN || 'No configurado',
-      headers: req.headers,
-      isOriginAllowed: corsOrigins.some(allowedOrigin => {
-        if (typeof allowedOrigin === 'string') {
-          return allowedOrigin === origin;
-        } else if (allowedOrigin instanceof RegExp) {
-          return allowedOrigin.test(origin);
-        }
-        return false;
-      })
-    });
+         // Usar la misma lógica que la función CORS principal
+     let isOriginAllowed = false;
+     
+     for (const allowedOrigin of corsOrigins) {
+       if (typeof allowedOrigin === 'string') {
+         if (allowedOrigin === origin) {
+           isOriginAllowed = true;
+           break;
+         }
+       } else if (allowedOrigin instanceof RegExp) {
+         if (allowedOrigin.test(origin)) {
+           isOriginAllowed = true;
+           break;
+         }
+       }
+     }
+     
+     // Aplicar el mismo fallback que la función CORS principal
+     if (!isOriginAllowed && origin && (origin.includes('vercel.app') || origin.includes('railway.app'))) {
+       isOriginAllowed = true;
+     }
+     
+     res.json({
+       message: 'Debug CORS',
+       timestamp: new Date().toISOString(),
+       requestOrigin: origin,
+       corsOrigins: corsOrigins,
+       corsOriginEnv: process.env.CORS_ORIGIN || 'No configurado',
+       headers: req.headers,
+       isOriginAllowed: isOriginAllowed,
+       debugInfo: {
+         originType: typeof origin,
+         originLength: origin ? origin.length : 0,
+         corsOriginsCount: corsOrigins.length,
+         corsOriginsTypes: corsOrigins.map(o => typeof o)
+       }
+     });
   });
 
   const port = process.env.PORT || 3000;
