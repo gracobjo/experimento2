@@ -8,6 +8,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import QRCode from 'qrcode';
 import InvoiceAuditHistory from '../../components/InvoiceAuditHistory';
 import { isInvoiceEditable, isInvoiceAuditable, isInvoiceCancellable, getStatusDisplayName, getStatusColor, getStatusIcon, INVOICE_STATUS } from '../../utils/invoice-status';
+import { getBackendUrl } from '../../config/endpoints';
 
 // Interfaces para tipado
 interface Invoice {
@@ -925,8 +926,8 @@ const InvoicesPage = () => {
           const token = localStorage.getItem('token');
           console.log('[FRONTEND] Cargando HTML preview para factura:', invoice.id);
           
-          // Usar URL directa al backend
-          const res = await fetch(`https://experimento2-production-54c0.up.railway.app/api/invoices/${invoice.id}/html-preview`, {
+          // Usar configuración centralizada
+          const res = await fetch(`${getBackendUrl()}/api/invoices/${invoice.id}/html-preview`, {
             headers: { 
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'

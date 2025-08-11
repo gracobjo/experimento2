@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { Invoice } from '../../types/invoice';
+import { getBackendUrl } from '../../config/endpoints';
 
 const InvoicesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -77,103 +78,7 @@ const InvoicesPage: React.FC = () => {
     }, 1000);
   };
 
-  const handleViewProfessional = async (invoice: Invoice, event?: React.MouseEvent<HTMLButtonElement>) => {
-    try {
-      console.log('[CLIENT] Intentando descargar PDF profesional para factura:', invoice.id);
-      
-      // Mostrar indicador de carga
-      const button = event?.currentTarget as HTMLButtonElement;
-      if (button) {
-        button.disabled = true;
-        button.innerHTML = '⏳ Descargando...';
-      }
-      
-      const response = await api.get(`/invoices/${invoice.id}/pdf-professional`, {
-        responseType: 'blob'
-      });
 
-      // Verificar que la respuesta sea válida
-      if (!response.data || response.data.size === 0) {
-        throw new Error('El PDF recibido está vacío');
-      }
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.target = '_blank';
-      link.download = `factura_${invoice.numeroFactura || invoice.id}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      
-      console.log('[CLIENT] PDF profesional descargado exitosamente');
-      
-      // Mostrar mensaje de éxito
-      if (button) {
-        button.innerHTML = '✅ Descargado';
-        setTimeout(() => {
-          button.disabled = false;
-          button.innerHTML = '📥 PDF';
-        }, 2000);
-      }
-      
-    } catch (err: any) {
-      console.error('[CLIENT] Error descargando PDF profesional:', err);
-      
-      // Si falla el PDF profesional, intentar con el PDF con QR
-      try {
-        console.log('[CLIENT] Intentando con PDF con QR como fallback...');
-        const response = await api.get(`/invoices/${invoice.id}/pdf-qr`, {
-          responseType: 'blob'
-        });
-
-        // Verificar que la respuesta sea válida
-        if (!response.data || response.data.size === 0) {
-          throw new Error('El PDF con QR recibido está vacío');
-        }
-
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        link.target = '_blank';
-        link.download = `factura_qr_${invoice.numeroFactura || invoice.id}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
-        
-        console.log('[CLIENT] PDF con QR descargado exitosamente como fallback');
-        
-        // Mostrar mensaje de éxito del fallback
-        if (button) {
-          button.innerHTML = '✅ Descargado (QR)';
-          setTimeout(() => {
-            button.disabled = false;
-            button.innerHTML = '📥 PDF';
-          }, 2000);
-        }
-        
-      } catch (fallbackErr: any) {
-        console.error('[CLIENT] Error también en fallback PDF con QR:', fallbackErr);
-        
-        // Restaurar el botón
-        if (button) {
-          button.disabled = false;
-          button.innerHTML = '📥 PDF';
-        }
-        
-        // Mostrar mensaje de error más informativo
-        const errorMessage = fallbackErr?.response?.status === 403 
-          ? 'No tiene permisos para descargar esta factura. Contacte a su abogado.'
-          : fallbackErr?.response?.status === 404
-          ? 'La factura no se encontró en el servidor.'
-          : 'Error al descargar la factura. Por favor, intente ver la factura en pantalla o contacte al administrador.';
-        
-        alert(errorMessage);
-      }
-    }
-  };
 
   const closeModal = () => {
     setSelectedInvoice(null);
@@ -197,8 +102,8 @@ const InvoicesPage: React.FC = () => {
           const token = localStorage.getItem('token');
           console.log('[CLIENT] Cargando HTML preview para factura:', invoice.id);
           
-          // Usar URL directa al backend
-          const res = await fetch(`https://experimento2-production-54c0.up.railway.app/api/invoices/${invoice.id}/html-preview`, {
+          // Usar configuración centralizada
+          const res = await fetch(`${getBackendUrl()}/api/invoices/${invoice.id}/html-preview`, {
             headers: { 
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
@@ -385,12 +290,6 @@ const InvoicesPage: React.FC = () => {
           >
             🖨️ Imprimir
           </button>
-          <button 
-            onClick={(e) => handleViewProfessional(invoice, e)}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-          >
-            📥 Descargar PDF
-          </button>
         </div>
         
         {/* Estilos CSS para impresión */}
@@ -499,7 +398,7 @@ const InvoicesPage: React.FC = () => {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Mis Facturas</h1>
               <p className="mt-2 text-gray-600">
-                Gestiona y descarga tus facturas
+                Gestiona y visualiza tus facturas
               </p>
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
                 <div className="flex items-start">
@@ -512,7 +411,6 @@ const InvoicesPage: React.FC = () => {
                     <h3 className="text-sm font-medium text-blue-800">Funcionalidades disponibles:</h3>
                     <div className="mt-2 text-sm text-blue-700">
                       <p>• <strong>👁️ Ver:</strong> Muestra la factura completa en pantalla con opciones de impresión</p>
-                      <p>• <strong>📥 PDF:</strong> Descarga la factura directamente en formato PDF</p>
                       <p>• <strong>🖨️ Imprimir:</strong> Imprime la factura desde la vista completa</p>
                     </div>
                   </div>
@@ -665,13 +563,6 @@ const InvoicesPage: React.FC = () => {
                             title="Ver factura completa con todos los detalles"
                           >
                             👁️ Ver
-                          </button>
-                          <button
-                            onClick={(e) => handleViewProfessional(invoice, e)}
-                            className="text-green-600 hover:text-green-900 hover:bg-green-50 px-2 py-1 rounded"
-                            title="Descargar factura en PDF"
-                          >
-                            📥 PDF
                           </button>
                         </div>
                       </td>

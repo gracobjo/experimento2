@@ -1,14 +1,13 @@
 import axios from 'axios';
+import { getBackendUrl, logEndpointsConfig } from '../config/endpoints';
 
 const api = axios.create({
-  baseURL: `${(window as any).APP_CONFIG?.API_URL || (import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api`,
+  baseURL: `${getBackendUrl()}/api`,
 });
 
 // Log de configuración para debugging
-console.log('🔧 Configuración de axios:');
-console.log('🔧 APP_CONFIG:', (window as any).APP_CONFIG);
-console.log('🔧 VITE_API_URL:', (import.meta as any).env.VITE_API_URL);
-console.log('🔧 Base URL final:', api.defaults.baseURL);
+logEndpointsConfig();
+console.log('🔧 Base URL final de axios:', api.defaults.baseURL);
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
