@@ -50,21 +50,40 @@ async function bootstrap() {
       }
       
       // Verificar si el origen está en la lista permitida
-      const isAllowed = corsOrigins.some(allowedOrigin => {
+      let isAllowed = false;
+      
+      for (const allowedOrigin of corsOrigins) {
         if (typeof allowedOrigin === 'string') {
-          return allowedOrigin === origin;
+          if (allowedOrigin === origin) {
+            isAllowed = true;
+            break;
+          }
         } else if (allowedOrigin instanceof RegExp) {
-          return allowedOrigin.test(origin);
+          if (allowedOrigin.test(origin)) {
+            isAllowed = true;
+            break;
+          }
         }
-        return false;
-      });
+      }
+      
+      // Logging detallado para debug
+      console.log('🔧 [CORS] Verificando origen:', origin);
+      console.log('🔧 [CORS] Orígenes permitidos:', corsOrigins);
+      console.log('🔧 [CORS] ¿Está permitido?', isAllowed);
       
       if (isAllowed) {
         console.log('🔧 [CORS] Origen permitido:', origin);
         callback(null, true);
       } else {
         console.log('🔧 [CORS] Origen bloqueado:', origin);
-        callback(new Error('Not allowed by CORS'));
+        // FALLBACK: Si no está en la lista, verificar patrones adicionales
+        if (origin.includes('vercel.app') || origin.includes('railway.app')) {
+          console.log('🔧 [CORS] FALLBACK: Origen permitido por patrón:', origin);
+          callback(null, true);
+        } else {
+          console.log('🔧 [CORS] Origen definitivamente bloqueado:', origin);
+          callback(new Error('Not allowed by CORS'));
+        }
       }
     },
     credentials: true,
