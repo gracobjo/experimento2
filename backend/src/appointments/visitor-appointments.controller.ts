@@ -38,6 +38,7 @@ export class VisitorAppointmentsController {
     }
   })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  // ENDPOINT PÚBLICO: No requiere autenticación para crear citas
   create(@Body() createVisitorAppointmentDto: CreateVisitorAppointmentDto) {
     return this.visitorAppointmentsService.create(createVisitorAppointmentDto);
   }
