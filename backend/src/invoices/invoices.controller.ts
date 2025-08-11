@@ -1168,4 +1168,86 @@ export class InvoicesController {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.send(html);
   }
+
+  @Get(':id/pdf-professional')
+  @Roles(Role.ABOGADO, Role.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiOperation({ 
+    summary: 'Descargar factura profesional (PDF completo)',
+    description: 'Descarga la factura en PDF profesional con diseño completo (solo ABOGADO y ADMIN)'
+  })
+  @ApiParam({ name: 'id', description: 'ID de la factura', type: 'string' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'PDF profesional de la factura',
+    schema: {
+      type: 'string',
+      format: 'binary'
+    }
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente' })
+  @ApiResponse({ status: 404, description: 'Factura no encontrada' })
+  async getInvoicePdfProfessional(@Param('id') id: string, @Res() res: Response, @Request() req) {
+    try {
+      console.log('[PDF-PROFESIONAL] Iniciando generación de PDF profesional para abogado');
+      
+      // Obtener la factura de la base de datos
+      const invoice = await this.invoicesService.findOne(id);
+      if (!invoice) {
+        console.log('[PDF-PROFESIONAL] Factura no encontrada');
+        return res.status(404).send('Factura no encontrada');
+      }
+
+      // Verificar permisos (solo abogado que creó la factura o admin)
+      if (req.user.role === 'ABOGADO' && invoice.emisorId !== req.user.id) {
+        console.log('[PDF-PROFESIONAL] No autorizado - ABOGADO');
+        return res.status(403).send('No autorizado para acceder a esta factura');
+      }
+      
+      console.log('[PDF-PROFESIONAL] Permisos verificados correctamente');
+      console.log('[PDF-PROFESIONAL] Datos de la factura:', JSON.stringify(invoice, null, 2));
+      
+      // Generar el PDF profesional (mismo que usa la vista HTML)
+      console.log('[PDF-PROFESIONAL] Generando PDF profesional...');
+      const pdfBuffer = await this.invoicesService.generateInvoicePdf(invoice);
+      
+      // Verificar que el buffer es válido
+      if (!Buffer.isBuffer(pdfBuffer)) {
+        console.error('[PDF-PROFESIONAL] Error: pdfBuffer no es un Buffer válido');
+        return res.status(500).send('Error: Buffer PDF inválido');
+      }
+      
+      console.log(`[PDF-PROFESIONAL] Buffer PDF generado. Tamaño: ${pdfBuffer.length} bytes`);
+      console.log(`[PDF-PROFESIONAL] Primeros bytes: ${Array.from(pdfBuffer.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
+
+      // Verificar que es un PDF válido (debe empezar con %PDF)
+      const pdfHeader = pdfBuffer.slice(0, 4).toString('ascii');
+      if (pdfHeader !== '%PDF') {
+        console.error('[PDF-PROFESIONAL] Error: Buffer no es un PDF válido. Header:', pdfHeader);
+        return res.status(500).send('Error: Buffer no es un PDF válido');
+      }
+
+      // Configurar headers y enviar respuesta
+      console.log('[PDF-PROFESIONAL] Configurando headers de respuesta...');
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Length': pdfBuffer.length.toString(),
+        'Content-Disposition': `attachment; filename="factura_profesional_${invoice.numeroFactura || id}.pdf"`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
+      
+      // Enviar el buffer directamente sin procesamiento adicional
+      console.log('[PDF-PROFESIONAL] Enviando PDF al abogado...');
+      res.end(pdfBuffer);
+      console.log('[PDF-PROFESIONAL] PDF enviado exitosamente');
+      
+    } catch (error) {
+      console.error('[PDF-PROFESIONAL] Error al generar PDF profesional:', error);
+      console.error('[PDF-PROFESIONAL] Stack trace:', (error as any).stack);
+      res.status(500).send({ error: (error as any).message || error.toString() });
+    }
+  }
 } 

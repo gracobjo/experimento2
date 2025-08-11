@@ -995,7 +995,7 @@ const InvoicesPage = () => {
         console.log('[FRONTEND] Token disponible:', !!token);
         
         // Intentar con URL directa al backend
-        const downloadUrl = `https://experimento2-production-54c0.up.railway.app/api/invoices/${invoice.id}/pdf-qr`;
+                    const downloadUrl = `https://experimento2-production-54c0.up.railway.app/api/invoices/${invoice.id}/pdf-professional`;
         console.log('[FRONTEND] URL de descarga directa:', downloadUrl);
         
         const response = await fetch(downloadUrl, {
