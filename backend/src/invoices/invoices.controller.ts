@@ -1191,6 +1191,9 @@ export class InvoicesController {
   async getInvoicePdfProfessional(@Param('id') id: string, @Res() res: Response, @Request() req) {
     try {
       console.log('[PDF-PROFESIONAL] Iniciando generación de PDF profesional para abogado');
+      console.log('[PDF-PROFESIONAL] ID de factura:', id);
+      console.log('[PDF-PROFESIONAL] Usuario:', req.user);
+      console.log('[PDF-PROFESIONAL] Rol del usuario:', req.user.role);
       
       // Obtener la factura de la base de datos
       const invoice = await this.invoicesService.findOne(id);
@@ -1216,9 +1219,17 @@ export class InvoicesController {
       // Generar el PDF profesional (mismo que usa la vista HTML)
       console.log('[PDF-PROFESIONAL] Generando PDF profesional...');
       console.log('[PDF-PROFESIONAL] Llamando a invoicesService.generateInvoicePdfProfessional()...');
+      console.log('[PDF-PROFESIONAL] Datos de la factura para PDF:', {
+        id: invoice.id,
+        numeroFactura: invoice.numeroFactura,
+        fechaFactura: invoice.fechaFactura,
+        emisorId: invoice.emisorId,
+        receptorId: invoice.receptorId
+      });
       
       let pdfBuffer: Buffer;
       try {
+        console.log('[PDF-PROFESIONAL] Iniciando generación con método principal...');
         pdfBuffer = await this.invoicesService.generateInvoicePdfProfessional(invoice);
         console.log('[PDF-PROFESIONAL] PDF profesional generado exitosamente');
       } catch (error) {
@@ -1227,8 +1238,13 @@ export class InvoicesController {
         
         // Si falla el PDF profesional, intentar con el método vectorial (compatible con Railway)
         console.log('[PDF-PROFESIONAL] Intentando con método vectorial (compatible con Railway)...');
-        pdfBuffer = await this.invoicesService.generateInvoicePdfProfessionalVectorial(invoice);
-        console.log('[PDF-PROFESIONAL] PDF vectorial generado exitosamente');
+        try {
+          pdfBuffer = await this.invoicesService.generateInvoicePdfProfessionalVectorial(invoice);
+          console.log('[PDF-PROFESIONAL] PDF vectorial generado exitosamente');
+        } catch (vectorialError) {
+          console.error('[PDF-PROFESIONAL] Error también en método vectorial:', vectorialError);
+          throw new Error(`Ambos métodos fallaron: Principal: ${error}, Vectorial: ${vectorialError}`);
+        }
       }
       
       // Verificar que el buffer es válido
