@@ -207,9 +207,9 @@ export class InvoicesController {
       console.log('[PDF-QR] Permisos verificados correctamente');
       console.log('[PDF-QR] Datos de la factura:', JSON.stringify(invoice, null, 2));
       
-      // Generar el PDF con QR
-      console.log('[PDF-QR] Iniciando generación de PDF...');
-      const pdfBuffer = await this.invoicesService.generateInvoicePdfWithQR(invoice);
+      // Generar el PDF profesional (mismo que usa el abogado)
+      console.log('[PDF-PROFESIONAL] Iniciando generación de PDF profesional...');
+      const pdfBuffer = await this.invoicesService.generateInvoicePdf(invoice);
       
       // Verificar que el buffer es válido
       if (!Buffer.isBuffer(pdfBuffer)) {

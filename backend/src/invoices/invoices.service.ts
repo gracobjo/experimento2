@@ -1225,8 +1225,32 @@ export class InvoicesService {
   }
 
   /**
-   * Genera un PDF profesional de la factura usando el template HTML profesional
-   * @param invoice Datos de la factura
+   * Genera un PDF profesional de la factura (mismo que usa el abogado)
+   * @param invoice Factura a procesar
+   * @returns Buffer del PDF generado
+   */
+  async generateInvoicePdf(invoice: any): Promise<Buffer> {
+    try {
+      this.logger.log('Generando PDF profesional de la factura');
+      
+      // Usar el servicio de generación de PDF profesional
+      const pdfBuffer = await this.pdfGeneratorService.generateInvoicePdf(invoice);
+      
+      this.logger.log('PDF profesional generado exitosamente');
+      return pdfBuffer;
+      
+    } catch (error) {
+      this.logger.error('Error generando PDF profesional:', error);
+      
+      // Fallback al PDF simple si falla el profesional
+      this.logger.log('Usando fallback al PDF simple');
+      return this.generateInvoicePdfWithQR(invoice);
+    }
+  }
+
+  /**
+   * Genera un PDF simple con QR para la factura
+   * @param invoice Factura a procesar
    * @returns Buffer del PDF generado
    */
   async generateInvoicePdfWithQR(invoice: any): Promise<Buffer> {
