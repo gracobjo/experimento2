@@ -322,12 +322,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
 ### **1. Probar Health Check:**
 ```bash
-curl https://chatbot-legal-production.up.railway.app/health
+curl https://chatbot-legal-production-b91c.up.railway.app/health
 ```
 
 ### **2. Probar Chat HTTP:**
 ```bash
-curl -X POST https://chatbot-legal-production.up.railway.app/chat \
+curl -X POST https://chatbot-legal-production-b91c.up.railway.app/chat \
   -H "Content-Type: application/json" \
   -d '{"text": "Hola, necesito ayuda legal", "language": "es"}'
 ```
@@ -359,7 +359,7 @@ curl -X POST https://chatbot-legal-production.up.railway.app/chat \
 ### **Frontend (.env):**
 ```env
 VITE_API_URL=https://experimento2-production.up.railway.app/api
-VITE_CHATBOT_URL=https://chatbot-legal-production.up.railway.app
+VITE_CHATBOT_URL=https://chatbot-legal-production-b91c.up.railway.app
 ```
 
 ### **Chatbot (Railway):**
@@ -414,7 +414,7 @@ git push origin main
 
 - **Frontend:** `https://experimento2-fenm.vercel.app`
 - **Backend:** `https://experimento2-production.up.railway.app`
-- **Chatbot:** `https://chatbot-legal-production.up.railway.app`
+- **Chatbot:** `https://chatbot-legal-production-b91c.up.railway.app`
 - **API Docs:** `https://experimento2-production.up.railway.app/api`
 
 ---

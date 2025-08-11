@@ -926,7 +926,7 @@ const InvoicesPage = () => {
           console.log('[FRONTEND] Cargando HTML preview para factura:', invoice.id);
           
           // Usar URL directa al backend
-          const res = await fetch(`https://experimento2-production-54c0.up.railway.app/api/invoices/${invoice.id}/html-preview`, {
+          const res = await fetch(`https://experimento2-production.up.railway.app/api/invoices/${invoice.id}/html-preview`, {
             headers: { 
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'

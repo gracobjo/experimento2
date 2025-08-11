@@ -110,7 +110,7 @@ else:
         "https://experimento2-production.up.railway.app",
         "https://experimento2-production-54c0.up.railway.app",
         "https://chatbot-legal-production-b91c.up.railway.app",
-        "https://chatbot-legal-production.up.railway.app",
+        "https://chatbot-legal-production-b91c.up.railway.app",
         os.getenv("FRONTEND_URL", "http://localhost:5173")
     ]
     print(f"[CORS] Usando dominios por defecto: {allowed_origins}")
