@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
+import { testApiConnectivity, logApiInfo } from '../../utils/apiTest';
 
 interface Appointment {
   id: string;
@@ -49,22 +50,56 @@ const AppointmentsPage = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null);
+        
+        // Verificar autenticación
         const token = localStorage.getItem('token');
+        if (!token) {
+          setError('No hay token de autenticación. Por favor, inicia sesión.');
+          setLoading(false);
+          return;
+        }
+        
+        console.log('[AppointmentsPage] Iniciando fetch de datos...');
+        console.log('[AppointmentsPage] Token:', token ? 'Presente' : 'Ausente');
+        console.log('[AppointmentsPage] Usuario:', user);
+        
+        // Ejecutar pruebas de API automáticamente
+        console.log('=== EJECUTANDO PRUEBAS DE API AUTOMÁTICAS ===');
+        logApiInfo();
+        await testApiConnectivity();
+        
         const [lawyersRes, appointmentsRes] = await Promise.all([
           api.get('/users/lawyers'),
           api.get('/appointments')
         ]);
+        
+        console.log('[AppointmentsPage] Lawyers response:', lawyersRes.data);
+        console.log('[AppointmentsPage] Appointments response:', appointmentsRes.data);
+        
         setLawyers(lawyersRes.data);
         setAppointments(appointmentsRes.data);
         setError(null);
       } catch (err: any) {
-        setError('Error al cargar los datos');
+        console.error('[AppointmentsPage] Error fetching data:', err);
+        console.error('[AppointmentsPage] Error response:', err.response);
+        console.error('[AppointmentsPage] Error status:', err.response?.status);
+        
+        if (err.response?.status === 401) {
+          setError('Sesión expirada. Por favor, inicia sesión de nuevo.');
+        } else if (err.response?.status === 403) {
+          setError('No tienes permisos para ver las citas.');
+        } else if (err.response?.status === 404) {
+          setError('Endpoint no encontrado. Verifica la configuración de la API.');
+        } else {
+          setError(`Error al cargar los datos: ${err.response?.data?.message || err.message || 'Error desconocido'}`);
+        }
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -98,7 +133,18 @@ const AppointmentsPage = () => {
       setSuccess('Cita agendada correctamente');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al agendar la cita');
+      console.error('[AppointmentsPage] Error creating appointment:', err);
+      console.error('[AppointmentsPage] Error response:', err.response);
+      
+      if (err.response?.status === 401) {
+        setError('Sesión expirada. Por favor, inicia sesión de nuevo.');
+      } else if (err.response?.status === 403) {
+        setError('No tienes permisos para crear citas.');
+      } else if (err.response?.status === 400) {
+        setError(`Error de validación: ${err.response?.data?.message || 'Datos incorrectos'}`);
+      } else {
+        setError(`Error al agendar la cita: ${err.response?.data?.message || err.message || 'Error desconocido'}`);
+      }
     }
   };
 
@@ -127,7 +173,18 @@ const AppointmentsPage = () => {
       setSuccess('Cita actualizada correctamente');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al actualizar la cita');
+      console.error('[AppointmentsPage] Error updating appointment:', err);
+      console.error('[AppointmentsPage] Error response:', err.response);
+      
+      if (err.response?.status === 401) {
+        setError('Sesión expirada. Por favor, inicia sesión de nuevo.');
+      } else if (err.response?.status === 403) {
+        setError('No tienes permisos para editar citas.');
+      } else if (err.response?.status === 400) {
+        setError(`Error de validación: ${err.response?.data?.message || 'Datos incorrectos'}`);
+      } else {
+        setError(`Error al actualizar la cita: ${err.response?.data?.message || err.message || 'Error desconocido'}`);
+      }
     }
   };
 
@@ -153,7 +210,18 @@ const AppointmentsPage = () => {
       setSuccess('Cita cancelada correctamente');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError('Error al cancelar la cita');
+      console.error('[AppointmentsPage] Error canceling appointment:', err);
+      console.error('[AppointmentsPage] Error response:', err.response);
+      
+      if (err.response?.status === 401) {
+        setError('Sesión expirada. Por favor, inicia sesión de nuevo.');
+      } else if (err.response?.status === 403) {
+        setError('No tienes permisos para cancelar citas.');
+      } else if (err.response?.status === 404) {
+        setError('Cita no encontrada.');
+      } else {
+        setError(`Error al cancelar la cita: ${err.response?.data?.message || err.message || 'Error desconocido'}`);
+      }
     }
   };
 
@@ -416,6 +484,37 @@ const AppointmentsPage = () => {
             <p className="text-green-700 text-sm">{success}</p>
           </div>
         )}
+
+        {/* Panel de debugging */}
+        <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
+          <details className="text-sm">
+            <summary className="cursor-pointer text-gray-700 font-medium">🔍 Información de Debugging</summary>
+            <div className="mt-2 space-y-1 text-gray-600">
+              <p><strong>Estado:</strong> {loading ? 'Cargando...' : 'Completado'}</p>
+              <p><strong>Usuario:</strong> {user ? `${user.name} (${user.email})` : 'No autenticado'}</p>
+              <p><strong>Token:</strong> {localStorage.getItem('token') ? 'Presente' : 'Ausente'}</p>
+              <p><strong>Abogados cargados:</strong> {lawyers.length}</p>
+              <p><strong>Citas cargadas:</strong> {appointments.length}</p>
+              <p><strong>Error:</strong> {error || 'Ninguno'}</p>
+              
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <button
+                  onClick={async () => {
+                    console.log('=== EJECUTANDO PRUEBAS DE API ===');
+                    logApiInfo();
+                    await testApiConnectivity();
+                  }}
+                  className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                >
+                  🧪 Ejecutar Pruebas de API
+                </button>
+                <p className="text-xs text-gray-500 mt-1">
+                  Abre la consola del navegador para ver los resultados
+                </p>
+              </div>
+            </div>
+          </details>
+        </div>
       </div>
 
       {/* Formulario de nueva cita */}

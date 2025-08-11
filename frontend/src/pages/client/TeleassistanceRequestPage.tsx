@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import axios from '../../api/axios';
+import api from '../../api/axios';
 
 interface Assistant {
   id: string;
@@ -55,9 +55,9 @@ const TeleassistanceRequestPage: React.FC = () => {
       setLoading(true);
       
       const [assistantsResponse, toolsResponse, issuesResponse] = await Promise.all([
-        axios.get('/teleassistance/available-assistants'),
-        axios.get('/teleassistance/remote-tools'),
-        axios.get('/teleassistance/common-issues')
+        api.get('/teleassistance/available-assistants'),
+        api.get('/teleassistance/remote-tools'),
+        api.get('/teleassistance/common-issues')
       ]);
 
       setAssistants(assistantsResponse.data);
@@ -89,7 +89,7 @@ const TeleassistanceRequestPage: React.FC = () => {
         remoteTool: selectedRemoteTool || undefined,
       };
 
-      const response = await axios.post('/api/teleassistance/sessions', requestData);
+      const response = await api.post('/teleassistance/sessions', requestData);
       
       alert('Solicitud de teleasistencia enviada exitosamente. Te contactaremos pronto.');
       navigate('/client/teleassistance');

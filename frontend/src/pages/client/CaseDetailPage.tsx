@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api/axios';
 import QuickActions from '../../components/QuickActions';
 import LawyerContactModal from '../../components/LawyerContactModal';
 
@@ -42,11 +42,8 @@ const ClientCaseDetailPage = () => {
         const token = localStorage.getItem('token');
         
         console.log('🔍 Fetching case with ID:', id);
-        console.log('🔍 API URL:', `${(import.meta as any).env.VITE_API_URL || 'http://localhost:3000'}/api/cases/${id}`);
         
-        const response = await axios.get(`/api/cases/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.get(`/cases/${id}`);
         
         console.log('📊 Response status:', response.status);
         console.log('📊 Response headers:', response.headers);

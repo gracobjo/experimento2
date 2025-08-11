@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import axios from 'axios';
+import api from '../../api/axios';
 import { Calendar, momentLocalizer, type Event as CalendarEvent } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -136,8 +136,7 @@ const AppointmentsCalendarPage = () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
-        const response = await axios.get('/api/appointments', {
-          headers: { Authorization: `Bearer ${token}` },
+        const response = await api.get('/appointments', {
           params: { _t: Date.now() } // Evitar caché
         });
         // Asegurar que la respuesta es un array
@@ -229,9 +228,7 @@ const AppointmentsCalendarPage = () => {
       setRescheduling(true);
       const token = localStorage.getItem('token');
       
-      const response = await axios.put(`/api/appointments/${selected.id}/reschedule`, rescheduleForm, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.put(`/appointments/${selected.id}/reschedule`, rescheduleForm);
 
       // Actualizar la lista de citas
       setAppointments(prev => prev.map(app => 
@@ -262,9 +259,7 @@ const AppointmentsCalendarPage = () => {
       setDeleting(true);
       const token = localStorage.getItem('token');
       
-      await axios.delete(`/api/appointments/${selected.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+              await api.delete(`/appointments/${selected.id}`);
 
       // Remover la cita de la lista
       setAppointments(prev => prev.filter(app => app.id !== selected.id));
@@ -288,9 +283,7 @@ const AppointmentsCalendarPage = () => {
       setRescheduling(true);
       const token = localStorage.getItem('token');
       
-      const response = await axios.put(`/api/appointments/${selected.id}/confirm`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+              const response = await api.put(`/appointments/${selected.id}/confirm`, {});
 
       // Actualizar la lista de citas
       setAppointments(prev => prev.map(app => 

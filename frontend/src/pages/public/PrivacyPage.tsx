@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import axios from '../../api/axios';
+import api from '../../api/axios';
 
 interface LegalContent {
   id: string;
@@ -20,7 +20,7 @@ const PrivacyPage: React.FC = () => {
     const fetchPrivacyContent = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('/parametros/legal/PRIVACY_POLICY');
+        const response = await api.get('/parametros/legal/PRIVACY_POLICY');
         setPrivacyContent(response.data.valor);
       } catch (err) {
         console.error('Error fetching privacy content:', err);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import FileUpload from '../../components/forms/FileUpload';
 
@@ -66,15 +66,9 @@ const DocumentsPage = () => {
         const token = localStorage.getItem('token');
         
         const [documentsResponse, statsResponse, expedientesResponse] = await Promise.all([
-          axios.get('/api/documents', {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          axios.get('/api/documents/stats', {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          axios.get('/api/cases', {
-            headers: { Authorization: `Bearer ${token}` }
-          })
+          api.get('/documents'),
+          api.get('/documents/stats'),
+          api.get('/cases')
         ]);
 
         setDocuments(documentsResponse.data);
@@ -168,12 +162,7 @@ const DocumentsPage = () => {
           formData.append('description', uploadForm.description);
         }
 
-        return axios.post('/api/documents/upload', formData, {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data'
-          }
-        });
+        return api.post('/documents/upload', formData);
       });
 
       console.log('Subiendo archivos...');
@@ -182,9 +171,7 @@ const DocumentsPage = () => {
 
       // Recargar documentos
       console.log('Recargando documentos...');
-      const response = await axios.get('/api/documents', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+              const response = await api.get('/documents');
       console.log('Documentos cargados:', response.data);
       
       // Verificar que los documentos tengan la estructura correcta
@@ -217,9 +204,7 @@ const DocumentsPage = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`/api/documents/${documentId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/documents/${documentId}`);
 
       setDocuments(prev => prev.filter(doc => doc.id !== documentId));
       // Mostrar mensaje de éxito
@@ -228,9 +213,7 @@ const DocumentsPage = () => {
       // Ocultar mensaje de éxito después de 3 segundos
       setTimeout(() => setSuccess(null), 3000);
       // Recargar estadísticas después de eliminar
-      const statsResponse = await axios.get('/api/documents/stats', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+              const statsResponse = await api.get('/documents/stats');
       setStats(statsResponse.data);
     } catch (err: any) {
       console.error('Error deleting document:', err);

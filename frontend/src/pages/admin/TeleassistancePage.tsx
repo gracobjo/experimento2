@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import axios from '../../api/axios';
+import api from '../../api/axios';
 import { useNavigate } from 'react-router-dom';
 
 interface TeleassistanceSession {
@@ -65,7 +65,7 @@ const TeleassistancePage: React.FC = () => {
   useEffect(() => {
     loadData();
     setToolLoading(true);
-    axios.get('/teleassistance/remote-tools')
+    api.get('/teleassistance/remote-tools')
       .then(res => setTools(res.data))
       .catch(() => setTools([]))
       .finally(() => setToolLoading(false));
@@ -76,18 +76,18 @@ const TeleassistancePage: React.FC = () => {
       setLoading(true);
       
       // Cargar sesiones pendientes
-      const pendingResponse = await axios.get('/teleassistance/sessions/pending');
+      const pendingResponse = await api.get('/teleassistance/sessions/pending');
       setPendingSessions(pendingResponse.data);
 
       // Cargar todas las sesiones del asistente
       if (user) {
-        const sessionsResponse = await axios.get('/teleassistance/sessions/assistant/' + user.id);
+        const sessionsResponse = await api.get('/teleassistance/sessions/assistant/' + user.id);
         setSessions(sessionsResponse.data);
       }
 
       // Cargar estadísticas (solo para admin)
       if (user?.role === 'ADMIN') {
-        const statsResponse = await axios.get('/teleassistance/stats');
+        const statsResponse = await api.get('/teleassistance/stats');
         setStats(statsResponse.data);
       }
     } catch (error) {
@@ -99,7 +99,7 @@ const TeleassistancePage: React.FC = () => {
 
   const startSession = async (sessionId: string) => {
     try {
-      await axios.post(`/teleassistance/sessions/${sessionId}/start`);
+              await api.post(`/teleassistance/sessions/${sessionId}/start`);
       loadData(); // Recargar datos
     } catch (error) {
       console.error('Error starting session:', error);
@@ -108,7 +108,7 @@ const TeleassistancePage: React.FC = () => {
 
   const endSession = async (sessionId: string, resolution?: string) => {
     try {
-      await axios.post(`/teleassistance/sessions/${sessionId}/end`, { resolution });
+              await api.post(`/teleassistance/sessions/${sessionId}/end`, { resolution });
       loadData(); // Recargar datos
     } catch (error) {
       console.error('Error ending session:', error);

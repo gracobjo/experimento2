@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import axios from '../../api/axios';
+import api from '../../api/axios';
 
 interface BusinessType {
   id: string;
@@ -482,13 +482,13 @@ const GuidedConfigPage: React.FC = () => {
     // Aplicar configuraciones del sitio
     const siteConfigs = generateSiteConfigs();
     for (const config of siteConfigs) {
-      await axios.post('/api/site-config', config);
+              await api.post('/site-config', config);
     }
 
     // Aplicar configuraciones de menús
     const menuConfigs = generateMenuConfigs();
     for (const config of menuConfigs) {
-      await axios.post('/api/menu-config', config);
+              await api.post('/menu-config', config);
     }
   };
 

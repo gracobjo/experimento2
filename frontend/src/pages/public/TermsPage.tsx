@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import axios from '../../api/axios';
+import api from '../../api/axios';
 
 interface LegalContent {
   id: string;
@@ -20,7 +20,7 @@ const TermsPage: React.FC = () => {
     const fetchTermsContent = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('/parametros/legal/TERMS_OF_SERVICE');
+        const response = await api.get('/parametros/legal/TERMS_OF_SERVICE');
         setTermsContent(response.data.valor);
       } catch (err) {
         console.error('Error fetching terms content:', err);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from '../api/axios';
+import api from '../api/axios';
 
 interface PendingProvisionsListProps {
   clientId?: string;
@@ -20,9 +20,7 @@ const PendingProvisionsList: React.FC<PendingProvisionsListProps> = ({ clientId,
         let url = '/provision-fondos?soloPendientes=true';
         if (clientId) url += `&clientId=${clientId}`;
         if (expedienteId) url += `&expedienteId=${expedienteId}`;
-        const res = await axios.get(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await api.get(url);
         setProvisions(res.data);
       } catch (err) {
         setError('Error al cargar las provisiones pendientes');

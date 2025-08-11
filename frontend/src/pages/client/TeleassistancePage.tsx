@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
-import axios from '../../api/axios';
+import api from '../../api/axios';
 
 interface TeleassistanceSession {
   id: string;
@@ -58,7 +58,7 @@ const TeleassistancePage: React.FC = () => {
   const loadSessions = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/teleassistance/sessions/user/' + user?.id);
+      const response = await api.get('/teleassistance/sessions/user/' + user?.id);
       setSessions(response.data);
     } catch (error) {
       console.error('Error loading sessions:', error);
@@ -69,7 +69,7 @@ const TeleassistancePage: React.FC = () => {
 
   const loadSessionDetails = async (sessionId: string) => {
     try {
-      const response = await axios.get(`/api/teleassistance/sessions/${sessionId}`);
+      const response = await api.get(`/teleassistance/sessions/${sessionId}`);
       setSelectedSession(response.data);
     } catch (error) {
       console.error('Error loading session details:', error);
@@ -81,7 +81,7 @@ const TeleassistancePage: React.FC = () => {
 
     try {
       setSendingMessage(true);
-      await axios.post(`/api/teleassistance/sessions/${sessionId}/messages`, {
+      await api.post(`/teleassistance/sessions/${sessionId}/messages`, {
         content: newMessage,
         messageType: 'TEXT'
       });
