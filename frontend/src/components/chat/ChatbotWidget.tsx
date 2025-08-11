@@ -224,7 +224,11 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ isOpen: externalIsOpen, o
       }
       
       // Formatear la fecha y hora para el backend
-      const selectedDateTime = `${date}T${time}:00`;
+      // Asegurar que la hora tenga formato HH:MM (dos dígitos)
+      const [hours, minutes] = time.split(':');
+      const formattedTime = `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+      const selectedDateTime = `${date}T${formattedTime}:00`;
+      
       console.log('🔍 [CITA] selectedDateTime:', selectedDateTime);
       
       const formattedDate = new Date(selectedDateTime);
