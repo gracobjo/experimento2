@@ -436,7 +436,7 @@ const ClientDocumentsPage = () => {
                 
                 <div className="flex space-x-2">
                   <a
-                    href={`/api/documents/${doc.id}/download`}
+                    href={`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api/documents/${doc.id}/download`}
                     className="flex-1 px-3 py-2 bg-blue-600 text-white text-center text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                     target="_blank"
                     rel="noopener noreferrer"
