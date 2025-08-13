@@ -156,6 +156,80 @@ async function main() {
       },
     });
 
+    // Crear facturas de ejemplo
+    const factura1 = await prisma.invoice.upsert({
+      where: { id: 'fac-2025-0001-R3-01' },
+      update: {},
+      create: {
+        id: 'fac-2025-0001-R3-01',
+        expedienteId: expediente1.id,
+        clientId: clientProfile1.id,
+        lawyerId: lawyer1.id,
+        invoiceNumber: 'fac-2025-0001-R3-01',
+        issueDate: new Date('2025-08-13'),
+        operationDate: new Date('2025-08-14'),
+        creationDate: new Date('2025-08-13'),
+        status: 'EMITIDA',
+        subtotal: 1001.00,
+        discount: 100.10,
+        taxAmount: 0.00,
+        total: 900.90,
+        notes: 'Factura por servicios de asesoría legal en contrato de compraventa',
+        paymentMethod: 'TRANSFERENCIA',
+        dueDate: new Date('2025-09-13'),
+      },
+    });
+
+    const factura2 = await prisma.invoice.upsert({
+      where: { id: 'fac-2025-0002-R3-02' },
+      update: {},
+      create: {
+        id: 'fac-2025-0002-R3-02',
+        expedienteId: expediente2.id,
+        clientId: clientProfile2.id,
+        lawyerId: lawyer2.id,
+        invoiceNumber: 'fac-2025-0002-R3-02',
+        issueDate: new Date('2025-08-13'),
+        operationDate: new Date('2025-08-14'),
+        creationDate: new Date('2025-08-13'),
+        status: 'EMITIDA',
+        subtotal: 1500.00,
+        discount: 150.00,
+        taxAmount: 0.00,
+        total: 1350.00,
+        notes: 'Factura por servicios de asesoría legal en demanda laboral',
+        paymentMethod: 'TRANSFERENCIA',
+        dueDate: new Date('2025-09-13'),
+      },
+    });
+
+    // Crear items de factura
+    await prisma.invoiceItem.upsert({
+      where: { id: 'item-001' },
+      update: {},
+      create: {
+        id: 'item-001',
+        invoiceId: factura1.id,
+        description: 'minuta',
+        quantity: 1,
+        unitPrice: 1001.00,
+        total: 1001.00,
+      },
+    });
+
+    await prisma.invoiceItem.upsert({
+      where: { id: 'item-002' },
+      update: {},
+      create: {
+        id: 'item-002',
+        invoiceId: factura2.id,
+        description: 'Asesoría legal y preparación de demanda',
+        quantity: 1,
+        unitPrice: 1500.00,
+        total: 1500.00,
+      },
+    });
+
     // Crear parámetros de contacto
     await prisma.parametro.upsert({
       where: { clave: 'CONTACT_EMAIL' },
@@ -405,6 +479,7 @@ async function main() {
     console.log('- 2 Clientes');
     console.log('- 2 Expedientes');
     console.log('- 2 Tareas');
+    console.log('- 2 Facturas con items');
     console.log('- 4 Parámetros de contacto');
     console.log('- 4 Parámetros legales');
     console.log('- 6 Parámetros de servicios');
