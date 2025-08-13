@@ -438,22 +438,69 @@ export class DocumentsController {
     @Res() res: Response,
   ) {
     try {
+      console.log(`📁 Intentando servir archivo: ${filename}`);
+      console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
+
       // Verificar que el archivo existe
       const filePath = this.documentsService.getFilePath(filename);
+      console.log(`📂 Ruta del archivo: ${filePath}`);
       
       // Verificar permisos del usuario para este archivo
       const hasAccess = await this.documentsService.checkFileAccess(filename, req.user.id, req.user.role);
       
       if (!hasAccess) {
+        console.log(`❌ Usuario ${req.user.id} no tiene acceso al archivo ${filename}`);
         return res.status(403).json({ 
           message: 'No tienes permisos para acceder a este archivo',
           error: 'Forbidden',
-          statusCode: 403
+          statusCode: 403,
+          filename: filename
         });
       }
 
+      console.log(`✅ Permisos verificados para archivo: ${filename}`);
+
+      // Verificar que el archivo físico existe
+      if (!fs.existsSync(filePath)) {
+        console.error(`❌ Archivo físico no encontrado: ${filePath}`);
+        return res.status(404).json({
+          message: 'Archivo no encontrado en el servidor',
+          error: 'File Not Found',
+          statusCode: 404,
+          filename: filename,
+          filePath: filePath,
+          suggestion: 'El archivo puede haberse perdido durante el deploy o el directorio de uploads no existe'
+        });
+      }
+
+      // Verificar que es un archivo válido
+      const stats = fs.statSync(filePath);
+      if (!stats.isFile()) {
+        console.error(`❌ La ruta no es un archivo válido: ${filePath}`);
+        return res.status(400).json({
+          message: 'La ruta especificada no es un archivo válido',
+          error: 'Invalid File Path',
+          statusCode: 400,
+          filename: filename
+        });
+      }
+
+      console.log(`✅ Archivo encontrado: ${filename} (${stats.size} bytes)`);
+
       // Servir el archivo
-      const fileStream = this.documentsService.getFileStream(filename);
+      let fileStream;
+      try {
+        fileStream = this.documentsService.getFileStream(filename);
+        console.log(`✅ Stream del archivo creado exitosamente`);
+      } catch (streamError) {
+        console.error(`❌ Error al crear stream del archivo:`, streamError);
+        return res.status(500).json({
+          message: 'Error al leer el archivo',
+          error: 'Stream Error',
+          statusCode: 500,
+          filename: filename
+        });
+      }
       
       // Detectar el tipo MIME basado en la extensión
       const ext = filename.split('.').pop()?.toLowerCase();
@@ -469,17 +516,60 @@ export class DocumentsController {
       else if (ext === 'doc') contentType = 'application/msword';
       else if (ext === 'docx') contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
+      // Configurar headers
       res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Length', stats.size);
       res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache por 1 hora
-      
+
+      console.log(`🚀 Iniciando envío del archivo: ${filename} (${contentType})`);
+
+      // Enviar el archivo
       fileStream.pipe(res);
-    } catch (error) {
-      console.error('Error serving file:', error);
-      res.status(404).json({
-        message: 'Archivo no encontrado',
-        error: 'Not Found',
-        statusCode: 404
+
+      // Manejar errores del stream
+      fileStream.on('error', (error) => {
+        console.error(`❌ Error en el stream del archivo:`, error);
+        if (!res.headersSent) {
+          res.status(500).json({
+            message: 'Error al leer el archivo',
+            error: 'Stream Error',
+            statusCode: 500,
+            filename: filename
+          });
+        }
       });
+
+      fileStream.on('end', () => {
+        console.log(`✅ Archivo enviado exitosamente: ${filename}`);
+      });
+
+    } catch (error) {
+      console.error(`❌ Error en serveFile:`, error);
+      
+      if (!res.headersSent) {
+        if (error instanceof NotFoundException) {
+          return res.status(404).json({
+            message: error.message,
+            error: 'Not Found',
+            statusCode: 404,
+            filename: filename
+          });
+        } else if (error instanceof ForbiddenException) {
+          return res.status(403).json({
+            message: error.message,
+            error: 'Forbidden',
+            statusCode: 403,
+            filename: filename
+          });
+        } else {
+          return res.status(500).json({
+            message: 'Error interno del servidor',
+            error: 'Internal Server Error',
+            statusCode: 500,
+            filename: filename
+          });
+        }
+      }
     }
   }
 
@@ -540,6 +630,63 @@ export class DocumentsController {
       return {
         error: error instanceof Error ? error.message : String(error),
         uploadDir: path.join(process.cwd(), 'uploads'),
+        exists: false
+      };
+    }
+  }
+
+  @Post('debug/ensure-upload-dir')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ 
+    summary: 'Crear directorio de uploads',
+    description: 'Crea el directorio de uploads si no existe (solo ADMIN)'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Directorio de uploads creado o verificado',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        uploadDir: { type: 'string' },
+        created: { type: 'boolean' },
+        exists: { type: 'boolean' }
+      }
+    }
+  })
+  async ensureUploadDirectory() {
+    try {
+      const uploadDir = path.join(process.cwd(), 'uploads');
+      const exists = fs.existsSync(uploadDir);
+      
+      if (!exists) {
+        console.log(`📁 Creando directorio de uploads: ${uploadDir}`);
+        fs.mkdirSync(uploadDir, { recursive: true });
+        console.log(`✅ Directorio de uploads creado exitosamente`);
+        
+        return {
+          message: 'Directorio de uploads creado exitosamente',
+          uploadDir,
+          created: true,
+          exists: true
+        };
+      } else {
+        console.log(`✅ Directorio de uploads ya existe: ${uploadDir}`);
+        
+        return {
+          message: 'Directorio de uploads ya existe',
+          uploadDir,
+          created: false,
+          exists: true
+        };
+      }
+    } catch (error) {
+      console.error('Error creating upload directory:', error);
+      return {
+        message: 'Error al crear el directorio de uploads',
+        error: error instanceof Error ? error.message : String(error),
+        uploadDir: path.join(process.cwd(), 'uploads'),
+        created: false,
         exists: false
       };
     }

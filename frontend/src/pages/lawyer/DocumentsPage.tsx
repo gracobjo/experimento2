@@ -248,8 +248,10 @@ const DocumentsPage = () => {
         return;
       }
 
+      console.log(`📥 Intentando descargar documento: ${originalName} (ID: ${documentId})`);
+
       // Hacer la petición al backend con autenticación
-                const response = await fetch(`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api/documents/${documentId}/download`, {
+      const response = await fetch(`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api/documents/${documentId}/download`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -261,8 +263,31 @@ const DocumentsPage = () => {
           alert('Sesión expirada. Por favor, inicia sesión de nuevo.');
           return;
         }
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+
+        // Intentar obtener detalles del error
+        let errorMessage = `Error ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+          if (errorData.suggestion) {
+            errorMessage += `\n\nSugerencia: ${errorData.suggestion}`;
+          }
+        } catch (e) {
+          // Si no se puede parsear JSON, usar el mensaje por defecto
+        }
+
+        // Mostrar mensaje de error más informativo
+        if (response.status === 404) {
+          errorMessage = `El documento "${originalName}" no se encuentra en el servidor.\n\nEsto puede deberse a:\n• El archivo se perdió durante el deploy\n• El directorio de uploads no existe\n• Problema de permisos\n\nPor favor, contacta al administrador del sistema.`;
+        }
+
+        alert(`Error al descargar el documento:\n\n${errorMessage}`);
+        return;
       }
+
+      console.log(`✅ Documento descargado exitosamente: ${originalName}`);
 
       // Crear blob y descargar
       const blob = await response.blob();
@@ -277,7 +302,13 @@ const DocumentsPage = () => {
 
     } catch (error) {
       console.error('Error descargando documento:', error);
-      alert(`Error al descargar el documento: ${error.message}`);
+      
+      let errorMessage = 'Error desconocido al descargar el documento';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      alert(`Error al descargar el documento:\n\n${errorMessage}\n\nPor favor, verifica tu conexión a internet e intenta nuevamente.`);
     }
   };
 
