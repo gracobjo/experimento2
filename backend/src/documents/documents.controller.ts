@@ -13,6 +13,8 @@ import {
   ParseFilePipe,
   MaxFileSizeValidator,
   FileTypeValidator,
+  NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -23,6 +25,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @ApiTags('documents')
 @Controller('documents')
@@ -308,21 +312,106 @@ export class DocumentsController {
     @Request() req,
     @Res() res: Response,
   ) {
-    const document = await this.documentsService.findOne(
-      id,
-      req.user.id,
-      req.user.role,
-    );
+    try {
+      console.log(`📥 Intentando descargar documento ID: ${id}`);
+      console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
 
-    const fileStream = this.documentsService.getFileStream(document.filename);
+      // Buscar el documento
+      const document = await this.documentsService.findOne(
+        id,
+        req.user.id,
+        req.user.role,
+      );
 
-    res.setHeader('Content-Type', document.mimeType);
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${document.originalName}"`,
-    );
+      if (!document) {
+        console.log(`❌ Documento no encontrado: ${id}`);
+        return res.status(404).json({
+          message: 'Documento no encontrado',
+          error: 'Not Found',
+          statusCode: 404,
+          documentId: id
+        });
+      }
 
-    fileStream.pipe(res);
+      console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
+
+      // Verificar que el archivo físico existe
+      const filePath = this.documentsService.getFilePath(document.filename);
+      console.log(`📁 Ruta del archivo: ${filePath}`);
+
+      // Intentar obtener el stream del archivo
+      let fileStream;
+      try {
+        fileStream = this.documentsService.getFileStream(document.filename);
+        console.log(`✅ Stream del archivo creado exitosamente`);
+      } catch (streamError) {
+        console.error(`❌ Error al crear stream del archivo:`, streamError);
+        return res.status(404).json({
+          message: 'Archivo físico no encontrado en el servidor',
+          error: 'File Not Found',
+          statusCode: 404,
+          documentId: id,
+          filename: document.filename,
+          filePath: filePath
+        });
+      }
+
+      // Configurar headers de respuesta
+      res.setHeader('Content-Type', document.mimeType);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${document.originalName}"`,
+      );
+
+      console.log(`🚀 Iniciando descarga del archivo: ${document.originalName}`);
+
+      // Enviar el archivo
+      fileStream.pipe(res);
+
+      // Manejar errores del stream
+      fileStream.on('error', (error) => {
+        console.error(`❌ Error en el stream del archivo:`, error);
+        if (!res.headersSent) {
+          res.status(500).json({
+            message: 'Error al leer el archivo',
+            error: 'Stream Error',
+            statusCode: 500
+          });
+        }
+      });
+
+      fileStream.on('end', () => {
+        console.log(`✅ Descarga completada: ${document.originalName}`);
+      });
+
+    } catch (error) {
+      console.error(`❌ Error en downloadDocument:`, error);
+      
+      if (!res.headersSent) {
+        if (error instanceof NotFoundException) {
+          return res.status(404).json({
+            message: error.message,
+            error: 'Not Found',
+            statusCode: 404,
+            documentId: id
+          });
+        } else if (error instanceof ForbiddenException) {
+          return res.status(403).json({
+            message: error.message,
+            error: 'Forbidden',
+            statusCode: 403,
+            documentId: id
+          });
+        } else {
+          return res.status(500).json({
+            message: 'Error interno del servidor',
+            error: 'Internal Server Error',
+            statusCode: 500,
+            documentId: id
+          });
+        }
+      }
+    }
   }
 
   @Get('file/:filename')
@@ -391,6 +480,68 @@ export class DocumentsController {
         error: 'Not Found',
         statusCode: 404
       });
+    }
+  }
+
+  @Get('debug/upload-status')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ 
+    summary: 'Estado del directorio de uploads',
+    description: 'Endpoint de diagnóstico para verificar el estado del directorio de uploads (solo ADMIN)'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Estado del directorio de uploads',
+    schema: {
+      type: 'object',
+      properties: {
+        uploadDir: { type: 'string' },
+        exists: { type: 'boolean' },
+        files: { type: 'array', items: { type: 'string' } },
+        totalFiles: { type: 'number' },
+        totalSize: { type: 'number' }
+      }
+    }
+  })
+  async getUploadStatus() {
+    try {
+      const uploadDir = path.join(process.cwd(), 'uploads');
+      const exists = fs.existsSync(uploadDir);
+      
+      let files = [];
+      let totalSize = 0;
+      
+      if (exists) {
+        try {
+          files = fs.readdirSync(uploadDir);
+          for (const file of files) {
+            const filePath = path.join(uploadDir, file);
+            const stats = fs.statSync(filePath);
+            if (stats.isFile()) {
+              totalSize += stats.size;
+            }
+          }
+        } catch (error) {
+          console.error('Error reading upload directory:', error);
+        }
+      }
+      
+      return {
+        uploadDir,
+        exists,
+        files,
+        totalFiles: files.length,
+        totalSize,
+        currentWorkingDir: process.cwd(),
+        nodeEnv: process.env.NODE_ENV
+      };
+    } catch (error) {
+      console.error('Error getting upload status:', error);
+      return {
+        error: error instanceof Error ? error.message : String(error),
+        uploadDir: path.join(process.cwd(), 'uploads'),
+        exists: false
+      };
     }
   }
 

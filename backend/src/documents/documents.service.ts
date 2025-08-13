@@ -530,13 +530,41 @@ export class DocumentsService {
   }
 
   getFileStream(filename: string) {
-    const filePath = path.join(process.cwd(), this.UPLOAD_DIR, filename);
+    console.log(`🔍 Buscando archivo: ${filename}`);
     
-    if (!fs.existsSync(filePath)) {
-      throw new NotFoundException('Archivo no encontrado');
+    const filePath = path.join(process.cwd(), this.UPLOAD_DIR, filename);
+    console.log(`📁 Ruta completa del archivo: ${filePath}`);
+    
+    // Verificar si el directorio de uploads existe
+    const uploadDir = path.join(process.cwd(), this.UPLOAD_DIR);
+    if (!fs.existsSync(uploadDir)) {
+      console.error(`❌ Directorio de uploads no existe: ${uploadDir}`);
+      throw new NotFoundException(`Directorio de uploads no encontrado: ${this.UPLOAD_DIR}`);
     }
-
-    return fs.createReadStream(filePath);
+    
+    // Verificar si el archivo existe
+    if (!fs.existsSync(filePath)) {
+      console.error(`❌ Archivo no encontrado: ${filePath}`);
+      throw new NotFoundException(`Archivo no encontrado: ${filename}`);
+    }
+    
+    // Verificar que es un archivo (no un directorio)
+    const stats = fs.statSync(filePath);
+    if (!stats.isFile()) {
+      console.error(`❌ La ruta no es un archivo: ${filePath}`);
+      throw new NotFoundException(`La ruta no es un archivo válido: ${filename}`);
+    }
+    
+    console.log(`✅ Archivo encontrado: ${filename} (${stats.size} bytes)`);
+    
+    try {
+      const stream = fs.createReadStream(filePath);
+      console.log(`✅ Stream creado exitosamente para: ${filename}`);
+      return stream;
+    } catch (error) {
+      console.error(`❌ Error al crear stream para ${filename}:`, error);
+      throw new NotFoundException(`Error al leer el archivo: ${filename}`);
+    }
   }
 
   getFilePath(filename: string): string {
