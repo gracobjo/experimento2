@@ -327,3 +327,25 @@
  TAB ...................................... Complete filename & cycle.
  SHIFT-TAB ...................... ESC-TAB   Complete filename & reverse cycle.
  ctrl-L ................................... Complete filename, list all.
+[1mdiff --git a/backend/src/cases/dto/create-case.dto.ts b/backend/src/cases/dto/create-case.dto.ts[m
+[1mindex f8f4b65..9dc4070 100644[m
+[1m--- a/backend/src/cases/dto/create-case.dto.ts[m
+[1m+++ b/backend/src/cases/dto/create-case.dto.ts[m
+[36m@@ -40,12 +40,13 @@[m [mexport class CreateCaseDto {[m
+   lawyerId: string;[m
+ [m
+   @ApiProperty({[m
+[31m-    description: 'Estado del caso',[m
+[32m+[m[32m    description: 'Estado del caso (opcional, se establece automáticamente como ABIERTO)',[m
+     example: 'ABIERTO',[m
+     type: String,[m
+     enum: ['ABIERTO', 'EN_PROCESO', 'CERRADO'],[m
+[32m+[m[32m    required: false,[m
+   })[m
+   @IsString()[m
+[31m-  @IsNotEmpty()[m
+[31m-  status: string;[m
+[32m+[m[32m  @IsOptional()[m
+[32m+[m[32m  status?: string;[m
+ } [m
+\ No newline at end of file[m
