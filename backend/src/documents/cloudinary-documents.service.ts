@@ -189,8 +189,14 @@ export class CloudinaryDocumentsService {
     // Los admins pueden descargar cualquier documento
 
     try {
-      // Obtener el publicId de Cloudinary desde los metadatos
-      const cloudinaryPublicId = (document.metadata as any)?.cloudinaryPublicId || document.filename;
+      // Obtener el publicId de Cloudinary desde los metadatos o migrar si es necesario
+      let cloudinaryPublicId = (document.metadata as any)?.cloudinaryPublicId;
+      
+      if (!cloudinaryPublicId) {
+        // El documento no tiene metadatos de Cloudinary, intentar migrarlo
+        this.logger.log(`Documento ${documentId} no tiene metadatos de Cloudinary, intentando migración...`);
+        cloudinaryPublicId = await this.migrateDocumentToCloudinary(document);
+      }
       
       // Descargar archivo de Cloudinary
       const downloadResult = await this.cloudinaryStorage.downloadFile(cloudinaryPublicId);
@@ -248,8 +254,14 @@ export class CloudinaryDocumentsService {
     }
 
     try {
-      // Obtener el publicId de Cloudinary desde los metadatos
-      const cloudinaryPublicId = (document.metadata as any)?.cloudinaryPublicId || document.filename;
+      // Obtener el publicId de Cloudinary desde los metadatos o migrar si es necesario
+      let cloudinaryPublicId = (document.metadata as any)?.cloudinaryPublicId;
+      
+      if (!cloudinaryPublicId) {
+        // El documento no tiene metadatos de Cloudinary, intentar migrarlo
+        this.logger.log(`Documento ${documentId} no tiene metadatos de Cloudinary, intentando migración...`);
+        cloudinaryPublicId = await this.migrateDocumentToCloudinary(document);
+      }
       
       // Obtener metadatos de Cloudinary
       const cloudinaryInfo = await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
@@ -309,8 +321,14 @@ export class CloudinaryDocumentsService {
     // Los admins pueden eliminar cualquier documento
 
     try {
-      // Obtener el publicId de Cloudinary desde los metadatos
-      const cloudinaryPublicId = (document.metadata as any)?.cloudinaryPublicId || document.filename;
+      // Obtener el publicId de Cloudinary desde los metadatos o migrar si es necesario
+      let cloudinaryPublicId = (document.metadata as any)?.cloudinaryPublicId;
+      
+      if (!cloudinaryPublicId) {
+        // El documento no tiene metadatos de Cloudinary, intentar migrarlo
+        this.logger.log(`Documento ${documentId} no tiene metadatos de Cloudinary, intentando migración...`);
+        cloudinaryPublicId = await this.migrateDocumentToCloudinary(document);
+      }
       
       // Eliminar archivo de Cloudinary
       await this.cloudinaryStorage.deleteFile(cloudinaryPublicId);
@@ -587,9 +605,35 @@ export class CloudinaryDocumentsService {
     return `/api/documents/file/${filename}`;
   }
 
-  getFileStream(filename: string) {
+  async getFileStream(filename: string) {
     // Para Cloudinary, devolvemos un stream desde la URL
-    return this.cloudinaryStorage.downloadFile(filename);
+    // Primero necesitamos encontrar el documento y obtener su publicId correcto
+    const document = await this.prisma.document.findFirst({
+      where: { filename },
+      include: {
+        expediente: {
+          include: {
+            client: true,
+            lawyer: true,
+          }
+        }
+      }
+    });
+
+    if (!document) {
+      throw new NotFoundException('Documento no encontrado');
+    }
+
+    // Obtener el publicId de Cloudinary desde los metadatos o migrar si es necesario
+    let cloudinaryPublicId = (document.metadata as any)?.cloudinaryPublicId;
+    
+    if (!cloudinaryPublicId) {
+      // El documento no tiene metadatos de Cloudinary, intentar migrarlo
+      this.logger.log(`Documento ${document.id} no tiene metadatos de Cloudinary, intentando migración...`);
+      cloudinaryPublicId = await this.migrateDocumentToCloudinary(document);
+    }
+    
+    return this.cloudinaryStorage.downloadFile(cloudinaryPublicId);
   }
 
   async checkFileAccess(filename: string, currentUserId: string, userRole: string) {
@@ -673,6 +717,53 @@ export class CloudinaryDocumentsService {
 
     if (file.size > this.MAX_FILE_SIZE) {
       throw new BadRequestException(`El archivo es demasiado grande. Tamaño máximo: ${this.MAX_FILE_SIZE / (1024 * 1024)}MB`);
+    }
+  }
+
+  /**
+   * Migra un documento existente para que use metadatos de Cloudinary
+   */
+  private async migrateDocumentToCloudinary(document: any): Promise<string> {
+    try {
+      this.logger.log(`Migrando documento ${document.id} a metadatos de Cloudinary`);
+      
+      // Si el filename ya es un publicId de Cloudinary (no empieza con /uploads/)
+      if (document.filename && !document.filename.startsWith('/uploads/') && !document.filename.startsWith('uploads/')) {
+        // Asumir que filename es el publicId de Cloudinary
+        const cloudinaryPublicId = document.filename;
+        
+        // Verificar que el archivo existe en Cloudinary
+        try {
+          await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
+          
+          // Actualizar metadatos en la base de datos
+          await this.prisma.document.update({
+            where: { id: document.id },
+            data: {
+              metadata: {
+                cloudinaryPublicId: cloudinaryPublicId,
+                storageType: 'cloudinary',
+                cloudinaryUrl: document.fileUrl,
+                migratedAt: new Date().toISOString()
+              } as any
+            }
+          });
+          
+          this.logger.log(`Documento ${document.id} migrado exitosamente a Cloudinary`);
+          return cloudinaryPublicId;
+          
+        } catch (cloudinaryError) {
+          this.logger.error(`Error verificando archivo en Cloudinary: ${cloudinaryError instanceof Error ? cloudinaryError.message : String(cloudinaryError)}`);
+          throw new NotFoundException('El archivo no existe en Cloudinary');
+        }
+      } else {
+        // El documento tiene una ruta local que ya no existe
+        throw new NotFoundException('El archivo local ya no está disponible');
+      }
+      
+    } catch (error) {
+      this.logger.error(`Error migrando documento: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
     }
   }
 }
