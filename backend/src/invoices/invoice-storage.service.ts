@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CloudinaryStorageService } from '../storage/cloudinary-storage.service';
 import { ConfigService } from '@nestjs/config';
-import * as PDFDocument from 'pdfkit';
+import PDFDocument from 'pdfkit';
 
 @Injectable()
 export class InvoiceStorageService {
@@ -28,8 +28,13 @@ export class InvoiceStorageService {
         originalname: `${invoiceData.invoiceNumber}.pdf`,
         mimetype: 'application/pdf',
         size: pdfBuffer.length,
-        path: null // Cloudinary puede manejar buffers directamente
-      };
+        path: null, // Cloudinary puede manejar buffers directamente
+        fieldname: 'invoice',
+        encoding: '7bit',
+        stream: null,
+        destination: null,
+        filename: `${invoiceData.invoiceNumber}.pdf`
+      } as any;
 
       // Subir a Cloudinary
       const uploadResult = await this.cloudinaryStorage.uploadFile(
