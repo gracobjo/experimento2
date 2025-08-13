@@ -374,17 +374,6 @@ export class CloudinaryDocumentsService {
           expediente: {
             include: {
               client: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true,
-                    }
-                  }
-                }
-              },
-              lawyer: {
                 select: {
                   id: true,
                   name: true,
@@ -459,6 +448,178 @@ export class CloudinaryDocumentsService {
     }
 
     throw new ForbiddenException('Rol de usuario no válido');
+  }
+
+  async findAll(currentUserId: string, userRole: string) {
+    return this.findMyDocuments(currentUserId, userRole);
+  }
+
+  async getDocumentsStats(currentUserId: string, userRole: string) {
+    const documents = await this.findMyDocuments(currentUserId, userRole);
+    
+    const totalDocuments = documents.length;
+    const totalSize = documents.reduce((sum, doc) => sum + doc.fileSize, 0);
+    const documentsByType = documents.reduce((acc, doc) => {
+      const type = doc.mimeType.split('/')[0];
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+
+    return {
+      totalDocuments,
+      totalSize,
+      documentsByType,
+      averageSize: totalDocuments > 0 ? totalSize / totalDocuments : 0
+    };
+  }
+
+  async findByExpediente(expedienteId: string, currentUserId: string, userRole: string) {
+    const expediente = await this.prisma.expediente.findUnique({
+      where: { id: expedienteId },
+      include: {
+        client: true,
+        lawyer: true,
+      }
+    });
+
+    if (!expediente) {
+      throw new NotFoundException('Expediente no encontrado');
+    }
+
+    // Verificar permisos
+    if (userRole === 'CLIENTE') {
+      const client = await this.prisma.client.findUnique({
+        where: { userId: currentUserId }
+      });
+      
+      if (!client || expediente.clientId !== client.id) {
+        throw new ForbiddenException('No tienes permisos para ver documentos de este expediente');
+      }
+    } else if (userRole === 'ABOGADO') {
+      if (expediente.lawyerId !== currentUserId) {
+        throw new ForbiddenException('No tienes permisos para ver documentos de este expediente');
+      }
+    }
+
+    return this.prisma.document.findMany({
+      where: { expedienteId },
+      include: {
+        expediente: {
+          include: {
+            client: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                  }
+                }
+              }
+            },
+            lawyer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              }
+            }
+          }
+        },
+        uploadedByUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          }
+        }
+      },
+      orderBy: {
+        uploadedAt: 'desc'
+      }
+    });
+  }
+
+  async findOne(id: string, currentUserId: string, userRole: string) {
+    const document = await this.prisma.document.findUnique({
+      where: { id },
+      include: {
+        expediente: {
+          include: {
+            client: true,
+            lawyer: true,
+          }
+        }
+      }
+    });
+
+    if (!document) {
+      throw new NotFoundException('Documento no encontrado');
+    }
+
+    // Verificar permisos
+    if (userRole === 'CLIENTE') {
+      const client = await this.prisma.client.findUnique({
+        where: { userId: currentUserId }
+      });
+      
+      if (!client || document.expediente.clientId !== client.id) {
+        throw new ForbiddenException('No tienes permisos para ver este documento');
+      }
+    } else if (userRole === 'ABOGADO') {
+      if (document.expediente.lawyerId !== currentUserId) {
+        throw new ForbiddenException('No tienes permisos para ver este documento');
+      }
+    }
+
+    return document;
+  }
+
+  async remove(id: string, currentUserId: string, userRole: string) {
+    return this.deleteDocument(id, currentUserId, userRole);
+  }
+
+  getFilePath(filename: string): string {
+    // Para Cloudinary, devolvemos la URL directa
+    return `/api/documents/file/${filename}`;
+  }
+
+  getFileStream(filename: string) {
+    // Para Cloudinary, devolvemos un stream desde la URL
+    return this.cloudinaryStorage.downloadFile(filename);
+  }
+
+  async checkFileAccess(filename: string, currentUserId: string, userRole: string) {
+    const document = await this.prisma.document.findFirst({
+      where: { filename },
+      include: {
+        expediente: {
+          include: {
+            client: true,
+            lawyer: true,
+          }
+        }
+      }
+    });
+
+    if (!document) {
+      return false;
+    }
+
+    // Verificar permisos
+    if (userRole === 'CLIENTE') {
+      const client = await this.prisma.client.findUnique({
+        where: { userId: currentUserId }
+      });
+      
+      return client && document.expediente.clientId === client.id;
+    } else if (userRole === 'ABOGADO') {
+      return document.expediente.lawyerId === currentUserId;
+    } else if (userRole === 'ADMIN') {
+      return true;
+    }
+
+    return false;
   }
 
   async getStorageStats() {

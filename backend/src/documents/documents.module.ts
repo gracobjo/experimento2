@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
-import { DocumentsService } from './documents.service';
+import { CloudinaryDocumentsService } from './cloudinary-documents.service';
 import { DocumentsController } from './documents.controller';
 import { PrismaModule } from '../prisma/prisma.module';
+import { CloudinaryStorageService } from '../storage/cloudinary-storage.service';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, ConfigModule],
   controllers: [DocumentsController],
-  providers: [DocumentsService],
-  exports: [DocumentsService],
+  providers: [CloudinaryDocumentsService, CloudinaryStorageService],
+  exports: [CloudinaryDocumentsService],
 })
 export class DocumentsModule {} 
