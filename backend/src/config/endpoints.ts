@@ -80,3 +80,4 @@ export const logBackendEndpointsConfig = (): void => {
 
 // Exportar configuración por defecto para uso directo
 export default getBackendEndpointsConfig();
+

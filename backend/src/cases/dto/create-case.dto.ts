@@ -40,12 +40,13 @@ export class CreateCaseDto {
   lawyerId: string;
 
   @ApiProperty({
-    description: 'Estado del caso',
+    description: 'Estado del caso (opcional, se establece automáticamente como ABIERTO)',
     example: 'ABIERTO',
     type: String,
     enum: ['ABIERTO', 'EN_PROCESO', 'CERRADO'],
+    required: false,
   })
   @IsString()
-  @IsNotEmpty()
-  status: string;
+  @IsOptional()
+  status?: string;
 } 

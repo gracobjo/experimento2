@@ -103,3 +103,4 @@ export const logEndpointsConfig = (): void => {
 
 // Exportar configuración por defecto para uso directo
 export default getEndpointsConfig();
+
