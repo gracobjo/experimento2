@@ -11,6 +11,14 @@ import compression from 'compression';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
+  // Log temporal para debug de variables de entorno
+  console.log('🔍 === VARIABLES DE ENTORNO ===');
+  console.log('CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME);
+  console.log('CLOUDINARY_API_KEY:', process.env.CLOUDINARY_API_KEY);
+  console.log('CLOUDINARY_API_SECRET:', process.env.CLOUDINARY_API_SECRET ? 'CONFIGURADO' : 'NO CONFIGURADO');
+  console.log('STORAGE_TYPE:', process.env.STORAGE_TYPE);
+  console.log('================================');
+
   // Configurar trust proxy para Railway
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
