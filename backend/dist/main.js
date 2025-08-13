@@ -73,6 +73,7 @@ async function bootstrap() {
             'http://localhost:3000',
             'http://localhost:8080',
             'https://experimento2-fenm.vercel.app',
+            'https://experimento2-fenm-44u7rmivu-gracobjos-projects.vercel.app',
             'experimento2-production-54c0.up.railway.app',
             /^https:\/\/.*\.vercel\.app$/,
             /^https:\/\/.*\.railway\.app$/
@@ -82,6 +83,8 @@ async function bootstrap() {
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
+        preflightContinue: false,
+        optionsSuccessStatus: 204,
     });
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
