@@ -189,10 +189,13 @@ export class CloudinaryDocumentsService {
     // Los admins pueden descargar cualquier documento
 
     try {
-      // Descargar archivo de Cloudinary
-      const downloadResult = await this.cloudinaryStorage.downloadFile(document.filename);
+      // Obtener el publicId de Cloudinary desde los metadatos
+      const cloudinaryPublicId = (document.metadata as any)?.cloudinaryPublicId || document.filename;
       
-      this.logger.log(`Documento descargado exitosamente de Cloudinary: ${document.filename}`);
+      // Descargar archivo de Cloudinary
+      const downloadResult = await this.cloudinaryStorage.downloadFile(cloudinaryPublicId);
+      
+      this.logger.log(`Documento descargado exitosamente de Cloudinary: ${cloudinaryPublicId}`);
 
       return {
         stream: downloadResult.stream,
@@ -245,8 +248,11 @@ export class CloudinaryDocumentsService {
     }
 
     try {
+      // Obtener el publicId de Cloudinary desde los metadatos
+      const cloudinaryPublicId = (document.metadata as any)?.cloudinaryPublicId || document.filename;
+      
       // Obtener metadatos de Cloudinary
-      const cloudinaryInfo = await this.cloudinaryStorage.getFileMetadata(document.filename);
+      const cloudinaryInfo = await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
       
       return {
         ...document,
@@ -303,10 +309,13 @@ export class CloudinaryDocumentsService {
     // Los admins pueden eliminar cualquier documento
 
     try {
-      // Eliminar archivo de Cloudinary
-      await this.cloudinaryStorage.deleteFile(document.filename);
+      // Obtener el publicId de Cloudinary desde los metadatos
+      const cloudinaryPublicId = (document.metadata as any)?.cloudinaryPublicId || document.filename;
       
-      this.logger.log(`Archivo eliminado de Cloudinary: ${document.filename}`);
+      // Eliminar archivo de Cloudinary
+      await this.cloudinaryStorage.deleteFile(cloudinaryPublicId);
+      
+      this.logger.log(`Archivo eliminado de Cloudinary: ${cloudinaryPublicId}`);
 
       // Eliminar registro de base de datos
       await this.prisma.document.delete({
@@ -330,7 +339,17 @@ export class CloudinaryDocumentsService {
         include: {
           expediente: {
             include: {
-              client: true,
+              client: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                    }
+                  }
+                }
+              },
               lawyer: {
                 select: {
                   id: true,
@@ -363,7 +382,17 @@ export class CloudinaryDocumentsService {
         include: {
           expediente: {
             include: {
-              client: true
+              client: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                    }
+                  }
+                }
+              }
             }
           },
           uploadedByUser: {
