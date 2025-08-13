@@ -330,17 +330,7 @@ export class CloudinaryDocumentsService {
         include: {
           expediente: {
             include: {
-              client: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true,
-                    }
-                  }
-                }
-              },
+              client: true,
               lawyer: {
                 select: {
                   id: true,
@@ -373,13 +363,7 @@ export class CloudinaryDocumentsService {
         include: {
           expediente: {
             include: {
-              client: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                }
-              }
+              client: true
             }
           },
           uploadedByUser: {
@@ -413,17 +397,7 @@ export class CloudinaryDocumentsService {
         include: {
           expediente: {
             include: {
-              client: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true,
-                    }
-                  }
-                }
-              },
+              client: true,
               lawyer: {
                 select: {
                   id: true,

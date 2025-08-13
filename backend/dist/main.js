@@ -46,11 +46,11 @@ const core_1 = __webpack_require__(1);
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
 const app_module_1 = __webpack_require__(4);
-const express = __importStar(__webpack_require__(49));
-const path = __importStar(__webpack_require__(46));
-const helmet_1 = __importDefault(__webpack_require__(134));
-const express_rate_limit_1 = __importDefault(__webpack_require__(135));
-const compression_1 = __importDefault(__webpack_require__(136));
+const express = __importStar(__webpack_require__(50));
+const path = __importStar(__webpack_require__(53));
+const helmet_1 = __importDefault(__webpack_require__(137));
+const express_rate_limit_1 = __importDefault(__webpack_require__(138));
+const compression_1 = __importDefault(__webpack_require__(139));
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     console.log('🔍 === VARIABLES DE ENTORNO ===');
@@ -285,18 +285,18 @@ const auth_module_1 = __webpack_require__(12);
 const users_module_1 = __webpack_require__(30);
 const cases_module_1 = __webpack_require__(38);
 const documents_module_1 = __webpack_require__(43);
-const appointments_module_1 = __webpack_require__(51);
-const tasks_module_1 = __webpack_require__(60);
-const reports_module_1 = __webpack_require__(65);
-const admin_module_1 = __webpack_require__(68);
-const chat_module_1 = __webpack_require__(81);
+const appointments_module_1 = __webpack_require__(54);
+const tasks_module_1 = __webpack_require__(63);
+const reports_module_1 = __webpack_require__(68);
+const admin_module_1 = __webpack_require__(71);
+const chat_module_1 = __webpack_require__(84);
 const prisma_module_1 = __webpack_require__(37);
-const parametros_module_1 = __webpack_require__(88);
-const invoices_module_1 = __webpack_require__(91);
-const provision_fondos_module_1 = __webpack_require__(116);
-const contact_module_1 = __webpack_require__(120);
-const teleassistance_module_1 = __webpack_require__(123);
-const notes_module_1 = __webpack_require__(128);
+const parametros_module_1 = __webpack_require__(91);
+const invoices_module_1 = __webpack_require__(94);
+const provision_fondos_module_1 = __webpack_require__(119);
+const contact_module_1 = __webpack_require__(123);
+const teleassistance_module_1 = __webpack_require__(126);
+const notes_module_1 = __webpack_require__(131);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -5014,18 +5014,20 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DocumentsModule = void 0;
 const common_1 = __webpack_require__(2);
-const documents_service_1 = __webpack_require__(44);
-const documents_controller_1 = __webpack_require__(47);
+const cloudinary_documents_service_1 = __webpack_require__(44);
+const documents_controller_1 = __webpack_require__(48);
 const prisma_module_1 = __webpack_require__(37);
+const cloudinary_storage_service_1 = __webpack_require__(45);
+const config_1 = __webpack_require__(5);
 let DocumentsModule = class DocumentsModule {
 };
 exports.DocumentsModule = DocumentsModule;
 exports.DocumentsModule = DocumentsModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule],
+        imports: [prisma_module_1.PrismaModule, config_1.ConfigModule],
         controllers: [documents_controller_1.DocumentsController],
-        providers: [documents_service_1.DocumentsService],
-        exports: [documents_service_1.DocumentsService],
+        providers: [cloudinary_documents_service_1.CloudinaryDocumentsService, cloudinary_storage_service_1.CloudinaryStorageService],
+        exports: [cloudinary_documents_service_1.CloudinaryDocumentsService],
     })
 ], DocumentsModule);
 
@@ -5035,58 +5037,29 @@ exports.DocumentsModule = DocumentsModule = __decorate([
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var _a;
+var CloudinaryDocumentsService_1;
+var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DocumentsService = void 0;
+exports.CloudinaryDocumentsService = void 0;
 const common_1 = __webpack_require__(2);
 const prisma_service_1 = __webpack_require__(8);
-const fs = __importStar(__webpack_require__(45));
-const path = __importStar(__webpack_require__(46));
-let DocumentsService = class DocumentsService {
-    constructor(prisma) {
+const cloudinary_storage_service_1 = __webpack_require__(45);
+const config_1 = __webpack_require__(5);
+let CloudinaryDocumentsService = CloudinaryDocumentsService_1 = class CloudinaryDocumentsService {
+    constructor(prisma, cloudinaryStorage, configService) {
         this.prisma = prisma;
+        this.cloudinaryStorage = cloudinaryStorage;
+        this.configService = configService;
+        this.logger = new common_1.Logger(CloudinaryDocumentsService_1.name);
         this.ALLOWED_MIME_TYPES = [
             'application/pdf',
             'text/plain',
@@ -5098,11 +5071,11 @@ let DocumentsService = class DocumentsService {
             'image/gif',
             'image/webp'
         ];
-        this.MAX_FILE_SIZE = 5 * 1024 * 1024;
+        this.MAX_FILE_SIZE = 10 * 1024 * 1024;
         this.MAX_FILES_PER_CASE = 5;
-        this.UPLOAD_DIR = 'uploads';
     }
     async uploadDocument(file, uploadDocumentDto, currentUserId, userRole) {
+        this.logger.log(`Iniciando upload de documento: ${file.originalname}`);
         const expediente = await this.prisma.expediente.findUnique({
             where: { id: uploadDocumentDto.expedienteId },
             include: {
@@ -5131,62 +5104,31 @@ let DocumentsService = class DocumentsService {
             throw new common_1.BadRequestException(`No se pueden subir más de ${this.MAX_FILES_PER_CASE} archivos por expediente`);
         }
         this.validateFile(file);
-        const uploadPath = path.join(process.cwd(), this.UPLOAD_DIR);
-        if (!fs.existsSync(uploadPath)) {
-            fs.mkdirSync(uploadPath, { recursive: true });
-        }
-        const fileExtension = path.extname(file.originalname);
-        const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(2)}${fileExtension}`;
-        const filePath = path.join(uploadPath, uniqueFilename);
-        fs.writeFileSync(filePath, file.buffer);
-        const document = await this.prisma.document.create({
-            data: {
-                filename: uniqueFilename,
-                originalName: file.originalname,
-                fileUrl: `/uploads/${uniqueFilename}`,
-                fileSize: file.size,
-                mimeType: file.mimetype,
-                description: uploadDocumentDto.description,
-                expedienteId: uploadDocumentDto.expedienteId,
+        try {
+            const uploadResult = await this.cloudinaryStorage.uploadFile(file, `experimento2/expedientes/${expediente.id}`, {
+                expedienteId: expediente.id,
                 uploadedBy: currentUserId,
-            },
-            include: {
-                expediente: {
-                    include: {
-                        client: {
-                            include: {
-                                user: {
-                                    select: {
-                                        id: true,
-                                        name: true,
-                                        email: true,
-                                    }
-                                }
-                            }
-                        },
-                        lawyer: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                            }
-                        },
+                userRole: userRole,
+                originalName: file.originalname,
+                description: uploadDocumentDto.description
+            });
+            this.logger.log(`Archivo subido exitosamente a Cloudinary: ${uploadResult.publicId}`);
+            const document = await this.prisma.document.create({
+                data: {
+                    filename: uploadResult.publicId,
+                    originalName: file.originalname,
+                    fileUrl: uploadResult.url,
+                    fileSize: file.size,
+                    mimeType: file.mimetype,
+                    description: uploadDocumentDto.description,
+                    expedienteId: uploadDocumentDto.expedienteId,
+                    uploadedBy: currentUserId,
+                    metadata: {
+                        cloudinaryPublicId: uploadResult.publicId,
+                        storageType: 'cloudinary',
+                        cloudinaryUrl: uploadResult.url
                     }
                 },
-                uploadedByUser: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    }
-                },
-            }
-        });
-        return document;
-    }
-    async findMyDocuments(currentUserId, userRole) {
-        if (userRole === 'ADMIN') {
-            return this.prisma.document.findMany({
                 include: {
                     expediente: {
                         include: {
@@ -5201,6 +5143,177 @@ let DocumentsService = class DocumentsService {
                                     }
                                 }
                             },
+                            lawyer: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    email: true,
+                                }
+                            },
+                        }
+                    },
+                    uploadedByUser: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                        }
+                    },
+                }
+            });
+            this.logger.log(`Documento guardado en base de datos: ${document.id}`);
+            return document;
+        }
+        catch (error) {
+            this.logger.error(`Error subiendo documento a Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
+            throw new common_1.BadRequestException(`Error subiendo documento: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+    async downloadDocument(documentId, currentUserId, userRole) {
+        this.logger.log(`Iniciando descarga de documento: ${documentId}`);
+        const document = await this.prisma.document.findUnique({
+            where: { id: documentId },
+            include: {
+                expediente: {
+                    include: {
+                        client: true,
+                        lawyer: true,
+                    }
+                }
+            }
+        });
+        if (!document) {
+            throw new common_1.NotFoundException('Documento no encontrado');
+        }
+        if (userRole === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            if (!client || document.expediente.clientId !== client.id) {
+                throw new common_1.ForbiddenException('No tienes permisos para descargar este documento');
+            }
+        }
+        else if (userRole === 'ABOGADO') {
+            if (document.expediente.lawyerId !== currentUserId) {
+                throw new common_1.ForbiddenException('No tienes permisos para descargar este documento');
+            }
+        }
+        try {
+            const downloadResult = await this.cloudinaryStorage.downloadFile(document.filename);
+            this.logger.log(`Documento descargado exitosamente de Cloudinary: ${document.filename}`);
+            return {
+                stream: downloadResult.stream,
+                metadata: {
+                    ...downloadResult.metadata,
+                    originalName: document.originalName,
+                    description: document.description,
+                    expedienteId: document.expedienteId,
+                    uploadedAt: document.uploadedAt,
+                }
+            };
+        }
+        catch (error) {
+            this.logger.error(`Error descargando documento de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
+            throw new common_1.NotFoundException(`Error descargando documento: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+    async getDocumentInfo(documentId, currentUserId, userRole) {
+        const document = await this.prisma.document.findUnique({
+            where: { id: documentId },
+            include: {
+                expediente: {
+                    include: {
+                        client: true,
+                        lawyer: true,
+                    }
+                }
+            }
+        });
+        if (!document) {
+            throw new common_1.NotFoundException('Documento no encontrado');
+        }
+        if (userRole === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            if (!client || document.expediente.clientId !== client.id) {
+                throw new common_1.ForbiddenException('No tienes permisos para ver este documento');
+            }
+        }
+        else if (userRole === 'ABOGADO') {
+            if (document.expediente.lawyerId !== currentUserId) {
+                throw new common_1.ForbiddenException('No tienes permisos para ver este documento');
+            }
+        }
+        try {
+            const cloudinaryInfo = await this.cloudinaryStorage.getFileMetadata(document.filename);
+            return {
+                ...document,
+                cloudinaryInfo: {
+                    publicId: cloudinaryInfo.publicId,
+                    resourceType: cloudinaryInfo.resourceType,
+                    format: cloudinaryInfo.format,
+                    size: cloudinaryInfo.size,
+                    createdAt: cloudinaryInfo.createdAt,
+                    url: cloudinaryInfo.url
+                }
+            };
+        }
+        catch (error) {
+            this.logger.warn(`No se pudieron obtener metadatos de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
+            return document;
+        }
+    }
+    async deleteDocument(documentId, currentUserId, userRole) {
+        this.logger.log(`Iniciando eliminación de documento: ${documentId}`);
+        const document = await this.prisma.document.findUnique({
+            where: { id: documentId },
+            include: {
+                expediente: {
+                    include: {
+                        client: true,
+                        lawyer: true,
+                    }
+                }
+            }
+        });
+        if (!document) {
+            throw new common_1.NotFoundException('Documento no encontrado');
+        }
+        if (userRole === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            if (!client || document.expediente.clientId !== client.id) {
+                throw new common_1.ForbiddenException('No tienes permisos para eliminar este documento');
+            }
+        }
+        else if (userRole === 'ABOGADO') {
+            if (document.expediente.lawyerId !== currentUserId) {
+                throw new common_1.ForbiddenException('No tienes permisos para eliminar este documento');
+            }
+        }
+        try {
+            await this.cloudinaryStorage.deleteFile(document.filename);
+            this.logger.log(`Archivo eliminado de Cloudinary: ${document.filename}`);
+            await this.prisma.document.delete({
+                where: { id: documentId }
+            });
+            this.logger.log(`Documento eliminado de base de datos: ${documentId}`);
+            return { message: 'Documento eliminado exitosamente' };
+        }
+        catch (error) {
+            this.logger.error(`Error eliminando documento: ${error instanceof Error ? error.message : String(error)}`);
+            throw new common_1.BadRequestException(`Error eliminando documento: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+    async findMyDocuments(currentUserId, userRole) {
+        if (userRole === 'ADMIN') {
+            return this.prisma.document.findMany({
+                include: {
+                    expediente: {
+                        include: {
+                            client: true,
                             lawyer: {
                                 select: {
                                     id: true,
@@ -5233,24 +5346,7 @@ let DocumentsService = class DocumentsService {
                 include: {
                     expediente: {
                         include: {
-                            client: {
-                                include: {
-                                    user: {
-                                        select: {
-                                            id: true,
-                                            name: true,
-                                            email: true,
-                                        }
-                                    }
-                                }
-                            },
-                            lawyer: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    email: true,
-                                }
-                            }
+                            client: true
                         }
                     },
                     uploadedByUser: {
@@ -5266,12 +5362,12 @@ let DocumentsService = class DocumentsService {
                 }
             });
         }
-        else {
+        else if (userRole === 'CLIENTE') {
             const client = await this.prisma.client.findUnique({
                 where: { userId: currentUserId }
             });
             if (!client) {
-                throw new common_1.ForbiddenException('No eres cliente');
+                throw new common_1.ForbiddenException('Cliente no encontrado');
             }
             return this.prisma.document.findMany({
                 where: {
@@ -5282,17 +5378,7 @@ let DocumentsService = class DocumentsService {
                 include: {
                     expediente: {
                         include: {
-                            client: {
-                                include: {
-                                    user: {
-                                        select: {
-                                            id: true,
-                                            name: true,
-                                            email: true,
-                                        }
-                                    }
-                                }
-                            },
+                            client: true,
                             lawyer: {
                                 select: {
                                     id: true,
@@ -5315,66 +5401,26 @@ let DocumentsService = class DocumentsService {
                 }
             });
         }
+        throw new common_1.ForbiddenException('Rol de usuario no válido');
     }
     async findAll(currentUserId, userRole) {
-        let whereClause = {};
-        if (userRole === 'CLIENTE') {
-            const client = await this.prisma.client.findUnique({
-                where: { userId: currentUserId }
-            });
-            if (!client) {
-                throw new common_1.NotFoundException('Cliente no encontrado');
-            }
-            whereClause = {
-                expediente: {
-                    clientId: client.id
-                }
-            };
-        }
-        else if (userRole === 'ABOGADO') {
-            whereClause = {
-                expediente: {
-                    lawyerId: currentUserId
-                }
-            };
-        }
-        return this.prisma.document.findMany({
-            where: whereClause,
-            include: {
-                expediente: {
-                    include: {
-                        client: {
-                            include: {
-                                user: {
-                                    select: {
-                                        id: true,
-                                        name: true,
-                                        email: true,
-                                    }
-                                }
-                            }
-                        },
-                        lawyer: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                            }
-                        },
-                    }
-                },
-                uploadedByUser: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    }
-                },
-            },
-            orderBy: {
-                uploadedAt: 'desc'
-            },
-        });
+        return this.findMyDocuments(currentUserId, userRole);
+    }
+    async getDocumentsStats(currentUserId, userRole) {
+        const documents = await this.findMyDocuments(currentUserId, userRole);
+        const totalDocuments = documents.length;
+        const totalSize = documents.reduce((sum, doc) => sum + doc.fileSize, 0);
+        const documentsByType = documents.reduce((acc, doc) => {
+            const type = doc.mimeType.split('/')[0];
+            acc[type] = (acc[type] || 0) + 1;
+            return acc;
+        }, {});
+        return {
+            totalDocuments,
+            totalSize,
+            documentsByType,
+            averageSize: totalDocuments > 0 ? totalSize / totalDocuments : 0
+        };
     }
     async findByExpediente(expedienteId, currentUserId, userRole) {
         const expediente = await this.prisma.expediente.findUnique({
@@ -5402,9 +5448,40 @@ let DocumentsService = class DocumentsService {
         }
         return this.prisma.document.findMany({
             where: { expedienteId },
+            include: {
+                expediente: {
+                    include: {
+                        client: {
+                            include: {
+                                user: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        email: true,
+                                    }
+                                }
+                            }
+                        },
+                        lawyer: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            }
+                        }
+                    }
+                },
+                uploadedByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                }
+            },
             orderBy: {
                 uploadedAt: 'desc'
-            },
+            }
         });
     }
     async findOne(id, currentUserId, userRole) {
@@ -5416,7 +5493,7 @@ let DocumentsService = class DocumentsService {
                         client: true,
                         lawyer: true,
                     }
-                },
+                }
             }
         });
         if (!document) {
@@ -5438,8 +5515,17 @@ let DocumentsService = class DocumentsService {
         return document;
     }
     async remove(id, currentUserId, userRole) {
-        const document = await this.prisma.document.findUnique({
-            where: { id },
+        return this.deleteDocument(id, currentUserId, userRole);
+    }
+    getFilePath(filename) {
+        return `/api/documents/file/${filename}`;
+    }
+    getFileStream(filename) {
+        return this.cloudinaryStorage.downloadFile(filename);
+    }
+    async checkFileAccess(filename, currentUserId, userRole) {
+        const document = await this.prisma.document.findFirst({
+            where: { filename },
             include: {
                 expediente: {
                     include: {
@@ -5450,179 +5536,360 @@ let DocumentsService = class DocumentsService {
             }
         });
         if (!document) {
-            throw new common_1.NotFoundException('Documento no encontrado');
+            return false;
         }
-        if (userRole === 'ABOGADO') {
-            if (document.expediente.lawyerId !== currentUserId) {
-                throw new common_1.ForbiddenException('Solo puedes eliminar documentos de expedientes asignados a ti');
-            }
-        }
-        else if (userRole === 'CLIENTE') {
-            const client = await this.prisma.client.findUnique({
-                where: { userId: currentUserId }
-            });
-            if (!client || document.expediente.clientId !== client.id) {
-                throw new common_1.ForbiddenException('Solo puedes eliminar documentos de tus propios expedientes');
-            }
-        }
-        const filePath = path.join(process.cwd(), this.UPLOAD_DIR, document.filename);
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-        }
-        await this.prisma.document.delete({
-            where: { id }
-        });
-        return { message: 'Documento eliminado exitosamente' };
-    }
-    async getDocumentsStats(currentUserId, userRole) {
-        let whereClause = {};
         if (userRole === 'CLIENTE') {
             const client = await this.prisma.client.findUnique({
                 where: { userId: currentUserId }
             });
-            if (!client) {
-                throw new common_1.NotFoundException('Cliente no encontrado');
-            }
-            whereClause = {
-                expediente: {
-                    clientId: client.id
-                }
-            };
+            return client && document.expediente.clientId === client.id;
         }
         else if (userRole === 'ABOGADO') {
-            whereClause = {
-                expediente: {
-                    lawyerId: currentUserId
+            return document.expediente.lawyerId === currentUserId;
+        }
+        else if (userRole === 'ADMIN') {
+            return true;
+        }
+        return false;
+    }
+    async getStorageStats() {
+        try {
+            const cloudinaryStats = await this.cloudinaryStorage.getUsageStats();
+            const freePlanInfo = this.cloudinaryStorage.getFreePlanInfo();
+            return {
+                cloudinary: {
+                    available: this.cloudinaryStorage.isAvailable(),
+                    stats: cloudinaryStats,
+                    freePlan: freePlanInfo
+                },
+                database: {
+                    totalDocuments: await this.prisma.document.count(),
+                    totalSize: await this.getTotalDatabaseSize()
                 }
             };
         }
-        const [total, totalSize, byType] = await Promise.all([
-            this.prisma.document.count({ where: whereClause }),
-            this.prisma.document.aggregate({
-                where: whereClause,
-                _sum: {
-                    fileSize: true
+        catch (error) {
+            this.logger.error(`Error obteniendo estadísticas: ${error instanceof Error ? error.message : String(error)}`);
+            return {
+                error: 'No se pudieron obtener estadísticas',
+                cloudinary: {
+                    available: this.cloudinaryStorage.isAvailable()
                 }
-            }),
-            this.prisma.document.groupBy({
-                by: ['mimeType'],
-                where: whereClause,
-                _count: {
-                    id: true
-                }
-            })
-        ]);
-        return {
-            total,
-            totalSize: totalSize._sum.fileSize || 0,
-            byType: byType.map(type => ({
-                type: type.mimeType,
-                count: type._count.id
-            }))
-        };
+            };
+        }
+    }
+    async getTotalDatabaseSize() {
+        const result = await this.prisma.document.aggregate({
+            _sum: {
+                fileSize: true
+            }
+        });
+        return result._sum.fileSize || 0;
     }
     validateFile(file) {
+        if (!file) {
+            throw new common_1.BadRequestException('No se proporcionó ningún archivo');
+        }
         if (!this.ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-            throw new common_1.BadRequestException(`Tipo de archivo no permitido. Tipos permitidos: PDF, TXT, DOC, DOCX, JPG, PNG, GIF, WEBP`);
+            throw new common_1.BadRequestException(`Tipo de archivo no permitido: ${file.mimetype}`);
         }
         if (file.size > this.MAX_FILE_SIZE) {
-            throw new common_1.BadRequestException(`El archivo excede el tamaño máximo de ${this.MAX_FILE_SIZE / (1024 * 1024)}MB`);
-        }
-        if (file.size === 0) {
-            throw new common_1.BadRequestException('El archivo no puede estar vacío');
-        }
-    }
-    getFileStream(filename) {
-        console.log(`🔍 Buscando archivo: ${filename}`);
-        const filePath = path.join(process.cwd(), this.UPLOAD_DIR, filename);
-        console.log(`📁 Ruta completa del archivo: ${filePath}`);
-        const uploadDir = path.join(process.cwd(), this.UPLOAD_DIR);
-        if (!fs.existsSync(uploadDir)) {
-            console.error(`❌ Directorio de uploads no existe: ${uploadDir}`);
-            throw new common_1.NotFoundException(`Directorio de uploads no encontrado: ${this.UPLOAD_DIR}`);
-        }
-        if (!fs.existsSync(filePath)) {
-            console.error(`❌ Archivo no encontrado: ${filePath}`);
-            throw new common_1.NotFoundException(`Archivo no encontrado: ${filename}`);
-        }
-        const stats = fs.statSync(filePath);
-        if (!stats.isFile()) {
-            console.error(`❌ La ruta no es un archivo: ${filePath}`);
-            throw new common_1.NotFoundException(`La ruta no es un archivo válido: ${filename}`);
-        }
-        console.log(`✅ Archivo encontrado: ${filename} (${stats.size} bytes)`);
-        try {
-            const stream = fs.createReadStream(filePath);
-            console.log(`✅ Stream creado exitosamente para: ${filename}`);
-            return stream;
-        }
-        catch (error) {
-            console.error(`❌ Error al crear stream para ${filename}:`, error);
-            throw new common_1.NotFoundException(`Error al leer el archivo: ${filename}`);
-        }
-    }
-    getFilePath(filename) {
-        return path.join(process.cwd(), this.UPLOAD_DIR, filename);
-    }
-    async checkFileAccess(filename, currentUserId, userRole) {
-        try {
-            const document = await this.prisma.document.findFirst({
-                where: { filename },
-                include: {
-                    expediente: {
-                        include: {
-                            client: true,
-                            lawyer: true
-                        }
-                    }
-                }
-            });
-            if (!document) {
-                return false;
-            }
-            if (userRole === 'ADMIN') {
-                return true;
-            }
-            if (userRole === 'ABOGADO' && document.expediente.lawyerId === currentUserId) {
-                return true;
-            }
-            if (userRole === 'CLIENTE') {
-                const client = await this.prisma.client.findUnique({
-                    where: { userId: currentUserId }
-                });
-                if (client && document.expediente.clientId === client.id) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        catch (error) {
-            console.error('Error checking file access:', error);
-            return false;
+            throw new common_1.BadRequestException(`El archivo es demasiado grande. Tamaño máximo: ${this.MAX_FILE_SIZE / (1024 * 1024)}MB`);
         }
     }
 };
-exports.DocumentsService = DocumentsService;
-exports.DocumentsService = DocumentsService = __decorate([
+exports.CloudinaryDocumentsService = CloudinaryDocumentsService;
+exports.CloudinaryDocumentsService = CloudinaryDocumentsService = CloudinaryDocumentsService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
-], DocumentsService);
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof cloudinary_storage_service_1.CloudinaryStorageService !== "undefined" && cloudinary_storage_service_1.CloudinaryStorageService) === "function" ? _b : Object, typeof (_c = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _c : Object])
+], CloudinaryDocumentsService);
 
 
 /***/ }),
 /* 45 */
-/***/ ((module) => {
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
-module.exports = require("fs");
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var CloudinaryStorageService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CloudinaryStorageService = void 0;
+const common_1 = __webpack_require__(2);
+const config_1 = __webpack_require__(5);
+const cloudinary_1 = __webpack_require__(46);
+const stream_1 = __webpack_require__(47);
+let CloudinaryStorageService = CloudinaryStorageService_1 = class CloudinaryStorageService {
+    constructor(configService) {
+        this.configService = configService;
+        this.logger = new common_1.Logger(CloudinaryStorageService_1.name);
+        this.isConfigured = false;
+        const cloudName = this.configService.get('CLOUDINARY_CLOUD_NAME');
+        const apiKey = this.configService.get('CLOUDINARY_API_KEY');
+        const apiSecret = this.configService.get('CLOUDINARY_API_SECRET');
+        if (cloudName && apiKey && apiSecret) {
+            cloudinary_1.v2.config({
+                cloud_name: cloudName,
+                api_key: apiKey,
+                api_secret: apiSecret,
+            });
+            this.isConfigured = true;
+            this.logger.log('Cloudinary Storage inicializado correctamente');
+        }
+        else {
+            this.logger.warn('Credenciales de Cloudinary no configuradas, Cloudinary Storage deshabilitado');
+        }
+    }
+    async uploadFile(file, folder = 'experimento2', metadata) {
+        try {
+            if (!this.isConfigured) {
+                throw new Error('Cloudinary Storage no está configurado');
+            }
+            const stream = new stream_1.Readable();
+            stream.push(file.buffer);
+            stream.push(null);
+            const uploadOptions = {
+                folder,
+                resource_type: 'auto',
+                public_id: `${Date.now()}-${Math.random().toString(36).substring(7)}`,
+                overwrite: false,
+                unique_filename: true,
+            };
+            if (metadata) {
+                uploadOptions.context = metadata;
+            }
+            const result = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary_1.v2.uploader.upload_stream(uploadOptions, (error, result) => {
+                    if (error)
+                        reject(error);
+                    else
+                        resolve(result);
+                });
+                stream.pipe(uploadStream);
+            });
+            this.logger.log(`Archivo subido exitosamente a Cloudinary: ${result.public_id}`);
+            return {
+                url: result.secure_url,
+                publicId: result.public_id,
+                storageType: 'cloudinary'
+            };
+        }
+        catch (error) {
+            this.logger.error(`Error subiendo archivo a Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
+            throw error;
+        }
+    }
+    async downloadFile(publicId) {
+        try {
+            if (!this.isConfigured) {
+                throw new Error('Cloudinary Storage no está configurado');
+            }
+            const info = await cloudinary_1.v2.api.resource(publicId);
+            const downloadUrl = cloudinary_1.v2.url(publicId, {
+                secure: true,
+                resource_type: info.resource_type
+            });
+            const response = await fetch(downloadUrl);
+            if (!response.ok) {
+                throw new Error(`Error descargando archivo: ${response.statusText}`);
+            }
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const stream = new stream_1.Readable();
+            stream.push(buffer);
+            stream.push(null);
+            this.logger.log(`Archivo descargado exitosamente de Cloudinary: ${publicId}`);
+            return {
+                stream,
+                metadata: {
+                    contentType: info.format ? `application/${info.format}` : 'application/octet-stream',
+                    contentLength: buffer.length,
+                    lastModified: new Date(info.created_at),
+                    publicId: info.public_id,
+                    resourceType: info.resource_type,
+                    format: info.format,
+                    width: info.width,
+                    height: info.height,
+                },
+                storageType: 'cloudinary'
+            };
+        }
+        catch (error) {
+            this.logger.error(`Error descargando archivo de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
+            throw error;
+        }
+    }
+    async generateDownloadUrl(publicId, options = {}) {
+        try {
+            if (!this.isConfigured) {
+                throw new Error('Cloudinary Storage no está configurado');
+            }
+            const url = cloudinary_1.v2.url(publicId, {
+                secure: true,
+                ...options
+            });
+            this.logger.log(`URL de descarga generada para: ${publicId}`);
+            return url;
+        }
+        catch (error) {
+            this.logger.error(`Error generando URL de descarga: ${error instanceof Error ? error.message : String(error)}`);
+            throw error;
+        }
+    }
+    async fileExists(publicId) {
+        try {
+            if (!this.isConfigured) {
+                return false;
+            }
+            await cloudinary_1.v2.api.resource(publicId);
+            return true;
+        }
+        catch (error) {
+            return false;
+        }
+    }
+    async deleteFile(publicId) {
+        try {
+            if (!this.isConfigured) {
+                throw new Error('Cloudinary Storage no está configurado');
+            }
+            const result = await cloudinary_1.v2.uploader.destroy(publicId);
+            if (result.result === 'ok') {
+                this.logger.log(`Archivo eliminado exitosamente de Cloudinary: ${publicId}`);
+            }
+            else {
+                throw new Error(`Error eliminando archivo: ${result.result}`);
+            }
+        }
+        catch (error) {
+            this.logger.error(`Error eliminando archivo de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
+            throw error;
+        }
+    }
+    async getFileMetadata(publicId) {
+        try {
+            if (!this.isConfigured) {
+                throw new Error('Cloudinary Storage no está configurado');
+            }
+            const info = await cloudinary_1.v2.api.resource(publicId);
+            return {
+                publicId: info.public_id,
+                resourceType: info.resource_type,
+                format: info.format,
+                width: info.width,
+                height: info.height,
+                size: info.bytes,
+                createdAt: info.created_at,
+                updatedAt: info.updated_at,
+                url: info.secure_url,
+                context: info.context || {},
+            };
+        }
+        catch (error) {
+            this.logger.error(`Error obteniendo metadatos del archivo: ${error instanceof Error ? error.message : String(error)}`);
+            throw error;
+        }
+    }
+    async transformFile(publicId, transformations = {}) {
+        try {
+            if (!this.isConfigured) {
+                throw new Error('Cloudinary Storage no está configurado');
+            }
+            const url = cloudinary_1.v2.url(publicId, {
+                secure: true,
+                ...transformations
+            });
+            this.logger.log(`URL transformada generada para: ${publicId}`);
+            return url;
+        }
+        catch (error) {
+            this.logger.error(`Error transformando archivo: ${error instanceof Error ? error.message : String(error)}`);
+            throw error;
+        }
+    }
+    async getUsageStats() {
+        try {
+            if (!this.isConfigured) {
+                throw new Error('Cloudinary Storage no está configurado');
+            }
+            const usage = await cloudinary_1.v2.api.usage();
+            return {
+                storageType: 'cloudinary',
+                plan: usage.plan,
+                credits: usage.credits,
+                objects: usage.objects,
+                bandwidth: usage.bandwidth,
+                storage: usage.storage,
+                requests: usage.requests,
+                resources: usage.resources,
+                derived_resources: usage.derived_resources,
+                transformations: usage.transformations,
+                videos: usage.videos,
+                images: usage.images,
+                raw: usage.raw,
+            };
+        }
+        catch (error) {
+            this.logger.error(`Error obteniendo estadísticas de uso: ${error instanceof Error ? error.message : String(error)}`);
+            return {
+                storageType: 'cloudinary',
+                error: 'No se pudieron obtener estadísticas'
+            };
+        }
+    }
+    isAvailable() {
+        return this.isConfigured;
+    }
+    getFreePlanInfo() {
+        return {
+            storage: '25GB',
+            transfer: '25GB/mes',
+            transformations: '25,000/mes',
+            features: [
+                'CDN global',
+                'Transformaciones automáticas',
+                'Optimización de imágenes',
+                'Soporte para PDFs y documentos',
+                'URLs seguras HTTPS',
+                'API REST completa'
+            ],
+            limitations: [
+                'Máximo 10MB por archivo',
+                'Sin soporte premium',
+                'Sin backup automático'
+            ]
+        };
+    }
+};
+exports.CloudinaryStorageService = CloudinaryStorageService;
+exports.CloudinaryStorageService = CloudinaryStorageService = CloudinaryStorageService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _a : Object])
+], CloudinaryStorageService);
+
 
 /***/ }),
 /* 46 */
 /***/ ((module) => {
 
-module.exports = require("path");
+module.exports = require("cloudinary");
 
 /***/ }),
 /* 47 */
+/***/ ((module) => {
+
+module.exports = require("stream");
+
+/***/ }),
+/* 48 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5675,17 +5942,17 @@ var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DocumentsController = void 0;
 const common_1 = __webpack_require__(2);
-const platform_express_1 = __webpack_require__(48);
-const express_1 = __webpack_require__(49);
+const platform_express_1 = __webpack_require__(49);
+const express_1 = __webpack_require__(50);
 const swagger_1 = __webpack_require__(3);
-const documents_service_1 = __webpack_require__(44);
-const upload_document_dto_1 = __webpack_require__(50);
+const cloudinary_documents_service_1 = __webpack_require__(44);
+const upload_document_dto_1 = __webpack_require__(51);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
-const fs = __importStar(__webpack_require__(45));
-const path = __importStar(__webpack_require__(46));
+const fs = __importStar(__webpack_require__(52));
+const path = __importStar(__webpack_require__(53));
 let DocumentsController = class DocumentsController {
     constructor(documentsService) {
         this.documentsService = documentsService;
@@ -6377,24 +6644,24 @@ exports.DocumentsController = DocumentsController = __decorate([
     (0, common_1.Controller)('documents'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
-    __metadata("design:paramtypes", [typeof (_a = typeof documents_service_1.DocumentsService !== "undefined" && documents_service_1.DocumentsService) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [typeof (_a = typeof cloudinary_documents_service_1.CloudinaryDocumentsService !== "undefined" && cloudinary_documents_service_1.CloudinaryDocumentsService) === "function" ? _a : Object])
 ], DocumentsController);
 
-
-/***/ }),
-/* 48 */
-/***/ ((module) => {
-
-module.exports = require("@nestjs/platform-express");
 
 /***/ }),
 /* 49 */
 /***/ ((module) => {
 
-module.exports = require("express");
+module.exports = require("@nestjs/platform-express");
 
 /***/ }),
 /* 50 */
+/***/ ((module) => {
+
+module.exports = require("express");
+
+/***/ }),
+/* 51 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -6448,7 +6715,19 @@ __decorate([
 
 
 /***/ }),
-/* 51 */
+/* 52 */
+/***/ ((module) => {
+
+module.exports = require("fs");
+
+/***/ }),
+/* 53 */
+/***/ ((module) => {
+
+module.exports = require("path");
+
+/***/ }),
+/* 54 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -6461,10 +6740,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AppointmentsModule = void 0;
 const common_1 = __webpack_require__(2);
-const appointments_controller_1 = __webpack_require__(52);
-const appointments_service_1 = __webpack_require__(53);
-const visitor_appointments_controller_1 = __webpack_require__(57);
-const visitor_appointments_service_1 = __webpack_require__(58);
+const appointments_controller_1 = __webpack_require__(55);
+const appointments_service_1 = __webpack_require__(56);
+const visitor_appointments_controller_1 = __webpack_require__(60);
+const visitor_appointments_service_1 = __webpack_require__(61);
 const prisma_module_1 = __webpack_require__(37);
 const email_service_1 = __webpack_require__(17);
 let AppointmentsModule = class AppointmentsModule {
@@ -6481,7 +6760,7 @@ exports.AppointmentsModule = AppointmentsModule = __decorate([
 
 
 /***/ }),
-/* 52 */
+/* 55 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -6502,11 +6781,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AppointmentsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const appointments_service_1 = __webpack_require__(53);
+const appointments_service_1 = __webpack_require__(56);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const create_appointment_dto_1 = __webpack_require__(54);
-const create_lawyer_appointment_dto_1 = __webpack_require__(55);
-const update_appointment_dto_1 = __webpack_require__(56);
+const create_appointment_dto_1 = __webpack_require__(57);
+const create_lawyer_appointment_dto_1 = __webpack_require__(58);
+const update_appointment_dto_1 = __webpack_require__(59);
 let AppointmentsController = class AppointmentsController {
     constructor(appointmentsService) {
         this.appointmentsService = appointmentsService;
@@ -6900,7 +7179,7 @@ exports.AppointmentsController = AppointmentsController = __decorate([
 
 
 /***/ }),
-/* 53 */
+/* 56 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7487,7 +7766,7 @@ exports.AppointmentsService = AppointmentsService = __decorate([
 
 
 /***/ }),
-/* 54 */
+/* 57 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7551,7 +7830,7 @@ __decorate([
 
 
 /***/ }),
-/* 55 */
+/* 58 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7615,7 +7894,7 @@ __decorate([
 
 
 /***/ }),
-/* 56 */
+/* 59 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7669,7 +7948,7 @@ __decorate([
 
 
 /***/ }),
-/* 57 */
+/* 60 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7690,8 +7969,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VisitorAppointmentsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const visitor_appointments_service_1 = __webpack_require__(58);
-const create_visitor_appointment_dto_1 = __webpack_require__(59);
+const visitor_appointments_service_1 = __webpack_require__(61);
+const create_visitor_appointment_dto_1 = __webpack_require__(62);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
@@ -7984,7 +8263,7 @@ exports.VisitorAppointmentsController = VisitorAppointmentsController = __decora
 
 
 /***/ }),
-/* 58 */
+/* 61 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8200,7 +8479,7 @@ exports.VisitorAppointmentsService = VisitorAppointmentsService = __decorate([
 
 
 /***/ }),
-/* 59 */
+/* 62 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8278,7 +8557,7 @@ __decorate([
 
 
 /***/ }),
-/* 60 */
+/* 63 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8291,8 +8570,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TasksModule = void 0;
 const common_1 = __webpack_require__(2);
-const tasks_controller_1 = __webpack_require__(61);
-const tasks_service_1 = __webpack_require__(62);
+const tasks_controller_1 = __webpack_require__(64);
+const tasks_service_1 = __webpack_require__(65);
 const prisma_module_1 = __webpack_require__(37);
 let TasksModule = class TasksModule {
 };
@@ -8308,7 +8587,7 @@ exports.TasksModule = TasksModule = __decorate([
 
 
 /***/ }),
-/* 61 */
+/* 64 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8329,9 +8608,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TasksController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const tasks_service_1 = __webpack_require__(62);
-const create_task_dto_1 = __webpack_require__(63);
-const update_task_dto_1 = __webpack_require__(64);
+const tasks_service_1 = __webpack_require__(65);
+const create_task_dto_1 = __webpack_require__(66);
+const update_task_dto_1 = __webpack_require__(67);
 const jwt_auth_guard_1 = __webpack_require__(27);
 let TasksController = class TasksController {
     constructor(tasksService) {
@@ -8689,7 +8968,7 @@ exports.TasksController = TasksController = __decorate([
 
 
 /***/ }),
-/* 62 */
+/* 65 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8707,7 +8986,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TasksService = void 0;
 const common_1 = __webpack_require__(2);
 const prisma_service_1 = __webpack_require__(8);
-const create_task_dto_1 = __webpack_require__(63);
+const create_task_dto_1 = __webpack_require__(66);
 let TasksService = class TasksService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -9232,7 +9511,7 @@ exports.TasksService = TasksService = __decorate([
 
 
 /***/ }),
-/* 63 */
+/* 66 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9302,7 +9581,7 @@ __decorate([
 
 
 /***/ }),
-/* 64 */
+/* 67 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9319,7 +9598,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateTaskDto = void 0;
 const swagger_1 = __webpack_require__(3);
-const create_task_dto_1 = __webpack_require__(63);
+const create_task_dto_1 = __webpack_require__(66);
 const class_validator_1 = __webpack_require__(23);
 class UpdateTaskDto extends (0, swagger_1.PartialType)(create_task_dto_1.CreateTaskDto) {
 }
@@ -9332,7 +9611,7 @@ __decorate([
 
 
 /***/ }),
-/* 65 */
+/* 68 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9345,8 +9624,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReportsModule = void 0;
 const common_1 = __webpack_require__(2);
-const reports_controller_1 = __webpack_require__(66);
-const reports_service_1 = __webpack_require__(67);
+const reports_controller_1 = __webpack_require__(69);
+const reports_service_1 = __webpack_require__(70);
 const prisma_module_1 = __webpack_require__(37);
 let ReportsModule = class ReportsModule {
 };
@@ -9362,7 +9641,7 @@ exports.ReportsModule = ReportsModule = __decorate([
 
 
 /***/ }),
-/* 66 */
+/* 69 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9383,7 +9662,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReportsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const reports_service_1 = __webpack_require__(67);
+const reports_service_1 = __webpack_require__(70);
 const jwt_auth_guard_1 = __webpack_require__(27);
 let ReportsController = class ReportsController {
     constructor(reportsService) {
@@ -9468,7 +9747,7 @@ exports.ReportsController = ReportsController = __decorate([
 
 
 /***/ }),
-/* 67 */
+/* 70 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9594,7 +9873,7 @@ exports.ReportsService = ReportsService = __decorate([
 
 
 /***/ }),
-/* 68 */
+/* 71 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9607,15 +9886,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AdminModule = void 0;
 const common_1 = __webpack_require__(2);
-const admin_controller_1 = __webpack_require__(69);
-const admin_service_1 = __webpack_require__(70);
-const layouts_controller_1 = __webpack_require__(71);
-const layouts_controller_2 = __webpack_require__(71);
-const layouts_service_1 = __webpack_require__(72);
-const menu_config_controller_1 = __webpack_require__(75);
-const menu_config_service_1 = __webpack_require__(76);
-const site_config_controller_1 = __webpack_require__(78);
-const site_config_service_1 = __webpack_require__(79);
+const admin_controller_1 = __webpack_require__(72);
+const admin_service_1 = __webpack_require__(73);
+const layouts_controller_1 = __webpack_require__(74);
+const layouts_controller_2 = __webpack_require__(74);
+const layouts_service_1 = __webpack_require__(75);
+const menu_config_controller_1 = __webpack_require__(78);
+const menu_config_service_1 = __webpack_require__(79);
+const site_config_controller_1 = __webpack_require__(81);
+const site_config_service_1 = __webpack_require__(82);
 const prisma_module_1 = __webpack_require__(37);
 let AdminModule = class AdminModule {
 };
@@ -9647,7 +9926,7 @@ exports.AdminModule = AdminModule = __decorate([
 
 
 /***/ }),
-/* 69 */
+/* 72 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9668,7 +9947,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AdminController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const admin_service_1 = __webpack_require__(70);
+const admin_service_1 = __webpack_require__(73);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
@@ -10452,7 +10731,7 @@ exports.AdminController = AdminController = __decorate([
 
 
 /***/ }),
-/* 70 */
+/* 73 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11020,7 +11299,7 @@ exports.AdminService = AdminService = __decorate([
 
 
 /***/ }),
-/* 71 */
+/* 74 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11045,8 +11324,8 @@ const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
-const layouts_service_1 = __webpack_require__(72);
-const layout_dto_1 = __webpack_require__(73);
+const layouts_service_1 = __webpack_require__(75);
+const layout_dto_1 = __webpack_require__(76);
 let LayoutsController = class LayoutsController {
     constructor(layoutsService) {
         this.layoutsService = layoutsService;
@@ -11382,7 +11661,7 @@ exports.AdminLayoutsController = AdminLayoutsController = __decorate([
 
 
 /***/ }),
-/* 72 */
+/* 75 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11781,7 +12060,7 @@ exports.LayoutsService = LayoutsService = __decorate([
 
 
 /***/ }),
-/* 73 */
+/* 76 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11797,7 +12076,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateLayoutDto = exports.CreateLayoutDto = exports.LayoutConfigDto = exports.ComponentConfigDto = void 0;
 const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(74);
+const class_transformer_1 = __webpack_require__(77);
 const swagger_1 = __webpack_require__(3);
 class ComponentConfigDto {
 }
@@ -11935,13 +12214,13 @@ __decorate([
 
 
 /***/ }),
-/* 74 */
+/* 77 */
 /***/ ((module) => {
 
 module.exports = require("class-transformer");
 
 /***/ }),
-/* 75 */
+/* 78 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11966,8 +12245,8 @@ const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
-const menu_config_service_1 = __webpack_require__(76);
-const menu_config_dto_1 = __webpack_require__(77);
+const menu_config_service_1 = __webpack_require__(79);
+const menu_config_dto_1 = __webpack_require__(80);
 let MenuConfigController = class MenuConfigController {
     constructor(menuConfigService) {
         this.menuConfigService = menuConfigService;
@@ -12176,7 +12455,7 @@ exports.MenuConfigController = MenuConfigController = __decorate([
 
 
 /***/ }),
-/* 76 */
+/* 79 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12460,7 +12739,7 @@ exports.MenuConfigService = MenuConfigService = __decorate([
 
 
 /***/ }),
-/* 77 */
+/* 80 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12478,7 +12757,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MenuConfigResponseDto = exports.UpdateMenuConfigDto = exports.CreateMenuConfigDto = exports.MenuItemDto = void 0;
 const swagger_1 = __webpack_require__(3);
 const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(74);
+const class_transformer_1 = __webpack_require__(77);
 const client_1 = __webpack_require__(9);
 class MenuItemDto {
 }
@@ -12638,7 +12917,7 @@ __decorate([
 
 
 /***/ }),
-/* 78 */
+/* 81 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12662,8 +12941,8 @@ const swagger_1 = __webpack_require__(3);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
-const site_config_service_1 = __webpack_require__(79);
-const site_config_dto_1 = __webpack_require__(80);
+const site_config_service_1 = __webpack_require__(82);
+const site_config_dto_1 = __webpack_require__(83);
 let SiteConfigController = class SiteConfigController {
     constructor(siteConfigService) {
         this.siteConfigService = siteConfigService;
@@ -12949,7 +13228,7 @@ exports.SiteConfigController = SiteConfigController = __decorate([
 
 
 /***/ }),
-/* 79 */
+/* 82 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -13293,7 +13572,7 @@ exports.SiteConfigService = SiteConfigService = __decorate([
 
 
 /***/ }),
-/* 80 */
+/* 83 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -13449,7 +13728,7 @@ __decorate([
 
 
 /***/ }),
-/* 81 */
+/* 84 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -13462,9 +13741,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatModule = void 0;
 const common_1 = __webpack_require__(2);
-const chat_controller_1 = __webpack_require__(82);
-const chat_service_1 = __webpack_require__(83);
-const chat_gateway_1 = __webpack_require__(85);
+const chat_controller_1 = __webpack_require__(85);
+const chat_service_1 = __webpack_require__(86);
+const chat_gateway_1 = __webpack_require__(88);
 const prisma_module_1 = __webpack_require__(37);
 let ChatModule = class ChatModule {
 };
@@ -13480,7 +13759,7 @@ exports.ChatModule = ChatModule = __decorate([
 
 
 /***/ }),
-/* 82 */
+/* 85 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -13501,9 +13780,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const chat_service_1 = __webpack_require__(83);
+const chat_service_1 = __webpack_require__(86);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const create_message_dto_1 = __webpack_require__(84);
+const create_message_dto_1 = __webpack_require__(87);
 let ChatController = class ChatController {
     constructor(chatService) {
         this.chatService = chatService;
@@ -13741,7 +14020,7 @@ exports.ChatController = ChatController = __decorate([
 
 
 /***/ }),
-/* 83 */
+/* 86 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -14140,7 +14419,7 @@ exports.ChatService = ChatService = __decorate([
 
 
 /***/ }),
-/* 84 */
+/* 87 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -14172,7 +14451,7 @@ __decorate([
 
 
 /***/ }),
-/* 85 */
+/* 88 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -14191,9 +14470,9 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 var _a, _b, _c, _d, _e, _f;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatGateway = void 0;
-const websockets_1 = __webpack_require__(86);
-const socket_io_1 = __webpack_require__(87);
-const chat_service_1 = __webpack_require__(83);
+const websockets_1 = __webpack_require__(89);
+const socket_io_1 = __webpack_require__(90);
+const chat_service_1 = __webpack_require__(86);
 let ChatGateway = class ChatGateway {
     constructor(chatService) {
         this.chatService = chatService;
@@ -14363,19 +14642,19 @@ exports.ChatGateway = ChatGateway = __decorate([
 
 
 /***/ }),
-/* 86 */
+/* 89 */
 /***/ ((module) => {
 
 module.exports = require("@nestjs/websockets");
 
 /***/ }),
-/* 87 */
+/* 90 */
 /***/ ((module) => {
 
 module.exports = require("socket.io");
 
 /***/ }),
-/* 88 */
+/* 91 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -14388,8 +14667,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ParametrosModule = void 0;
 const common_1 = __webpack_require__(2);
-const parametros_service_1 = __webpack_require__(89);
-const parametros_controller_1 = __webpack_require__(90);
+const parametros_service_1 = __webpack_require__(92);
+const parametros_controller_1 = __webpack_require__(93);
 const prisma_module_1 = __webpack_require__(37);
 let ParametrosModule = class ParametrosModule {
 };
@@ -14405,7 +14684,7 @@ exports.ParametrosModule = ParametrosModule = __decorate([
 
 
 /***/ }),
-/* 89 */
+/* 92 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -14633,7 +14912,7 @@ exports.ParametrosService = ParametrosService = __decorate([
 
 
 /***/ }),
-/* 90 */
+/* 93 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -14654,7 +14933,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ParametrosController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const parametros_service_1 = __webpack_require__(89);
+const parametros_service_1 = __webpack_require__(92);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
@@ -15206,7 +15485,7 @@ exports.ParametrosController = ParametrosController = __decorate([
 
 
 /***/ }),
-/* 91 */
+/* 94 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -15219,17 +15498,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InvoicesModule = void 0;
 const common_1 = __webpack_require__(2);
-const invoices_service_1 = __webpack_require__(92);
-const invoices_controller_1 = __webpack_require__(107);
-const facturae_controller_1 = __webpack_require__(113);
-const facturae_service_1 = __webpack_require__(99);
-const external_systems_controller_1 = __webpack_require__(114);
-const external_systems_service_1 = __webpack_require__(115);
-const pdf_generator_service_1 = __webpack_require__(101);
-const invoice_audit_service_1 = __webpack_require__(105);
-const digital_signature_service_1 = __webpack_require__(110);
+const invoices_service_1 = __webpack_require__(95);
+const invoices_controller_1 = __webpack_require__(110);
+const facturae_controller_1 = __webpack_require__(116);
+const facturae_service_1 = __webpack_require__(102);
+const external_systems_controller_1 = __webpack_require__(117);
+const external_systems_service_1 = __webpack_require__(118);
+const pdf_generator_service_1 = __webpack_require__(104);
+const invoice_audit_service_1 = __webpack_require__(108);
+const digital_signature_service_1 = __webpack_require__(113);
 const auth_module_1 = __webpack_require__(12);
-const parametros_module_1 = __webpack_require__(88);
+const parametros_module_1 = __webpack_require__(91);
 let InvoicesModule = class InvoicesModule {
 };
 exports.InvoicesModule = InvoicesModule;
@@ -15243,7 +15522,7 @@ exports.InvoicesModule = InvoicesModule = __decorate([
 
 
 /***/ }),
-/* 92 */
+/* 95 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -15295,16 +15574,16 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InvoicesService = void 0;
 const common_1 = __webpack_require__(2);
 const prisma_service_1 = __webpack_require__(8);
-const facturae_xml_util_1 = __webpack_require__(93);
-const xades_sign_util_1 = __webpack_require__(95);
-const facturae_service_1 = __webpack_require__(99);
-const pdf_generator_service_1 = __webpack_require__(101);
-const fs = __importStar(__webpack_require__(45));
+const facturae_xml_util_1 = __webpack_require__(96);
+const xades_sign_util_1 = __webpack_require__(98);
+const facturae_service_1 = __webpack_require__(102);
+const pdf_generator_service_1 = __webpack_require__(104);
+const fs = __importStar(__webpack_require__(52));
 const crypto = __importStar(__webpack_require__(20));
-const pdf_lib_1 = __webpack_require__(104);
-const QRCode = __importStar(__webpack_require__(103));
-const invoice_audit_service_1 = __webpack_require__(105);
-const invoice_status_constants_1 = __webpack_require__(106);
+const pdf_lib_1 = __webpack_require__(107);
+const QRCode = __importStar(__webpack_require__(106));
+const invoice_audit_service_1 = __webpack_require__(108);
+const invoice_status_constants_1 = __webpack_require__(109);
 let InvoicesService = InvoicesService_1 = class InvoicesService {
     constructor(prisma, pdfGeneratorService, invoiceAuditService) {
         this.prisma = prisma;
@@ -16316,7 +16595,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
     async generateInvoicePdfProfessionalVectorial(invoice) {
         try {
             this.logger.log('Generando PDF profesional vectorial (compatible con Railway)');
-            const { PDFDocument, rgb, StandardFonts } = await Promise.resolve().then(() => __importStar(__webpack_require__(104)));
+            const { PDFDocument, rgb, StandardFonts } = await Promise.resolve().then(() => __importStar(__webpack_require__(107)));
             const pdfDoc = await PDFDocument.create();
             const page = pdfDoc.addPage([595, 842]);
             const { width, height } = page.getSize();
@@ -16514,7 +16793,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
                 color: darkGray
             });
             try {
-                const QRCode = await Promise.resolve().then(() => __importStar(__webpack_require__(103)));
+                const QRCode = await Promise.resolve().then(() => __importStar(__webpack_require__(106)));
                 const qrData = [
                     `NIF:${invoice.emisor?.email || ''}`,
                     `NUM:${invoice.numeroFactura || ''}`,
@@ -16677,7 +16956,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
         }
     }
     async htmlToPdfWithPuppeteer(htmlContent) {
-        const puppeteer = await Promise.resolve().then(() => __importStar(__webpack_require__(102)));
+        const puppeteer = await Promise.resolve().then(() => __importStar(__webpack_require__(105)));
         let browser;
         try {
             this.logger.log('[PUPPETEER] Iniciando Puppeteer...');
@@ -17211,7 +17490,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
             `HASH:${invoiceHash}`
         ].join('|');
         console.log('🔍 [generateInvoiceHtml] QR Data generado:', qrData);
-        const qrImageDataUrl = await (await Promise.resolve().then(() => __importStar(__webpack_require__(103)))).toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
+        const qrImageDataUrl = await (await Promise.resolve().then(() => __importStar(__webpack_require__(106)))).toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
         if (invoice.facturaOriginalId) {
             console.log('🔄 [generateInvoiceHtml] Es factura rectificativa, obteniendo datos de factura original');
             const facturaOriginal = await this.prisma.invoice.findUnique({
@@ -17386,14 +17665,14 @@ exports.InvoicesService = InvoicesService = InvoicesService_1 = __decorate([
 
 
 /***/ }),
-/* 93 */
+/* 96 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.generateFacturaeXML = generateFacturaeXML;
 exports.generateFacturaeXMLFromInvoice = generateFacturaeXMLFromInvoice;
-const xmlbuilder2_1 = __webpack_require__(94);
+const xmlbuilder2_1 = __webpack_require__(97);
 function generateFacturaeXML(data) {
     const root = (0, xmlbuilder2_1.create)({ version: '1.0', encoding: 'UTF-8' })
         .ele('Facturae', {
@@ -17810,13 +18089,13 @@ function generateFacturaeXMLFromInvoice(invoice) {
 
 
 /***/ }),
-/* 94 */
+/* 97 */
 /***/ ((module) => {
 
 module.exports = require("xmlbuilder2");
 
 /***/ }),
-/* 95 */
+/* 98 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -17861,9 +18140,9 @@ exports.validateCertificate = validateCertificate;
 exports.checkCertificateStatus = checkCertificateStatus;
 exports.getTimestamp = getTimestamp;
 exports.validateSignature = validateSignature;
-const xadesjs = __importStar(__webpack_require__(96));
-const webcrypto_1 = __webpack_require__(97);
-const xmldom_1 = __webpack_require__(98);
+const xadesjs = __importStar(__webpack_require__(99));
+const webcrypto_1 = __webpack_require__(100);
+const xmldom_1 = __webpack_require__(101);
 const webcrypto = new webcrypto_1.Crypto();
 xadesjs.Application.setEngine("OpenSSL", webcrypto);
 var XAdESLevel;
@@ -18037,25 +18316,25 @@ function validateSignature(xmlContent) {
 
 
 /***/ }),
-/* 96 */
+/* 99 */
 /***/ ((module) => {
 
 module.exports = require("xadesjs");
 
 /***/ }),
-/* 97 */
+/* 100 */
 /***/ ((module) => {
 
 module.exports = require("@peculiar/webcrypto");
 
 /***/ }),
-/* 98 */
+/* 101 */
 /***/ ((module) => {
 
 module.exports = require("xmldom");
 
 /***/ }),
-/* 99 */
+/* 102 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -18105,11 +18384,11 @@ var FacturaeService_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FacturaeService = void 0;
 const common_1 = __webpack_require__(2);
-const facturae_xml_util_1 = __webpack_require__(93);
-const xades_sign_util_1 = __webpack_require__(95);
-const facturae_validator_util_1 = __webpack_require__(100);
-const fs = __importStar(__webpack_require__(45));
-const path = __importStar(__webpack_require__(46));
+const facturae_xml_util_1 = __webpack_require__(96);
+const xades_sign_util_1 = __webpack_require__(98);
+const facturae_validator_util_1 = __webpack_require__(103);
+const fs = __importStar(__webpack_require__(52));
+const path = __importStar(__webpack_require__(53));
 let FacturaeService = FacturaeService_1 = class FacturaeService {
     constructor() {
         this.logger = new common_1.Logger(FacturaeService_1.name);
@@ -18378,7 +18657,7 @@ exports.FacturaeService = FacturaeService = FacturaeService_1 = __decorate([
 
 
 /***/ }),
-/* 100 */
+/* 103 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -18417,8 +18696,8 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FacturaeValidator = void 0;
-const xmldom_1 = __webpack_require__(98);
-const path = __importStar(__webpack_require__(46));
+const xmldom_1 = __webpack_require__(101);
+const path = __importStar(__webpack_require__(53));
 class FacturaeValidator {
     static validateXML(xmlContent, options = {}) {
         const result = {
@@ -18873,7 +19152,7 @@ FacturaeValidator.FACTURAE_SCHEMA_PATH = path.join(__dirname, '../../schemas/fac
 
 
 /***/ }),
-/* 101 */
+/* 104 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -18924,11 +19203,11 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PdfGeneratorService = void 0;
 const common_1 = __webpack_require__(2);
-const puppeteer = __importStar(__webpack_require__(102));
-const fs = __importStar(__webpack_require__(45));
-const path = __importStar(__webpack_require__(46));
-const QRCode = __importStar(__webpack_require__(103));
-const parametros_service_1 = __webpack_require__(89);
+const puppeteer = __importStar(__webpack_require__(105));
+const fs = __importStar(__webpack_require__(52));
+const path = __importStar(__webpack_require__(53));
+const QRCode = __importStar(__webpack_require__(106));
+const parametros_service_1 = __webpack_require__(92);
 let PdfGeneratorService = PdfGeneratorService_1 = class PdfGeneratorService {
     constructor(parametrosService) {
         this.parametrosService = parametrosService;
@@ -19481,25 +19760,25 @@ exports.PdfGeneratorService = PdfGeneratorService = PdfGeneratorService_1 = __de
 
 
 /***/ }),
-/* 102 */
+/* 105 */
 /***/ ((module) => {
 
 module.exports = require("puppeteer");
 
 /***/ }),
-/* 103 */
+/* 106 */
 /***/ ((module) => {
 
 module.exports = require("qrcode");
 
 /***/ }),
-/* 104 */
+/* 107 */
 /***/ ((module) => {
 
 module.exports = require("pdf-lib");
 
 /***/ }),
-/* 105 */
+/* 108 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -19632,7 +19911,7 @@ exports.InvoiceAuditService = InvoiceAuditService = __decorate([
 
 
 /***/ }),
-/* 106 */
+/* 109 */
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -19744,7 +20023,7 @@ exports.getStatusColor = getStatusColor;
 
 
 /***/ }),
-/* 107 */
+/* 110 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -19798,20 +20077,20 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InvoicesController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const invoices_service_1 = __webpack_require__(92);
-const create_invoice_dto_1 = __webpack_require__(108);
-const update_invoice_dto_1 = __webpack_require__(109);
+const invoices_service_1 = __webpack_require__(95);
+const create_invoice_dto_1 = __webpack_require__(111);
+const update_invoice_dto_1 = __webpack_require__(112);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
-const express_1 = __webpack_require__(49);
-const invoice_audit_service_1 = __webpack_require__(105);
-const digital_signature_service_1 = __webpack_require__(110);
-const fs = __importStar(__webpack_require__(45));
-const path = __importStar(__webpack_require__(46));
-const platform_express_1 = __webpack_require__(48);
-const multer = __importStar(__webpack_require__(112));
+const express_1 = __webpack_require__(50);
+const invoice_audit_service_1 = __webpack_require__(108);
+const digital_signature_service_1 = __webpack_require__(113);
+const fs = __importStar(__webpack_require__(52));
+const path = __importStar(__webpack_require__(53));
+const platform_express_1 = __webpack_require__(49);
+const multer = __importStar(__webpack_require__(115));
 let InvoicesController = class InvoicesController {
     constructor(invoicesService, invoiceAuditService, digitalSignatureService) {
         this.invoicesService = invoicesService;
@@ -19940,7 +20219,7 @@ let InvoicesController = class InvoicesController {
     async testPdf(id, res, req) {
         try {
             console.log('[TEST-PDF] Generando PDF de prueba...');
-            const { PDFDocument, rgb } = await Promise.resolve().then(() => __importStar(__webpack_require__(104)));
+            const { PDFDocument, rgb } = await Promise.resolve().then(() => __importStar(__webpack_require__(107)));
             const pdfDoc = await PDFDocument.create();
             const page = pdfDoc.addPage([595, 842]);
             const { width, height } = page.getSize();
@@ -21126,7 +21405,7 @@ exports.InvoicesController = InvoicesController = __decorate([
 
 
 /***/ }),
-/* 108 */
+/* 111 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21142,7 +21421,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateInvoiceDto = void 0;
 const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(74);
+const class_transformer_1 = __webpack_require__(77);
 const swagger_1 = __webpack_require__(3);
 class InvoiceItemDto {
 }
@@ -21464,7 +21743,7 @@ __decorate([
 
 
 /***/ }),
-/* 109 */
+/* 112 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21481,7 +21760,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateInvoiceDto = exports.UpdateInvoiceItemDto = void 0;
 const swagger_1 = __webpack_require__(3);
 const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(74);
+const class_transformer_1 = __webpack_require__(77);
 class UpdateInvoiceItemDto {
 }
 exports.UpdateInvoiceItemDto = UpdateInvoiceItemDto;
@@ -21710,7 +21989,7 @@ __decorate([
 
 
 /***/ }),
-/* 110 */
+/* 113 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21760,9 +22039,9 @@ var DigitalSignatureService_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DigitalSignatureService = void 0;
 const common_1 = __webpack_require__(2);
-const axios_1 = __importDefault(__webpack_require__(111));
-const fs = __importStar(__webpack_require__(45));
-const path = __importStar(__webpack_require__(46));
+const axios_1 = __importDefault(__webpack_require__(114));
+const fs = __importStar(__webpack_require__(52));
+const path = __importStar(__webpack_require__(53));
 let DigitalSignatureService = DigitalSignatureService_1 = class DigitalSignatureService {
     constructor() {
         this.logger = new common_1.Logger(DigitalSignatureService_1.name);
@@ -21954,19 +22233,19 @@ exports.DigitalSignatureService = DigitalSignatureService = DigitalSignatureServ
 
 
 /***/ }),
-/* 111 */
+/* 114 */
 /***/ ((module) => {
 
 module.exports = require("axios");
 
 /***/ }),
-/* 112 */
+/* 115 */
 /***/ ((module) => {
 
 module.exports = require("multer");
 
 /***/ }),
-/* 113 */
+/* 116 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -22020,10 +22299,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FacturaeController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const express_1 = __webpack_require__(49);
-const invoices_service_1 = __webpack_require__(92);
+const express_1 = __webpack_require__(50);
+const invoices_service_1 = __webpack_require__(95);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const xades_sign_util_1 = __webpack_require__(95);
+const xades_sign_util_1 = __webpack_require__(98);
 let FacturaeController = class FacturaeController {
     constructor(invoicesService) {
         this.invoicesService = invoicesService;
@@ -22075,7 +22354,7 @@ let FacturaeController = class FacturaeController {
     }
     async validateXML(data) {
         const { xml, checkSignature = true } = data;
-        const { FacturaeValidator } = await Promise.resolve().then(() => __importStar(__webpack_require__(100)));
+        const { FacturaeValidator } = await Promise.resolve().then(() => __importStar(__webpack_require__(103)));
         if (checkSignature) {
             return FacturaeValidator.validateSignedDocument(xml, {
                 validateSchema: true,
@@ -22460,7 +22739,7 @@ exports.FacturaeController = FacturaeController = __decorate([
 
 
 /***/ }),
-/* 114 */
+/* 117 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -22481,7 +22760,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ExternalSystemsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const external_systems_service_1 = __webpack_require__(115);
+const external_systems_service_1 = __webpack_require__(118);
 const jwt_auth_guard_1 = __webpack_require__(27);
 let ExternalSystemsController = class ExternalSystemsController {
     constructor(externalSystemsService) {
@@ -22835,7 +23114,7 @@ exports.ExternalSystemsController = ExternalSystemsController = __decorate([
 
 
 /***/ }),
-/* 115 */
+/* 118 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -22853,8 +23132,8 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ExternalSystemsService = void 0;
 const common_1 = __webpack_require__(2);
-const facturae_validator_util_1 = __webpack_require__(100);
-const invoices_service_1 = __webpack_require__(92);
+const facturae_validator_util_1 = __webpack_require__(103);
+const invoices_service_1 = __webpack_require__(95);
 let ExternalSystemsService = ExternalSystemsService_1 = class ExternalSystemsService {
     constructor(invoicesService) {
         this.invoicesService = invoicesService;
@@ -23100,7 +23379,7 @@ exports.ExternalSystemsService = ExternalSystemsService = ExternalSystemsService
 
 
 /***/ }),
-/* 116 */
+/* 119 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23113,8 +23392,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProvisionFondosModule = void 0;
 const common_1 = __webpack_require__(2);
-const provision_fondos_controller_1 = __webpack_require__(117);
-const provision_fondos_service_1 = __webpack_require__(118);
+const provision_fondos_controller_1 = __webpack_require__(120);
+const provision_fondos_service_1 = __webpack_require__(121);
 const prisma_module_1 = __webpack_require__(37);
 let ProvisionFondosModule = class ProvisionFondosModule {
 };
@@ -23130,7 +23409,7 @@ exports.ProvisionFondosModule = ProvisionFondosModule = __decorate([
 
 
 /***/ }),
-/* 117 */
+/* 120 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23151,8 +23430,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProvisionFondosController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const provision_fondos_service_1 = __webpack_require__(118);
-const create_provision_fondos_dto_1 = __webpack_require__(119);
+const provision_fondos_service_1 = __webpack_require__(121);
+const create_provision_fondos_dto_1 = __webpack_require__(122);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
@@ -23406,7 +23685,7 @@ exports.ProvisionFondosController = ProvisionFondosController = __decorate([
 
 
 /***/ }),
-/* 118 */
+/* 121 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23540,7 +23819,7 @@ exports.ProvisionFondosService = ProvisionFondosService = __decorate([
 
 
 /***/ }),
-/* 119 */
+/* 122 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23626,7 +23905,7 @@ __decorate([
 
 
 /***/ }),
-/* 120 */
+/* 123 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23639,8 +23918,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ContactModule = void 0;
 const common_1 = __webpack_require__(2);
-const contact_controller_1 = __webpack_require__(121);
-const contact_service_1 = __webpack_require__(122);
+const contact_controller_1 = __webpack_require__(124);
+const contact_service_1 = __webpack_require__(125);
 const prisma_module_1 = __webpack_require__(37);
 const auth_module_1 = __webpack_require__(12);
 let ContactModule = class ContactModule {
@@ -23657,7 +23936,7 @@ exports.ContactModule = ContactModule = __decorate([
 
 
 /***/ }),
-/* 121 */
+/* 124 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23677,9 +23956,9 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ContactController = void 0;
 const common_1 = __webpack_require__(2);
-const platform_express_1 = __webpack_require__(48);
+const platform_express_1 = __webpack_require__(49);
 const swagger_1 = __webpack_require__(3);
-const contact_service_1 = __webpack_require__(122);
+const contact_service_1 = __webpack_require__(125);
 const jwt_auth_guard_1 = __webpack_require__(27);
 let ContactController = class ContactController {
     constructor(contactService) {
@@ -23727,7 +24006,7 @@ exports.ContactController = ContactController = __decorate([
 
 
 /***/ }),
-/* 122 */
+/* 125 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23779,8 +24058,8 @@ exports.ContactService = void 0;
 const common_1 = __webpack_require__(2);
 const prisma_service_1 = __webpack_require__(8);
 const email_service_1 = __webpack_require__(17);
-const fs = __importStar(__webpack_require__(45));
-const path = __importStar(__webpack_require__(46));
+const fs = __importStar(__webpack_require__(52));
+const path = __importStar(__webpack_require__(53));
 let ContactService = class ContactService {
     constructor(prisma, emailService) {
         this.prisma = prisma;
@@ -23983,7 +24262,7 @@ exports.ContactService = ContactService = __decorate([
 
 
 /***/ }),
-/* 123 */
+/* 126 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23996,8 +24275,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TeleassistanceModule = void 0;
 const common_1 = __webpack_require__(2);
-const teleassistance_controller_1 = __webpack_require__(124);
-const teleassistance_service_1 = __webpack_require__(125);
+const teleassistance_controller_1 = __webpack_require__(127);
+const teleassistance_service_1 = __webpack_require__(128);
 const prisma_module_1 = __webpack_require__(37);
 let TeleassistanceModule = class TeleassistanceModule {
 };
@@ -24013,7 +24292,7 @@ exports.TeleassistanceModule = TeleassistanceModule = __decorate([
 
 
 /***/ }),
-/* 124 */
+/* 127 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -24034,9 +24313,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TeleassistanceController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const teleassistance_service_1 = __webpack_require__(125);
-const create_teleassistance_session_dto_1 = __webpack_require__(126);
-const update_teleassistance_session_dto_1 = __webpack_require__(127);
+const teleassistance_service_1 = __webpack_require__(128);
+const create_teleassistance_session_dto_1 = __webpack_require__(129);
+const update_teleassistance_session_dto_1 = __webpack_require__(130);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
@@ -24309,7 +24588,7 @@ exports.TeleassistanceController = TeleassistanceController = __decorate([
 
 
 /***/ }),
-/* 125 */
+/* 128 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -24855,7 +25134,7 @@ exports.TeleassistanceService = TeleassistanceService = __decorate([
 
 
 /***/ }),
-/* 126 */
+/* 129 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -24942,7 +25221,7 @@ __decorate([
 
 
 /***/ }),
-/* 127 */
+/* 130 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25000,7 +25279,7 @@ __decorate([
 
 
 /***/ }),
-/* 128 */
+/* 131 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25013,9 +25292,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.NotesModule = void 0;
 const common_1 = __webpack_require__(2);
-const notes_controller_1 = __webpack_require__(129);
-const public_notes_controller_1 = __webpack_require__(133);
-const notes_service_1 = __webpack_require__(130);
+const notes_controller_1 = __webpack_require__(132);
+const public_notes_controller_1 = __webpack_require__(136);
+const notes_service_1 = __webpack_require__(133);
 const prisma_module_1 = __webpack_require__(37);
 let NotesModule = class NotesModule {
 };
@@ -25031,7 +25310,7 @@ exports.NotesModule = NotesModule = __decorate([
 
 
 /***/ }),
-/* 129 */
+/* 132 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25052,9 +25331,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.NotesController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const notes_service_1 = __webpack_require__(130);
-const create_note_dto_1 = __webpack_require__(131);
-const update_note_dto_1 = __webpack_require__(132);
+const notes_service_1 = __webpack_require__(133);
+const create_note_dto_1 = __webpack_require__(134);
+const update_note_dto_1 = __webpack_require__(135);
 const jwt_auth_guard_1 = __webpack_require__(27);
 let NotesController = class NotesController {
     constructor(notesService) {
@@ -25222,7 +25501,7 @@ exports.NotesController = NotesController = __decorate([
 
 
 /***/ }),
-/* 130 */
+/* 133 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25399,7 +25678,7 @@ exports.NotesService = NotesService = __decorate([
 
 
 /***/ }),
-/* 131 */
+/* 134 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25446,21 +25725,21 @@ __decorate([
 
 
 /***/ }),
-/* 132 */
+/* 135 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateNoteDto = void 0;
 const swagger_1 = __webpack_require__(3);
-const create_note_dto_1 = __webpack_require__(131);
+const create_note_dto_1 = __webpack_require__(134);
 class UpdateNoteDto extends (0, swagger_1.PartialType)(create_note_dto_1.CreateNoteDto) {
 }
 exports.UpdateNoteDto = UpdateNoteDto;
 
 
 /***/ }),
-/* 133 */
+/* 136 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25478,7 +25757,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PublicNotesController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const notes_service_1 = __webpack_require__(130);
+const notes_service_1 = __webpack_require__(133);
 let PublicNotesController = class PublicNotesController {
     constructor(notesService) {
         this.notesService = notesService;
@@ -25518,19 +25797,19 @@ exports.PublicNotesController = PublicNotesController = __decorate([
 
 
 /***/ }),
-/* 134 */
+/* 137 */
 /***/ ((module) => {
 
 module.exports = require("helmet");
 
 /***/ }),
-/* 135 */
+/* 138 */
 /***/ ((module) => {
 
 module.exports = require("express-rate-limit");
 
 /***/ }),
-/* 136 */
+/* 139 */
 /***/ ((module) => {
 
 module.exports = require("compression");
