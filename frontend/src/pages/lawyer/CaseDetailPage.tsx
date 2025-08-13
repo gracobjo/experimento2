@@ -36,6 +36,7 @@ interface Case {
     filename: string;
     fileUrl: string;
     uploadedAt: string;
+    originalName: string; // Added originalName to the interface
   }[];
 }
 
@@ -200,7 +201,7 @@ const CaseDetailPage = () => {
     }
   };
 
-  const handleViewDocument = async (filename: string, originalName: string) => {
+  const handleViewDocument = async (documentId: string, originalName: string) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -208,8 +209,8 @@ const CaseDetailPage = () => {
         return;
       }
 
-      // Hacer petición autenticada al endpoint
-      const response = await fetch(`${getBackendUrl()}/api/documents/file/${filename}`, {
+      // Hacer petición autenticada al endpoint usando el ID del documento
+      const response = await fetch(`${getBackendUrl()}/api/documents/file/${documentId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -403,9 +404,9 @@ const CaseDetailPage = () => {
                         </div>
                       </div>
                       <button
-                        onClick={() => handleViewDocument(doc.filename, doc.filename)}
+                        onClick={() => handleViewDocument(doc.id, doc.originalName)}
                         className="text-blue-600 hover:text-blue-800 text-sm bg-transparent border-none cursor-pointer"
-                        aria-label={`Ver documento ${doc.filename}`}
+                        aria-label={`Ver documento ${doc.originalName}`}
                         aria-describedby={`doc-help-${doc.id}`}
                       >
                         Ver

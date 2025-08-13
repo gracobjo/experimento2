@@ -624,13 +624,37 @@ export class CloudinaryDocumentsService {
       throw new NotFoundException('Documento no encontrado');
     }
 
-    // Obtener el publicId de Cloudinary desde los metadatos o migrar si es necesario
+    // Obtener el publicId de Cloudinary
     let cloudinaryPublicId = (document.metadata as any)?.cloudinaryPublicId;
     
     if (!cloudinaryPublicId) {
-      // El documento no tiene metadatos de Cloudinary, intentar migrarlo
-      this.logger.log(`Documento ${document.id} no tiene metadatos de Cloudinary, intentando migración...`);
-      cloudinaryPublicId = await this.migrateDocumentToCloudinary(document);
+      // Si no hay metadatos, asumir que filename es el publicId de Cloudinary
+      // Esto es el caso cuando se sube un documento nuevo
+      cloudinaryPublicId = filename;
+      
+      // Verificar que el archivo existe en Cloudinary
+      try {
+        await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
+        
+        // Actualizar metadatos en la base de datos para futuras consultas
+        await this.prisma.document.update({
+          where: { id: document.id },
+          data: {
+            metadata: {
+              cloudinaryPublicId: cloudinaryPublicId,
+              storageType: 'cloudinary',
+              cloudinaryUrl: document.fileUrl,
+              updatedAt: new Date().toISOString()
+            } as any
+          }
+        });
+        
+        this.logger.log(`Metadatos de Cloudinary actualizados para documento ${document.id}`);
+        
+      } catch (cloudinaryError) {
+        this.logger.error(`Error verificando archivo en Cloudinary: ${cloudinaryError instanceof Error ? cloudinaryError.message : String(cloudinaryError)}`);
+        throw new NotFoundException('El archivo no existe en Cloudinary');
+      }
     }
     
     return this.cloudinaryStorage.downloadFile(cloudinaryPublicId);
@@ -667,6 +691,121 @@ export class CloudinaryDocumentsService {
     }
 
     return false;
+  }
+
+  async findDocumentByFilename(filename: string) {
+    return this.prisma.document.findFirst({
+      where: { filename },
+      include: {
+        expediente: {
+          include: {
+            client: true,
+            lawyer: true,
+          }
+        }
+      }
+    });
+  }
+
+  async findDocumentById(id: string) {
+    return this.prisma.document.findUnique({
+      where: { id },
+      include: {
+        expediente: {
+          include: {
+            client: true,
+            lawyer: true,
+          }
+        }
+      }
+    });
+  }
+
+  async checkDocumentAccess(documentId: string, currentUserId: string, userRole: string) {
+    const document = await this.prisma.document.findUnique({
+      where: { id: documentId },
+      include: {
+        expediente: {
+          include: {
+            client: true,
+            lawyer: true,
+          }
+        }
+      }
+    });
+
+    if (!document) {
+      return false;
+    }
+
+    // Verificar permisos
+    if (userRole === 'CLIENTE') {
+      const client = await this.prisma.client.findUnique({
+        where: { userId: currentUserId }
+      });
+      
+      return client && document.expediente.clientId === client.id;
+    } else if (userRole === 'ABOGADO') {
+      return document.expediente.lawyerId === currentUserId;
+    } else if (userRole === 'ADMIN') {
+      return true;
+    }
+
+    return false;
+  }
+
+  async getDocumentStream(documentId: string) {
+    // Obtener el documento por ID
+    const document = await this.prisma.document.findUnique({
+      where: { id: documentId },
+      include: {
+        expediente: {
+          include: {
+            client: true,
+            lawyer: true,
+          }
+        }
+      }
+    });
+
+    if (!document) {
+      throw new NotFoundException('Documento no encontrado');
+    }
+
+    // Obtener el publicId de Cloudinary
+    let cloudinaryPublicId = (document.metadata as any)?.cloudinaryPublicId;
+    
+    if (!cloudinaryPublicId) {
+      // Si no hay metadatos, asumir que filename es el publicId de Cloudinary
+      // Esto es el caso cuando se sube un documento nuevo
+      cloudinaryPublicId = document.filename;
+      
+      // Verificar que el archivo existe en Cloudinary
+      try {
+        await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
+        
+        // Actualizar metadatos en la base de datos para futuras consultas
+        await this.prisma.document.update({
+          where: { id: document.id },
+          data: {
+            metadata: {
+              cloudinaryPublicId: cloudinaryPublicId,
+              storageType: 'cloudinary',
+              cloudinaryUrl: document.fileUrl,
+              updatedAt: new Date().toISOString()
+            } as any
+          }
+        });
+        
+        this.logger.log(`Metadatos de Cloudinary actualizados para documento ${document.id}`);
+        
+      } catch (cloudinaryError) {
+        this.logger.error(`Error verificando archivo en Cloudinary: ${cloudinaryError instanceof Error ? cloudinaryError.message : String(cloudinaryError)}`);
+        throw new NotFoundException('El archivo no existe en Cloudinary');
+      }
+    }
+    
+    return this.cloudinaryStorage.downloadFile(cloudinaryPublicId);
   }
 
   async getStorageStats() {

@@ -414,13 +414,13 @@ export class DocumentsController {
     }
   }
 
-  @Get('file/:filename')
+  @Get('file/:id')
   @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
   @ApiOperation({ 
     summary: 'Servir archivo estático',
-    description: 'Sirve un archivo estático desde la carpeta uploads. Los clientes solo pueden acceder a archivos de sus expedientes.'
+    description: 'Sirve un archivo estático desde Cloudinary usando el ID del documento. Los clientes solo pueden acceder a archivos de sus expedientes.'
   })
-  @ApiParam({ name: 'filename', description: 'Nombre del archivo', type: 'string' })
+  @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
   @ApiResponse({ 
     status: 200, 
     description: 'Archivo servido correctamente',
@@ -433,77 +433,58 @@ export class DocumentsController {
   @ApiResponse({ status: 403, description: 'Acceso prohibido' })
   @ApiResponse({ status: 404, description: 'Archivo no encontrado' })
   async serveFile(
-    @Param('filename') filename: string,
+    @Param('id') id: string,
     @Request() req,
     @Res() res: Response,
   ) {
     try {
-      console.log(`📁 Intentando servir archivo: ${filename}`);
+      console.log(`📁 Intentando servir documento con ID: ${id}`);
       console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
-
-      // Verificar que el archivo existe
-      const filePath = this.documentsService.getFilePath(filename);
-      console.log(`📂 Ruta del archivo: ${filePath}`);
       
-      // Verificar permisos del usuario para este archivo
-      const hasAccess = await this.documentsService.checkFileAccess(filename, req.user.id, req.user.role);
+      // Verificar permisos del usuario para este documento
+      const hasAccess = await this.documentsService.checkDocumentAccess(id, req.user.id, req.user.role);
       
       if (!hasAccess) {
-        console.log(`❌ Usuario ${req.user.id} no tiene acceso al archivo ${filename}`);
+        console.log(`❌ Usuario ${req.user.id} no tiene acceso al documento ${id}`);
         return res.status(403).json({ 
-          message: 'No tienes permisos para acceder a este archivo',
+          message: 'No tienes permisos para acceder a este documento',
           error: 'Forbidden',
           statusCode: 403,
-          filename: filename
+          documentId: id
         });
       }
 
-      console.log(`✅ Permisos verificados para archivo: ${filename}`);
+      console.log(`✅ Permisos verificados para documento: ${id}`);
 
-      // Verificar que el archivo físico existe
-      if (!fs.existsSync(filePath)) {
-        console.error(`❌ Archivo físico no encontrado: ${filePath}`);
-        return res.status(404).json({
-          message: 'Archivo no encontrado en el servidor',
-          error: 'File Not Found',
-          statusCode: 404,
-          filename: filename,
-          filePath: filePath,
-          suggestion: 'El archivo puede haberse perdido durante el deploy o el directorio de uploads no existe'
-        });
-      }
-
-      // Verificar que es un archivo válido
-      const stats = fs.statSync(filePath);
-      if (!stats.isFile()) {
-        console.error(`❌ La ruta no es un archivo válido: ${filePath}`);
-        return res.status(400).json({
-          message: 'La ruta especificada no es un archivo válido',
-          error: 'Invalid File Path',
-          statusCode: 400,
-          filename: filename
-        });
-      }
-
-      console.log(`✅ Archivo encontrado: ${filename} (${stats.size} bytes)`);
-
-      // Servir el archivo
+      // Obtener el stream del archivo desde Cloudinary
       let fileStream;
       try {
-        fileStream = this.documentsService.getFileStream(filename);
-        console.log(`✅ Stream del archivo creado exitosamente`);
+        fileStream = await this.documentsService.getDocumentStream(id);
+        console.log(`✅ Stream del documento creado exitosamente`);
       } catch (streamError) {
-        console.error(`❌ Error al crear stream del archivo:`, streamError);
-        return res.status(500).json({
-          message: 'Error al leer el archivo',
-          error: 'Stream Error',
-          statusCode: 500,
-          filename: filename
+        console.error(`❌ Error al crear stream del documento:`, streamError);
+        return res.status(404).json({
+          message: 'Documento no encontrado en Cloudinary',
+          error: 'File Not Found',
+          statusCode: 404,
+          documentId: id,
+          suggestion: 'El documento puede haberse perdido o no estar disponible en Cloudinary'
         });
       }
       
-      // Detectar el tipo MIME basado en la extensión
-      const ext = filename.split('.').pop()?.toLowerCase();
+      // Obtener información del documento para el tipo MIME
+      const document = await this.documentsService.findDocumentById(id);
+      if (!document) {
+        return res.status(404).json({
+          message: 'Documento no encontrado en la base de datos',
+          error: 'Document Not Found',
+          statusCode: 404,
+          documentId: id
+        });
+      }
+
+      const originalName = document.originalName;
+      const ext = originalName.split('.').pop()?.toLowerCase();
       let contentType = 'application/octet-stream';
       
       if (ext === 'pdf') contentType = 'application/pdf';
@@ -518,57 +499,42 @@ export class DocumentsController {
 
       // Configurar headers
       res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Length', stats.size);
+      res.setHeader('Content-Disposition', `inline; filename="${originalName}"`);
       res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache por 1 hora
 
-      console.log(`🚀 Iniciando envío del archivo: ${filename} (${contentType})`);
+      console.log(`🚀 Iniciando envío del documento: ${originalName} (${contentType})`);
 
-      // Enviar el archivo
+      // Enviar el documento
       fileStream.pipe(res);
 
       // Manejar errores del stream
       fileStream.on('error', (error) => {
-        console.error(`❌ Error en el stream del archivo:`, error);
+        console.error(`❌ Error en el stream del documento:`, error);
         if (!res.headersSent) {
           res.status(500).json({
-            message: 'Error al leer el archivo',
+            message: 'Error al transmitir el documento',
             error: 'Stream Error',
             statusCode: 500,
-            filename: filename
+            documentId: id
           });
         }
       });
 
+      // Manejar cuando el stream termina
       fileStream.on('end', () => {
-        console.log(`✅ Archivo enviado exitosamente: ${filename}`);
+        console.log(`✅ Documento enviado completamente: ${id}`);
       });
 
     } catch (error) {
-      console.error(`❌ Error en serveFile:`, error);
+      console.error(`❌ Error general al servir documento:`, error);
       
       if (!res.headersSent) {
-        if (error instanceof NotFoundException) {
-          return res.status(404).json({
-            message: error.message,
-            error: 'Not Found',
-            statusCode: 404,
-            filename: filename
-          });
-        } else if (error instanceof ForbiddenException) {
-          return res.status(403).json({
-            message: error.message,
-            error: 'Forbidden',
-            statusCode: 403,
-            filename: filename
-          });
-        } else {
-          return res.status(500).json({
-            message: 'Error interno del servidor',
-            error: 'Internal Server Error',
-            statusCode: 500,
-            filename: filename
-          });
-        }
+        res.status(500).json({
+          message: 'Error interno del servidor',
+          error: 'Internal Server Error',
+          statusCode: 500,
+          documentId: id
+        });
       }
     }
   }

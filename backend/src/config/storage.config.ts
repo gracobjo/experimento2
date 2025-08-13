@@ -24,3 +24,4 @@ export default registerAs('storage', () => ({
     enabled: process.env.CDN_ENABLED === 'true',
   },
 }));
+

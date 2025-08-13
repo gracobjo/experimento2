@@ -94,7 +94,7 @@ const DocumentsManagementPage = () => {
     }
   };
 
-  const handleViewDocument = async (filename: string, originalName: string) => {
+  const handleViewDocument = async (documentId: string, originalName: string) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -102,8 +102,8 @@ const DocumentsManagementPage = () => {
         return;
       }
 
-      // Hacer petición autenticada al endpoint
-      const response = await fetch(`${getBackendUrl()}/api/documents/file/${filename}`, {
+      // Hacer petición autenticada al endpoint usando el ID del documento
+      const response = await fetch(`${getBackendUrl()}/api/documents/file/${documentId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -325,7 +325,7 @@ const DocumentsManagementPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
-                          onClick={() => handleViewDocument(doc.filename, doc.originalName)}
+                          onClick={() => handleViewDocument(doc.id, doc.originalName)}
                           className="text-blue-600 hover:text-blue-900 bg-transparent border-none cursor-pointer"
                         >
                           Ver

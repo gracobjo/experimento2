@@ -186,3 +186,4 @@ Frontend → Backend → Cloudinary (archivos) + PostgreSQL (metadatos)
 - 📈 **Escalable** cuando sea necesario
 
 **No necesitas MongoDB ni AWS S3** para empezar. Cloudinary te dará todo lo que necesitas de forma gratuita.
+
