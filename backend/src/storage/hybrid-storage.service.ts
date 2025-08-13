@@ -57,7 +57,7 @@ export class HybridStorageService {
       // Fallback a almacenamiento local
       return await this.uploadToLocal(file, key, metadata);
     } catch (error) {
-      this.logger.error(`Error en upload híbrido, fallback a local: ${error.message}`);
+      this.logger.error(`Error en upload híbrido, fallback a local: ${error instanceof Error ? error.message : String(error)}`);
       return await this.uploadToLocal(file, key, metadata);
     }
   }
@@ -102,7 +102,7 @@ export class HybridStorageService {
       // Fallback a almacenamiento local
       return await this.downloadFromLocal(key);
     } catch (error) {
-      this.logger.error(`Error en descarga híbrida, fallback a local: ${error.message}`);
+      this.logger.error(`Error en descarga híbrida, fallback a local: ${error instanceof Error ? error.message : String(error)}`);
       return await this.downloadFromLocal(key);
     }
   }
@@ -165,7 +165,7 @@ export class HybridStorageService {
         return;
       }
     } catch (error) {
-      this.logger.warn(`No se pudo eliminar de S3, continuando con local: ${error.message}`);
+      this.logger.warn(`No se pudo eliminar de S3, continuando con local: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     // Eliminar de local
@@ -186,7 +186,7 @@ export class HybridStorageService {
         return await this.s3StorageService.generatePresignedUrl(key);
       }
     } catch (error) {
-      this.logger.warn(`No se pudo generar URL de S3, usando local: ${error.message}`);
+      this.logger.warn(`No se pudo generar URL de S3, usando local: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     // Fallback a URL local
@@ -203,7 +203,7 @@ export class HybridStorageService {
         return await this.s3StorageService.getFileMetadata(key);
       }
     } catch (error) {
-      this.logger.warn(`No se pudo obtener info de S3, usando local: ${error.message}`);
+      this.logger.warn(`No se pudo obtener info de S3, usando local: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     // Fallback a info local
@@ -271,7 +271,7 @@ export class HybridStorageService {
         }
       }
     } catch (error) {
-      this.logger.error(`Error obteniendo estadísticas locales: ${error.message}`);
+      this.logger.error(`Error obteniendo estadísticas locales: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     return stats;

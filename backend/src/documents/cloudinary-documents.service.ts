@@ -108,7 +108,7 @@ export class CloudinaryDocumentsService {
             cloudinaryPublicId: uploadResult.publicId,
             storageType: 'cloudinary',
             cloudinaryUrl: uploadResult.url
-          }
+          } as any
         },
         include: {
           expediente: {
@@ -147,8 +147,8 @@ export class CloudinaryDocumentsService {
       return document;
 
     } catch (error) {
-      this.logger.error(`Error subiendo documento a Cloudinary: ${error.message}`);
-      throw new BadRequestException(`Error subiendo documento: ${error.message}`);
+      this.logger.error(`Error subiendo documento a Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
+      throw new BadRequestException(`Error subiendo documento: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -206,8 +206,8 @@ export class CloudinaryDocumentsService {
       };
 
     } catch (error) {
-      this.logger.error(`Error descargando documento de Cloudinary: ${error.message}`);
-      throw new NotFoundException(`Error descargando documento: ${error.message}`);
+      this.logger.error(`Error descargando documento de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
+      throw new NotFoundException(`Error descargando documento: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -261,7 +261,7 @@ export class CloudinaryDocumentsService {
       };
 
     } catch (error) {
-      this.logger.warn(`No se pudieron obtener metadatos de Cloudinary: ${error.message}`);
+      this.logger.warn(`No se pudieron obtener metadatos de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
       return document;
     }
   }
@@ -318,8 +318,8 @@ export class CloudinaryDocumentsService {
       return { message: 'Documento eliminado exitosamente' };
 
     } catch (error) {
-      this.logger.error(`Error eliminando documento: ${error.message}`);
-      throw new BadRequestException(`Error eliminando documento: ${error.message}`);
+      this.logger.error(`Error eliminando documento: ${error instanceof Error ? error.message : String(error)}`);
+      throw new BadRequestException(`Error eliminando documento: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -478,7 +478,7 @@ export class CloudinaryDocumentsService {
         }
       };
     } catch (error) {
-      this.logger.error(`Error obteniendo estadísticas: ${error.message}`);
+      this.logger.error(`Error obteniendo estadísticas: ${error instanceof Error ? error.message : String(error)}`);
       return {
         error: 'No se pudieron obtener estadísticas',
         cloudinary: {

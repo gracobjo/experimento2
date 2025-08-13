@@ -89,10 +89,10 @@ export class EnhancedHybridStorageService {
           case 'local':
             return await this.uploadToLocal(file, key, metadata);
         }
-      } catch (error) {
-        this.logger.warn(`Error con ${storageType}, intentando siguiente: ${error.message}`);
-        continue;
-      }
+              } catch (error) {
+          this.logger.warn(`Error con ${storageType}, intentando siguiente: ${error instanceof Error ? error.message : String(error)}`);
+          continue;
+        }
     }
 
     // Si todos fallan, usar local como último recurso
@@ -145,10 +145,10 @@ export class EnhancedHybridStorageService {
         if (result) {
           return result;
         }
-      } catch (error) {
-        this.logger.warn(`Error descargando desde ${storageType}: ${error.message}`);
-        continue;
-      }
+              } catch (error) {
+          this.logger.warn(`Error descargando desde ${storageType}: ${error instanceof Error ? error.message : String(error)}`);
+          continue;
+        }
     }
 
     throw new Error(`Archivo no encontrado en ningún servicio de almacenamiento: ${key}`);
@@ -180,7 +180,7 @@ export class EnhancedHybridStorageService {
           return await this.downloadFromLocal(key);
       }
     } catch (error) {
-      this.logger.error(`Error descargando desde ${storageType}: ${error.message}`);
+      this.logger.error(`Error descargando desde ${storageType}: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
 
@@ -309,9 +309,9 @@ export class EnhancedHybridStorageService {
           await this.deleteFromSpecificStorage(key, storageType);
           deletedFrom.push(storageType);
         }
-      } catch (error) {
-        this.logger.warn(`Error eliminando de ${storageType}: ${error.message}`);
-      }
+              } catch (error) {
+          this.logger.warn(`Error eliminando de ${storageType}: ${error instanceof Error ? error.message : String(error)}`);
+        }
     }
 
     if (deletedFrom.length > 0) {
@@ -348,7 +348,7 @@ export class EnhancedHybridStorageService {
           break;
       }
     } catch (error) {
-      this.logger.error(`Error eliminando archivo de ${storageType}: ${error.message}`);
+      this.logger.error(`Error eliminando archivo de ${storageType}: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -390,9 +390,9 @@ export class EnhancedHybridStorageService {
         case 'local':
           return `/api/documents/file/${key}`;
       }
-    } catch (error) {
-      this.logger.warn(`Error generando URL de ${storageType}: ${error.message}`);
-    }
+            } catch (error) {
+          this.logger.warn(`Error generando URL de ${storageType}: ${error instanceof Error ? error.message : String(error)}`);
+        }
 
     // Fallback a URL local
     return `/api/documents/file/${key}`;
@@ -445,7 +445,7 @@ export class EnhancedHybridStorageService {
           break;
       }
     } catch (error) {
-      this.logger.error(`Error obteniendo info de ${storageType}: ${error.message}`);
+      this.logger.error(`Error obteniendo info de ${storageType}: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
 
@@ -513,16 +513,16 @@ export class EnhancedHybridStorageService {
         }
       }
     } catch (error) {
-      this.logger.error(`Error obteniendo estadísticas locales: ${error.message}`);
+      this.logger.error(`Error obteniendo estadísticas locales: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     // Estadísticas de Cloudinary si está disponible
     if (this.cloudinaryStorage.isAvailable()) {
       try {
         const cloudinaryStats = await this.cloudinaryStorage.getUsageStats();
-        stats.cloudinaryStats = cloudinaryStats;
+        (stats as any).cloudinaryStats = cloudinaryStats;
       } catch (error) {
-        this.logger.warn(`No se pudieron obtener estadísticas de Cloudinary: ${error.message}`);
+        this.logger.warn(`No se pudieron obtener estadísticas de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -560,7 +560,7 @@ export class EnhancedHybridStorageService {
       this.logger.log(`Archivo migrado exitosamente de ${fromStorage} a ${toStorage}: ${key}`);
       return true;
     } catch (error) {
-      this.logger.error(`Error migrando archivo de ${fromStorage} a ${toStorage}: ${error.message}`);
+      this.logger.error(`Error migrando archivo de ${fromStorage} a ${toStorage}: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }

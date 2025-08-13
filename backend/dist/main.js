@@ -53,6 +53,12 @@ const express_rate_limit_1 = __importDefault(__webpack_require__(135));
 const compression_1 = __importDefault(__webpack_require__(136));
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    console.log('🔍 === VARIABLES DE ENTORNO ===');
+    console.log('CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME);
+    console.log('CLOUDINARY_API_KEY:', process.env.CLOUDINARY_API_KEY);
+    console.log('CLOUDINARY_API_SECRET:', process.env.CLOUDINARY_API_SECRET ? 'CONFIGURADO' : 'NO CONFIGURADO');
+    console.log('STORAGE_TYPE:', process.env.STORAGE_TYPE);
+    console.log('================================');
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     app.use((req, res, next) => {
@@ -4903,13 +4909,14 @@ __decorate([
 ], CreateCaseDto.prototype, "lawyerId", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
-        description: 'Estado del caso',
+        description: 'Estado del caso (opcional, se establece automáticamente como ABIERTO)',
         example: 'ABIERTO',
         type: String,
         enum: ['ABIERTO', 'EN_PROCESO', 'CERRADO'],
+        required: false,
     }),
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreateCaseDto.prototype, "status", void 0);
 
@@ -5526,11 +5533,73 @@ let DocumentsService = class DocumentsService {
         }
     }
     getFileStream(filename) {
+        console.log(`🔍 Buscando archivo: ${filename}`);
         const filePath = path.join(process.cwd(), this.UPLOAD_DIR, filename);
-        if (!fs.existsSync(filePath)) {
-            throw new common_1.NotFoundException('Archivo no encontrado');
+        console.log(`📁 Ruta completa del archivo: ${filePath}`);
+        const uploadDir = path.join(process.cwd(), this.UPLOAD_DIR);
+        if (!fs.existsSync(uploadDir)) {
+            console.error(`❌ Directorio de uploads no existe: ${uploadDir}`);
+            throw new common_1.NotFoundException(`Directorio de uploads no encontrado: ${this.UPLOAD_DIR}`);
         }
-        return fs.createReadStream(filePath);
+        if (!fs.existsSync(filePath)) {
+            console.error(`❌ Archivo no encontrado: ${filePath}`);
+            throw new common_1.NotFoundException(`Archivo no encontrado: ${filename}`);
+        }
+        const stats = fs.statSync(filePath);
+        if (!stats.isFile()) {
+            console.error(`❌ La ruta no es un archivo: ${filePath}`);
+            throw new common_1.NotFoundException(`La ruta no es un archivo válido: ${filename}`);
+        }
+        console.log(`✅ Archivo encontrado: ${filename} (${stats.size} bytes)`);
+        try {
+            const stream = fs.createReadStream(filePath);
+            console.log(`✅ Stream creado exitosamente para: ${filename}`);
+            return stream;
+        }
+        catch (error) {
+            console.error(`❌ Error al crear stream para ${filename}:`, error);
+            throw new common_1.NotFoundException(`Error al leer el archivo: ${filename}`);
+        }
+    }
+    getFilePath(filename) {
+        return path.join(process.cwd(), this.UPLOAD_DIR, filename);
+    }
+    async checkFileAccess(filename, currentUserId, userRole) {
+        try {
+            const document = await this.prisma.document.findFirst({
+                where: { filename },
+                include: {
+                    expediente: {
+                        include: {
+                            client: true,
+                            lawyer: true
+                        }
+                    }
+                }
+            });
+            if (!document) {
+                return false;
+            }
+            if (userRole === 'ADMIN') {
+                return true;
+            }
+            if (userRole === 'ABOGADO' && document.expediente.lawyerId === currentUserId) {
+                return true;
+            }
+            if (userRole === 'CLIENTE') {
+                const client = await this.prisma.client.findUnique({
+                    where: { userId: currentUserId }
+                });
+                if (client && document.expediente.clientId === client.id) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        catch (error) {
+            console.error('Error checking file access:', error);
+            return false;
+        }
     }
 };
 exports.DocumentsService = DocumentsService;
@@ -5557,19 +5626,52 @@ module.exports = require("path");
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c;
+var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DocumentsController = void 0;
 const common_1 = __webpack_require__(2);
@@ -5582,6 +5684,8 @@ const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
+const fs = __importStar(__webpack_require__(45));
+const path = __importStar(__webpack_require__(46));
 let DocumentsController = class DocumentsController {
     constructor(documentsService) {
         this.documentsService = documentsService;
@@ -5605,11 +5709,284 @@ let DocumentsController = class DocumentsController {
         return this.documentsService.findOne(id, req.user.id, req.user.role);
     }
     async downloadDocument(id, req, res) {
-        const document = await this.documentsService.findOne(id, req.user.id, req.user.role);
-        const fileStream = this.documentsService.getFileStream(document.filename);
-        res.setHeader('Content-Type', document.mimeType);
-        res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
-        fileStream.pipe(res);
+        try {
+            console.log(`📥 Intentando descargar documento ID: ${id}`);
+            console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
+            const document = await this.documentsService.findOne(id, req.user.id, req.user.role);
+            if (!document) {
+                console.log(`❌ Documento no encontrado: ${id}`);
+                return res.status(404).json({
+                    message: 'Documento no encontrado',
+                    error: 'Not Found',
+                    statusCode: 404,
+                    documentId: id
+                });
+            }
+            console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
+            const filePath = this.documentsService.getFilePath(document.filename);
+            console.log(`📁 Ruta del archivo: ${filePath}`);
+            let fileStream;
+            try {
+                fileStream = this.documentsService.getFileStream(document.filename);
+                console.log(`✅ Stream del archivo creado exitosamente`);
+            }
+            catch (streamError) {
+                console.error(`❌ Error al crear stream del archivo:`, streamError);
+                return res.status(404).json({
+                    message: 'Archivo físico no encontrado en el servidor',
+                    error: 'File Not Found',
+                    statusCode: 404,
+                    documentId: id,
+                    filename: document.filename,
+                    filePath: filePath
+                });
+            }
+            res.setHeader('Content-Type', document.mimeType);
+            res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
+            console.log(`🚀 Iniciando descarga del archivo: ${document.originalName}`);
+            fileStream.pipe(res);
+            fileStream.on('error', (error) => {
+                console.error(`❌ Error en el stream del archivo:`, error);
+                if (!res.headersSent) {
+                    res.status(500).json({
+                        message: 'Error al leer el archivo',
+                        error: 'Stream Error',
+                        statusCode: 500
+                    });
+                }
+            });
+            fileStream.on('end', () => {
+                console.log(`✅ Descarga completada: ${document.originalName}`);
+            });
+        }
+        catch (error) {
+            console.error(`❌ Error en downloadDocument:`, error);
+            if (!res.headersSent) {
+                if (error instanceof common_1.NotFoundException) {
+                    return res.status(404).json({
+                        message: error.message,
+                        error: 'Not Found',
+                        statusCode: 404,
+                        documentId: id
+                    });
+                }
+                else if (error instanceof common_1.ForbiddenException) {
+                    return res.status(403).json({
+                        message: error.message,
+                        error: 'Forbidden',
+                        statusCode: 403,
+                        documentId: id
+                    });
+                }
+                else {
+                    return res.status(500).json({
+                        message: 'Error interno del servidor',
+                        error: 'Internal Server Error',
+                        statusCode: 500,
+                        documentId: id
+                    });
+                }
+            }
+        }
+    }
+    async serveFile(filename, req, res) {
+        try {
+            console.log(`📁 Intentando servir archivo: ${filename}`);
+            console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
+            const filePath = this.documentsService.getFilePath(filename);
+            console.log(`📂 Ruta del archivo: ${filePath}`);
+            const hasAccess = await this.documentsService.checkFileAccess(filename, req.user.id, req.user.role);
+            if (!hasAccess) {
+                console.log(`❌ Usuario ${req.user.id} no tiene acceso al archivo ${filename}`);
+                return res.status(403).json({
+                    message: 'No tienes permisos para acceder a este archivo',
+                    error: 'Forbidden',
+                    statusCode: 403,
+                    filename: filename
+                });
+            }
+            console.log(`✅ Permisos verificados para archivo: ${filename}`);
+            if (!fs.existsSync(filePath)) {
+                console.error(`❌ Archivo físico no encontrado: ${filePath}`);
+                return res.status(404).json({
+                    message: 'Archivo no encontrado en el servidor',
+                    error: 'File Not Found',
+                    statusCode: 404,
+                    filename: filename,
+                    filePath: filePath,
+                    suggestion: 'El archivo puede haberse perdido durante el deploy o el directorio de uploads no existe'
+                });
+            }
+            const stats = fs.statSync(filePath);
+            if (!stats.isFile()) {
+                console.error(`❌ La ruta no es un archivo válido: ${filePath}`);
+                return res.status(400).json({
+                    message: 'La ruta especificada no es un archivo válido',
+                    error: 'Invalid File Path',
+                    statusCode: 400,
+                    filename: filename
+                });
+            }
+            console.log(`✅ Archivo encontrado: ${filename} (${stats.size} bytes)`);
+            let fileStream;
+            try {
+                fileStream = this.documentsService.getFileStream(filename);
+                console.log(`✅ Stream del archivo creado exitosamente`);
+            }
+            catch (streamError) {
+                console.error(`❌ Error al crear stream del archivo:`, streamError);
+                return res.status(500).json({
+                    message: 'Error al leer el archivo',
+                    error: 'Stream Error',
+                    statusCode: 500,
+                    filename: filename
+                });
+            }
+            const ext = filename.split('.').pop()?.toLowerCase();
+            let contentType = 'application/octet-stream';
+            if (ext === 'pdf')
+                contentType = 'application/pdf';
+            else if (ext === 'jpg' || ext === 'jpeg')
+                contentType = 'image/jpeg';
+            else if (ext === 'png')
+                contentType = 'image/png';
+            else if (ext === 'gif')
+                contentType = 'image/gif';
+            else if (ext === 'webp')
+                contentType = 'image/webp';
+            else if (ext === 'txt')
+                contentType = 'text/plain';
+            else if (ext === 'csv')
+                contentType = 'text/csv';
+            else if (ext === 'doc')
+                contentType = 'application/msword';
+            else if (ext === 'docx')
+                contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            res.setHeader('Content-Type', contentType);
+            res.setHeader('Content-Length', stats.size);
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+            console.log(`🚀 Iniciando envío del archivo: ${filename} (${contentType})`);
+            fileStream.pipe(res);
+            fileStream.on('error', (error) => {
+                console.error(`❌ Error en el stream del archivo:`, error);
+                if (!res.headersSent) {
+                    res.status(500).json({
+                        message: 'Error al leer el archivo',
+                        error: 'Stream Error',
+                        statusCode: 500,
+                        filename: filename
+                    });
+                }
+            });
+            fileStream.on('end', () => {
+                console.log(`✅ Archivo enviado exitosamente: ${filename}`);
+            });
+        }
+        catch (error) {
+            console.error(`❌ Error en serveFile:`, error);
+            if (!res.headersSent) {
+                if (error instanceof common_1.NotFoundException) {
+                    return res.status(404).json({
+                        message: error.message,
+                        error: 'Not Found',
+                        statusCode: 404,
+                        filename: filename
+                    });
+                }
+                else if (error instanceof common_1.ForbiddenException) {
+                    return res.status(403).json({
+                        message: error.message,
+                        error: 'Forbidden',
+                        statusCode: 403,
+                        filename: filename
+                    });
+                }
+                else {
+                    return res.status(500).json({
+                        message: 'Error interno del servidor',
+                        error: 'Internal Server Error',
+                        statusCode: 500,
+                        filename: filename
+                    });
+                }
+            }
+        }
+    }
+    async getUploadStatus() {
+        try {
+            const uploadDir = path.join(process.cwd(), 'uploads');
+            const exists = fs.existsSync(uploadDir);
+            let files = [];
+            let totalSize = 0;
+            if (exists) {
+                try {
+                    files = fs.readdirSync(uploadDir);
+                    for (const file of files) {
+                        const filePath = path.join(uploadDir, file);
+                        const stats = fs.statSync(filePath);
+                        if (stats.isFile()) {
+                            totalSize += stats.size;
+                        }
+                    }
+                }
+                catch (error) {
+                    console.error('Error reading upload directory:', error);
+                }
+            }
+            return {
+                uploadDir,
+                exists,
+                files,
+                totalFiles: files.length,
+                totalSize,
+                currentWorkingDir: process.cwd(),
+                nodeEnv: process.env.NODE_ENV
+            };
+        }
+        catch (error) {
+            console.error('Error getting upload status:', error);
+            return {
+                error: error instanceof Error ? error.message : String(error),
+                uploadDir: path.join(process.cwd(), 'uploads'),
+                exists: false
+            };
+        }
+    }
+    async ensureUploadDirectory() {
+        try {
+            const uploadDir = path.join(process.cwd(), 'uploads');
+            const exists = fs.existsSync(uploadDir);
+            if (!exists) {
+                console.log(`📁 Creando directorio de uploads: ${uploadDir}`);
+                fs.mkdirSync(uploadDir, { recursive: true });
+                console.log(`✅ Directorio de uploads creado exitosamente`);
+                return {
+                    message: 'Directorio de uploads creado exitosamente',
+                    uploadDir,
+                    created: true,
+                    exists: true
+                };
+            }
+            else {
+                console.log(`✅ Directorio de uploads ya existe: ${uploadDir}`);
+                return {
+                    message: 'Directorio de uploads ya existe',
+                    uploadDir,
+                    created: false,
+                    exists: true
+                };
+            }
+        }
+        catch (error) {
+            console.error('Error creating upload directory:', error);
+            return {
+                message: 'Error al crear el directorio de uploads',
+                error: error instanceof Error ? error.message : String(error),
+                uploadDir: path.join(process.cwd(), 'uploads'),
+                created: false,
+                exists: false
+            };
+        }
     }
     remove(id, req) {
         return this.documentsService.remove(id, req.user.id, req.user.role);
@@ -5893,6 +6270,81 @@ __decorate([
     __metadata("design:paramtypes", [String, Object, typeof (_c = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _c : Object]),
     __metadata("design:returntype", Promise)
 ], DocumentsController.prototype, "downloadDocument", null);
+__decorate([
+    (0, common_1.Get)('file/:filename'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Servir archivo estático',
+        description: 'Sirve un archivo estático desde la carpeta uploads. Los clientes solo pueden acceder a archivos de sus expedientes.'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'filename', description: 'Nombre del archivo', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Archivo servido correctamente',
+        schema: {
+            type: 'string',
+            format: 'binary'
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Archivo no encontrado' }),
+    __param(0, (0, common_1.Param)('filename')),
+    __param(1, (0, common_1.Request)()),
+    __param(2, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, typeof (_d = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _d : Object]),
+    __metadata("design:returntype", Promise)
+], DocumentsController.prototype, "serveFile", null);
+__decorate([
+    (0, common_1.Get)('debug/upload-status'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Estado del directorio de uploads',
+        description: 'Endpoint de diagnóstico para verificar el estado del directorio de uploads (solo ADMIN)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Estado del directorio de uploads',
+        schema: {
+            type: 'object',
+            properties: {
+                uploadDir: { type: 'string' },
+                exists: { type: 'boolean' },
+                files: { type: 'array', items: { type: 'string' } },
+                totalFiles: { type: 'number' },
+                totalSize: { type: 'number' }
+            }
+        }
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], DocumentsController.prototype, "getUploadStatus", null);
+__decorate([
+    (0, common_1.Post)('debug/ensure-upload-dir'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Crear directorio de uploads',
+        description: 'Crea el directorio de uploads si no existe (solo ADMIN)'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Directorio de uploads creado o verificado',
+        schema: {
+            type: 'object',
+            properties: {
+                message: { type: 'string' },
+                uploadDir: { type: 'string' },
+                created: { type: 'boolean' },
+                exists: { type: 'boolean' }
+            }
+        }
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], DocumentsController.prototype, "ensureUploadDirectory", null);
 __decorate([
     (0, common_1.Delete)(':id'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
@@ -18485,13 +18937,28 @@ let PdfGeneratorService = PdfGeneratorService_1 = class PdfGeneratorService {
             path.join(process.cwd(), 'src', 'invoices', 'templates', 'invoice-template.html'),
             path.join(__dirname, 'templates', 'invoice-template.html'),
             path.join(__dirname, 'invoices', 'templates', 'invoice-template.html'),
-            path.join(process.cwd(), 'dist', 'invoices', 'templates', 'invoice-template.html'),
-            path.join(process.cwd(), 'src', 'invoices', 'templates', 'invoice-template-simple.html')
+            path.join(process.cwd(), 'dist', 'invoices', 'templates', 'invoice-template.html')
         ];
         for (const templatePath of possiblePaths) {
             if (fs.existsSync(templatePath)) {
                 this.templatePath = templatePath;
-                this.logger.log(`Template HTML usado para PDF: ${this.templatePath}`);
+                this.logger.log(`✅ Template HTML usado para PDF: ${this.templatePath}`);
+                this.logger.log(`📁 Verificando contenido del template...`);
+                try {
+                    const templateContent = fs.readFileSync(templatePath, 'utf8');
+                    if (templateContent.includes('totals-container')) {
+                        this.logger.log(`✅ Template principal detectado - estructura de totales moderna`);
+                    }
+                    else if (templateContent.includes('totals-table')) {
+                        this.logger.log(`⚠️ Template con estructura antigua de tabla`);
+                    }
+                    else {
+                        this.logger.log(`❓ Template con estructura desconocida`);
+                    }
+                }
+                catch (error) {
+                    this.logger.error(`Error leyendo template: ${error}`);
+                }
                 break;
             }
         }
@@ -18646,6 +19113,21 @@ let PdfGeneratorService = PdfGeneratorService_1 = class PdfGeneratorService {
             }
             let template = fs.readFileSync(this.templatePath, 'utf8');
             this.logger.log(`[PDF-TEMPLATE] Template leído. Tamaño: ${template.length} caracteres`);
+            if (template.includes('totals-container')) {
+                this.logger.log(`✅ [PDF-TEMPLATE] Usando template principal con estructura moderna`);
+                this.logger.log(`✅ [PDF-TEMPLATE] Estructura de totales: totals-container + total-row-item`);
+            }
+            else if (template.includes('totals-table')) {
+                this.logger.warn(`⚠️ [PDF-TEMPLATE] ADVERTENCIA: Usando template con estructura antigua`);
+                this.logger.warn(`⚠️ [PDF-TEMPLATE] Esto puede causar problemas de solapamiento en totales`);
+            }
+            else {
+                this.logger.error(`❌ [PDF-TEMPLATE] Template con estructura desconocida`);
+            }
+            this.logger.log(`🔍 [PDF-TEMPLATE] Verificando estructura del template...`);
+            this.logger.log(`🔍 [PDF-TEMPLATE] Contiene 'totals-container': ${template.includes('totals-container')}`);
+            this.logger.log(`🔍 [PDF-TEMPLATE] Contiene 'total-row-item': ${template.includes('total-row-item')}`);
+            this.logger.log(`🔍 [PDF-TEMPLATE] Contiene 'TOTAL A PAGAR': ${template.includes('TOTAL A PAGAR')}`);
             this.logger.log(`[PDF-TEMPLATE] Datos a insertar:`, {
                 numeroFactura: data.numeroFactura,
                 fechaFactura: data.fechaFactura,
@@ -18862,7 +19344,7 @@ let PdfGeneratorService = PdfGeneratorService_1 = class PdfGeneratorService {
                 height: 1123,
                 deviceScaleFactor: 1
             });
-            await page.waitForTimeout(1000);
+            await new Promise(resolve => setTimeout(resolve, 1000));
             const compactCss = `
         <style>
           @page {
@@ -19793,6 +20275,9 @@ let InvoicesController = class InvoicesController {
     async getInvoicePdfProfessional(id, res, req) {
         try {
             console.log('[PDF-PROFESIONAL] Iniciando generación de PDF profesional para abogado');
+            console.log('[PDF-PROFESIONAL] ID de factura:', id);
+            console.log('[PDF-PROFESIONAL] Usuario:', req.user);
+            console.log('[PDF-PROFESIONAL] Rol del usuario:', req.user.role);
             const invoice = await this.invoicesService.findOne(id);
             if (!invoice) {
                 console.log('[PDF-PROFESIONAL] Factura no encontrada');
@@ -19802,12 +20287,24 @@ let InvoicesController = class InvoicesController {
                 console.log('[PDF-PROFESIONAL] No autorizado - ABOGADO');
                 return res.status(403).send('No autorizado para acceder a esta factura');
             }
+            if (req.user.role === 'CLIENTE' && invoice.receptorId !== req.user.id) {
+                console.log('[PDF-PROFESIONAL] No autorizado - CLIENTE');
+                return res.status(403).send('No autorizado para acceder a esta factura');
+            }
             console.log('[PDF-PROFESIONAL] Permisos verificados correctamente');
             console.log('[PDF-PROFESIONAL] Datos de la factura:', JSON.stringify(invoice, null, 2));
             console.log('[PDF-PROFESIONAL] Generando PDF profesional...');
             console.log('[PDF-PROFESIONAL] Llamando a invoicesService.generateInvoicePdfProfessional()...');
+            console.log('[PDF-PROFESIONAL] Datos de la factura para PDF:', {
+                id: invoice.id,
+                numeroFactura: invoice.numeroFactura,
+                fechaFactura: invoice.fechaFactura,
+                emisorId: invoice.emisorId,
+                receptorId: invoice.receptorId
+            });
             let pdfBuffer;
             try {
+                console.log('[PDF-PROFESIONAL] Iniciando generación con método principal...');
                 pdfBuffer = await this.invoicesService.generateInvoicePdfProfessional(invoice);
                 console.log('[PDF-PROFESIONAL] PDF profesional generado exitosamente');
             }
@@ -19815,8 +20312,14 @@ let InvoicesController = class InvoicesController {
                 console.error('[PDF-PROFESIONAL] Error en generateInvoicePdfProfessional:', error);
                 console.error('[PDF-PROFESIONAL] Stack trace:', error.stack);
                 console.log('[PDF-PROFESIONAL] Intentando con método vectorial (compatible con Railway)...');
-                pdfBuffer = await this.invoicesService.generateInvoicePdfProfessionalVectorial(invoice);
-                console.log('[PDF-PROFESIONAL] PDF vectorial generado exitosamente');
+                try {
+                    pdfBuffer = await this.invoicesService.generateInvoicePdfProfessionalVectorial(invoice);
+                    console.log('[PDF-PROFESIONAL] PDF vectorial generado exitosamente');
+                }
+                catch (vectorialError) {
+                    console.error('[PDF-PROFESIONAL] Error también en método vectorial:', vectorialError);
+                    throw new Error(`Ambos métodos fallaron: Principal: ${error}, Vectorial: ${vectorialError}`);
+                }
             }
             if (!Buffer.isBuffer(pdfBuffer)) {
                 console.error('[PDF-PROFESIONAL] Error: pdfBuffer no es un Buffer válido');
@@ -20589,11 +21092,11 @@ __decorate([
 ], InvoicesController.prototype, "getInvoiceHtmlPreview", null);
 __decorate([
     (0, common_1.Get)(':id/pdf-professional'),
-    (0, roles_decorator_1.Roles)(client_1.Role.ABOGADO, client_1.Role.ADMIN),
+    (0, roles_decorator_1.Roles)(client_1.Role.ABOGADO, client_1.Role.ADMIN, client_1.Role.CLIENTE),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, swagger_1.ApiOperation)({
         summary: 'Descargar factura profesional (PDF completo)',
-        description: 'Descarga la factura en PDF profesional con diseño completo (solo ABOGADO y ADMIN)'
+        description: 'Descarga la factura en PDF profesional con diseño completo (ABOGADO, ADMIN y CLIENTE)'
     }),
     (0, swagger_1.ApiParam)({ name: 'id', description: 'ID de la factura', type: 'string' }),
     (0, swagger_1.ApiResponse)({
@@ -20605,7 +21108,7 @@ __decorate([
         }
     }),
     (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
-    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente o no autorizado para esta factura' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Factura no encontrada' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Res)()),

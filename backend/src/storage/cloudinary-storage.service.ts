@@ -71,15 +71,15 @@ export class CloudinaryStorageService {
         stream.pipe(uploadStream);
       });
 
-      this.logger.log(`Archivo subido exitosamente a Cloudinary: ${result.public_id}`);
-      
+            this.logger.log(`Archivo subido exitosamente a Cloudinary: ${(result as any).public_id}`);
+
       return {
-        url: result.secure_url,
-        publicId: result.public_id,
+        url: (result as any).secure_url,
+        publicId: (result as any).public_id,
         storageType: 'cloudinary'
       };
     } catch (error) {
-      this.logger.error(`Error subiendo archivo a Cloudinary: ${error.message}`);
+      this.logger.error(`Error subiendo archivo a Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -133,7 +133,7 @@ export class CloudinaryStorageService {
         storageType: 'cloudinary'
       };
     } catch (error) {
-      this.logger.error(`Error descargando archivo de Cloudinary: ${error.message}`);
+      this.logger.error(`Error descargando archivo de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -155,7 +155,7 @@ export class CloudinaryStorageService {
       this.logger.log(`URL de descarga generada para: ${publicId}`);
       return url;
     } catch (error) {
-      this.logger.error(`Error generando URL de descarga: ${error.message}`);
+      this.logger.error(`Error generando URL de descarga: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -193,7 +193,7 @@ export class CloudinaryStorageService {
         throw new Error(`Error eliminando archivo: ${result.result}`);
       }
     } catch (error) {
-      this.logger.error(`Error eliminando archivo de Cloudinary: ${error.message}`);
+      this.logger.error(`Error eliminando archivo de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -222,7 +222,7 @@ export class CloudinaryStorageService {
         context: info.context || {},
       };
     } catch (error) {
-      this.logger.error(`Error obteniendo metadatos del archivo: ${error.message}`);
+      this.logger.error(`Error obteniendo metadatos del archivo: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -244,7 +244,7 @@ export class CloudinaryStorageService {
       this.logger.log(`URL transformada generada para: ${publicId}`);
       return url;
     } catch (error) {
-      this.logger.error(`Error transformando archivo: ${error.message}`);
+      this.logger.error(`Error transformando archivo: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -276,7 +276,7 @@ export class CloudinaryStorageService {
         raw: usage.raw,
       };
     } catch (error) {
-      this.logger.error(`Error obteniendo estadísticas de uso: ${error.message}`);
+      this.logger.error(`Error obteniendo estadísticas de uso: ${error instanceof Error ? error.message : String(error)}`);
       return {
         storageType: 'cloudinary',
         error: 'No se pudieron obtener estadísticas'

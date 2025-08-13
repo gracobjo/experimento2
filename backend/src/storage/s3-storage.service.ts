@@ -60,7 +60,7 @@ export class S3StorageService {
       
       return `https://${this.bucketName}.s3.amazonaws.com/${key}`;
     } catch (error) {
-      this.logger.error(`Error subiendo archivo a S3: ${error.message}`);
+      this.logger.error(`Error subiendo archivo a S3: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -97,7 +97,7 @@ export class S3StorageService {
         },
       };
     } catch (error) {
-      this.logger.error(`Error descargando archivo de S3: ${error.message}`);
+      this.logger.error(`Error descargando archivo de S3: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -121,7 +121,7 @@ export class S3StorageService {
       
       return url;
     } catch (error) {
-      this.logger.error(`Error generando URL firmada: ${error.message}`);
+      this.logger.error(`Error generando URL firmada: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -164,7 +164,7 @@ export class S3StorageService {
       await this.s3Client.send(command);
       this.logger.log(`Archivo eliminado exitosamente de S3: ${key}`);
     } catch (error) {
-      this.logger.error(`Error eliminando archivo de S3: ${error.message}`);
+      this.logger.error(`Error eliminando archivo de S3: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -193,7 +193,7 @@ export class S3StorageService {
         etag: response.ETag,
       };
     } catch (error) {
-      this.logger.error(`Error obteniendo metadatos del archivo: ${error.message}`);
+      this.logger.error(`Error obteniendo metadatos del archivo: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }

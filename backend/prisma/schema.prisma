@@ -93,6 +93,7 @@ model Document {
   mimeType       String
   originalName   String
   uploadedBy     String
+  metadata       Json?      // Metadatos adicionales (Cloudinary, S3, etc.)
   expediente     Expediente @relation(fields: [expedienteId], references: [id])
   uploadedByUser User       @relation("UserDocuments", fields: [uploadedBy], references: [id])
 }
