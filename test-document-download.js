@@ -143,3 +143,6 @@ async function runDiagnostics() {
 // Ejecutar diagnóstico
 runDiagnostics();
 
+
+
+

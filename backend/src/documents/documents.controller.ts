@@ -429,12 +429,12 @@ export class DocumentsController {
   @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
   @ApiOperation({ 
     summary: 'Servir archivo estático',
-    description: 'Sirve un archivo estático desde Cloudinary usando el ID del documento. Los clientes solo pueden acceder a archivos de sus expedientes.'
+    description: 'Sirve un archivo estático desde Cloudinary. Los clientes solo pueden acceder a archivos de sus expedientes.'
   })
   @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
   @ApiResponse({ 
     status: 200, 
-    description: 'Archivo servido correctamente',
+    description: 'Archivo servido',
     schema: {
       type: 'string',
       format: 'binary'
@@ -442,110 +442,131 @@ export class DocumentsController {
   })
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Acceso prohibido' })
-  @ApiResponse({ status: 404, description: 'Archivo no encontrado' })
+  @ApiResponse({ status: 404, description: 'Documento no encontrado' })
   async serveFile(
     @Param('id') id: string,
     @Request() req,
     @Res() res: Response,
   ) {
     try {
-      console.log(`📁 Intentando servir documento con ID: ${id}`);
+      console.log(`📁 Intentando servir archivo ID: ${id}`);
       console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
-      
-      // Verificar permisos del usuario para este documento
-      const hasAccess = await this.documentsService.checkDocumentAccess(id, req.user.id, req.user.role);
-      
-      if (!hasAccess) {
-        console.log(`❌ Usuario ${req.user.id} no tiene acceso al documento ${id}`);
-        return res.status(403).json({ 
-          message: 'No tienes permisos para acceder a este documento',
-          error: 'Forbidden',
-          statusCode: 403,
+
+      // Buscar el documento por ID
+      const document = await this.documentsService.findOne(
+        id,
+        req.user.id,
+        req.user.role,
+      );
+
+      if (!document) {
+        console.log(`❌ Documento no encontrado: ${id}`);
+        return res.status(404).json({
+          message: 'Documento no encontrado',
+          error: 'Not Found',
+          statusCode: 404,
           documentId: id
         });
       }
 
-      console.log(`✅ Permisos verificados para documento: ${id}`);
+      console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
 
-      // Obtener el stream del archivo desde Cloudinary
+      // Obtener el stream del archivo usando el servicio de Cloudinary
       let fileStream;
+      let fileMetadata;
+      
       try {
-        fileStream = await this.documentsService.getDocumentStream(id);
-        console.log(`✅ Stream del documento creado exitosamente`);
+        const downloadResult = await this.documentsService.getFileStream(document.filename);
+        fileStream = downloadResult.stream;
+        fileMetadata = downloadResult.metadata;
+        console.log(`✅ Stream del archivo creado exitosamente desde Cloudinary`);
       } catch (streamError) {
-        console.error(`❌ Error al crear stream del documento:`, streamError);
+        console.error(`❌ Error al crear stream del archivo:`, streamError);
         return res.status(404).json({
-          message: 'Documento no encontrado en Cloudinary',
+          message: 'Archivo no encontrado en el almacenamiento',
           error: 'File Not Found',
           statusCode: 404,
           documentId: id,
-          suggestion: 'El documento puede haberse perdido o no estar disponible en Cloudinary'
-        });
-      }
-      
-      // Obtener información del documento para el tipo MIME
-      const document = await this.documentsService.findDocumentById(id);
-      if (!document) {
-        return res.status(404).json({
-          message: 'Documento no encontrado en la base de datos',
-          error: 'Document Not Found',
-          statusCode: 404,
-          documentId: id
+          filename: document.filename,
+          errorDetails: streamError instanceof Error ? streamError.message : String(streamError)
         });
       }
 
-      const originalName = document.originalName;
-      const ext = originalName.split('.').pop()?.toLowerCase();
-      let contentType = 'application/octet-stream';
-      
-      if (ext === 'pdf') contentType = 'application/pdf';
-      else if (ext === 'jpg' || ext === 'jpeg') contentType = 'image/jpeg';
-      else if (ext === 'png') contentType = 'image/png';
-      else if (ext === 'gif') contentType = 'image/gif';
-      else if (ext === 'webp') contentType = 'image/webp';
-      else if (ext === 'txt') contentType = 'text/plain';
-      else if (ext === 'csv') contentType = 'text/csv';
-      else if (ext === 'doc') contentType = 'application/msword';
-      else if (ext === 'docx') contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-
-      // Configurar headers
+      // Configurar headers de respuesta para visualización (no descarga)
+      const contentType = fileMetadata?.contentType || document.mimeType || 'application/octet-stream';
       res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Disposition', `inline; filename="${originalName}"`);
+      
+      // Para imágenes y PDFs, permitir visualización inline
+      if (contentType.startsWith('image/') || contentType === 'application/pdf') {
+        res.setHeader('Content-Disposition', 'inline');
+      } else {
+        // Para otros tipos de archivo, forzar descarga
+        res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
+      }
+
+      // Agregar headers adicionales si están disponibles
+      if (fileMetadata?.contentLength) {
+        res.setHeader('Content-Length', fileMetadata.contentLength);
+      }
+      if (fileMetadata?.lastModified) {
+        res.setHeader('Last-Modified', fileMetadata.lastModified.toUTCString());
+      }
+
+      // Headers para cache y CORS
       res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache por 1 hora
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-      console.log(`🚀 Iniciando envío del documento: ${originalName} (${contentType})`);
+      console.log(`🚀 Sirviendo archivo: ${document.originalName} (${contentType})`);
 
-      // Enviar el documento
+      // Enviar el archivo
       fileStream.pipe(res);
 
       // Manejar errores del stream
       fileStream.on('error', (error) => {
-        console.error(`❌ Error en el stream del documento:`, error);
+        console.error(`❌ Error en el stream del archivo:`, error);
         if (!res.headersSent) {
           res.status(500).json({
-            message: 'Error al transmitir el documento',
+            message: 'Error al leer el archivo',
             error: 'Stream Error',
             statusCode: 500,
-            documentId: id
+            errorDetails: error instanceof Error ? error.message : String(error)
           });
         }
       });
 
-      // Manejar cuando el stream termina
       fileStream.on('end', () => {
-        console.log(`✅ Documento enviado completamente: ${id}`);
+        console.log(`✅ Archivo servido exitosamente: ${document.originalName}`);
       });
 
     } catch (error) {
-      console.error(`❌ Error general al servir documento:`, error);
+      console.error(`❌ Error en serveFile:`, error);
       
       if (!res.headersSent) {
-        res.status(500).json({
-          message: 'Error interno del servidor',
-          error: 'Internal Server Error',
-          statusCode: 500,
-          documentId: id
-        });
+        if (error instanceof NotFoundException) {
+          return res.status(404).json({
+            message: error.message,
+            error: 'Not Found',
+            statusCode: 404,
+            documentId: id
+          });
+        } else if (error instanceof ForbiddenException) {
+          return res.status(403).json({
+            message: error.message,
+            error: 'Forbidden',
+            statusCode: 403,
+            documentId: id
+          });
+        } else {
+          return res.status(500).json({
+            message: 'Error interno del servidor al servir el archivo',
+            error: 'Internal Server Error',
+            statusCode: 500,
+            documentId: id,
+            errorDetails: error instanceof Error ? error.message : String(error)
+          });
+        }
       }
     }
   }
