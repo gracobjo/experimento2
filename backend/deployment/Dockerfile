@@ -24,14 +24,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# --- Instala Chromium y dependencias para Puppeteer ---
+# --- Instala dependencias básicas del sistema ---
 RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont
+    ca-certificates
 
 # Copia los archivos de dependencias y Prisma
 COPY package*.json ./
@@ -52,8 +47,8 @@ COPY --from=builder /app/src/invoices/templates ./dist/invoices/templates
 # Copia scripts necesarios
 COPY backend/scripts ./scripts
 
-# Variable de entorno para Puppeteer (importante para Alpine)
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+# Variable de entorno para el puerto de la aplicación
+ENV PORT=3000
 
 EXPOSE 3000
 
