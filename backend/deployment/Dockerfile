@@ -16,7 +16,7 @@ COPY . .
 # Genera el cliente de Prisma
 RUN npx prisma generate
 
-# Compila la aplicación
+# Compila la aplicación (sin postbuild scripts problemáticos)
 RUN npm run build
 
 # ---------- Production stage ----------
@@ -43,9 +43,6 @@ COPY --from=builder /app/dist ./dist
 
 # (Opcional) Copia plantillas si las usas en tiempo de ejecución
 COPY --from=builder /app/src/invoices/templates ./dist/invoices/templates
-
-# Copia scripts necesarios
-COPY backend/scripts ./scripts
 
 # Variable de entorno para el puerto de la aplicación
 ENV PORT=3000
