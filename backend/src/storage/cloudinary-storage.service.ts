@@ -44,11 +44,15 @@ export class CloudinaryStorageService {
       stream.push(file.buffer);
       stream.push(null);
 
+      // Obtener extensión del archivo original
+      const originalName = file.originalname || 'file';
+      const extension = originalName.includes('.') ? originalName.split('.').pop() : '';
+      
       // Configurar opciones de upload
       const uploadOptions: any = {
         folder,
         resource_type: 'auto', // Detecta automáticamente el tipo
-        public_id: `${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        public_id: `${Date.now()}-${Math.random().toString(36).substring(7)}${extension ? '.' + extension : ''}`,
         overwrite: false,
         unique_filename: true,
       };
@@ -121,7 +125,7 @@ export class CloudinaryStorageService {
       return {
         stream,
         metadata: {
-          contentType: info.format ? `application/${info.format}` : 'application/octet-stream',
+          contentType: this.getMimeTypeFromPublicId(publicId, info.format),
           contentLength: buffer.length,
           lastModified: new Date(info.created_at),
           publicId: info.public_id,
@@ -313,5 +317,64 @@ export class CloudinaryStorageService {
         'Sin backup automático'
       ]
     };
+  }
+
+  /**
+   * Obtener MIME type basado en la extensión del publicId
+   */
+  private getMimeTypeFromPublicId(publicId: string, cloudinaryFormat?: string): string {
+    // Si Cloudinary detectó el formato, usarlo
+    if (cloudinaryFormat) {
+      switch (cloudinaryFormat.toLowerCase()) {
+        case 'docx':
+          return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        case 'doc':
+          return 'application/msword';
+        case 'pdf':
+          return 'application/pdf';
+        case 'txt':
+          return 'text/plain';
+        case 'csv':
+          return 'text/csv';
+        case 'jpg':
+        case 'jpeg':
+          return 'image/jpeg';
+        case 'png':
+          return 'image/png';
+        case 'gif':
+          return 'image/gif';
+        case 'webp':
+          return 'image/webp';
+        default:
+          return `application/${cloudinaryFormat}`;
+      }
+    }
+
+    // Si no hay formato de Cloudinary, intentar detectar por extensión en publicId
+    const extension = publicId.includes('.') ? publicId.split('.').pop()?.toLowerCase() : '';
+    
+    switch (extension) {
+      case 'docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case 'doc':
+        return 'application/msword';
+      case 'pdf':
+        return 'application/pdf';
+      case 'txt':
+        return 'text/plain';
+      case 'csv':
+        return 'text/csv';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'application/octet-stream';
+    }
   }
 }
