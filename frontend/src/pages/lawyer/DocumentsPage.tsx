@@ -239,8 +239,8 @@ const DocumentsPage = () => {
     return '📎';
   };
 
-  // Función para descargar documento con autenticación
-  const handleDownload = async (documentId: string, originalName: string) => {
+  // Función para visualizar documento con autenticación
+  const handleViewDocument = async (documentId: string, originalName: string) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -248,10 +248,10 @@ const DocumentsPage = () => {
         return;
       }
 
-      console.log(`📥 Intentando descargar documento: ${originalName} (ID: ${documentId})`);
+      console.log(`📥 Intentando visualizar documento: ${originalName} (ID: ${documentId})`);
 
-      // Hacer la petición al backend con autenticación
-      const response = await fetch(`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api/documents/${documentId}/download`, {
+      // Hacer la petición al backend con autenticación para visualización
+      const response = await fetch(`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api/documents/file/${documentId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -283,32 +283,49 @@ const DocumentsPage = () => {
           errorMessage = `El documento "${originalName}" no se encuentra en el servidor.\n\nEsto puede deberse a:\n• El archivo se perdió durante el deploy\n• El directorio de uploads no existe\n• Problema de permisos\n\nPor favor, contacta al administrador del sistema.`;
         }
 
-        alert(`Error al descargar el documento:\n\n${errorMessage}`);
+        alert(`Error al visualizar el documento:\n\n${errorMessage}`);
         return;
       }
 
-      console.log(`✅ Documento descargado exitosamente: ${originalName}`);
+      console.log(`✅ Documento cargado exitosamente: ${originalName}`);
 
-      // Crear blob y descargar
+      // Obtener el blob y determinar cómo manejarlo
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = originalName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      
+      // Determinar el tipo de archivo para decidir si visualizar o descargar
+      const fileExtension = originalName.toLowerCase().split('.').pop();
+      const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension);
+      const isPdf = fileExtension === 'pdf';
+      
+      if (isImage || isPdf) {
+        // Para imágenes y PDFs, abrir en nueva pestaña para visualización
+        window.open(url, '_blank');
+      } else {
+        // Para otros tipos (DOCX, TXT, etc.), descargar directamente
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = originalName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+      
+      // Limpiar URL para imágenes y PDFs después de un tiempo
+      if (isImage || isPdf) {
+        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      }
 
     } catch (error) {
-      console.error('Error descargando documento:', error);
+      console.error('Error visualizando documento:', error);
       
-      let errorMessage = 'Error desconocido al descargar el documento';
+      let errorMessage = 'Error desconocido al visualizar el documento';
       if (error instanceof Error) {
         errorMessage = error.message;
       }
       
-      alert(`Error al descargar el documento:\n\n${errorMessage}\n\nPor favor, verifica tu conexión a internet e intenta nuevamente.`);
+      alert(`Error al visualizar el documento:\n\n${errorMessage}\n\nPor favor, verifica tu conexión a internet e intenta nuevamente.`);
     }
   };
 
@@ -576,13 +593,14 @@ const DocumentsPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
-                          onClick={() => handleDownload(doc.id, doc.originalName)}
+                          onClick={() => handleViewDocument(doc.id, doc.originalName)}
                           className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         >
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
-                          Ver
+                          Visualizar
                         </button>
                         <button
                           onClick={() => handleDelete(doc.id)}
