@@ -289,142 +289,6 @@ export class DocumentsController {
     return this.documentsService.findOne(id, req.user.id, req.user.role);
   }
 
-  @Get(':id/download')
-  @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
-  @ApiOperation({ 
-    summary: 'Descargar documento',
-    description: 'Descarga un documento específico. Los clientes solo pueden descargar documentos de sus expedientes.'
-  })
-  @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Archivo descargado',
-    schema: {
-      type: 'string',
-      format: 'binary'
-    }
-  })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'Acceso prohibido' })
-  @ApiResponse({ status: 404, description: 'Documento no encontrado' })
-  async downloadDocument(
-    @Param('id') id: string,
-    @Request() req,
-    @Res() res: Response,
-  ) {
-    try {
-      console.log(`📥 Intentando descargar documento ID: ${id}`);
-      console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
-
-      // Buscar el documento
-      const document = await this.documentsService.findOne(
-        id,
-        req.user.id,
-        req.user.role,
-      );
-
-      if (!document) {
-        console.log(`❌ Documento no encontrado: ${id}`);
-        return res.status(404).json({
-          message: 'Documento no encontrado',
-          error: 'Not Found',
-          statusCode: 404,
-          documentId: id
-        });
-      }
-
-      console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
-
-      // Obtener el stream del archivo usando el servicio de Cloudinary
-      let fileStream;
-      let fileMetadata;
-      
-      try {
-        const downloadResult = await this.documentsService.getFileStream(document.filename);
-        fileStream = downloadResult.stream;
-        fileMetadata = downloadResult.metadata;
-        console.log(`✅ Stream del archivo creado exitosamente desde Cloudinary`);
-      } catch (streamError) {
-        console.error(`❌ Error al crear stream del archivo:`, streamError);
-        return res.status(404).json({
-          message: 'Archivo no encontrado en el almacenamiento',
-          error: 'File Not Found',
-          statusCode: 404,
-          documentId: id,
-          filename: document.filename,
-          errorDetails: streamError instanceof Error ? streamError.message : String(streamError)
-        });
-      }
-
-      // Configurar headers de respuesta
-      const contentType = fileMetadata?.contentType || document.mimeType || 'application/octet-stream';
-      res.setHeader('Content-Type', contentType);
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="${document.originalName}"`,
-      );
-
-      // Agregar headers adicionales si están disponibles
-      if (fileMetadata?.contentLength) {
-        res.setHeader('Content-Length', fileMetadata.contentLength);
-      }
-      if (fileMetadata?.lastModified) {
-        res.setHeader('Last-Modified', fileMetadata.lastModified.toUTCString());
-      }
-
-      console.log(`🚀 Iniciando descarga del archivo: ${document.originalName} (${contentType})`);
-
-      // Enviar el archivo
-      fileStream.pipe(res);
-
-      // Manejar errores del stream
-      fileStream.on('error', (error) => {
-        console.error(`❌ Error en el stream del archivo:`, error);
-        if (!res.headersSent) {
-          res.status(500).json({
-            message: 'Error al leer el archivo',
-            error: 'Stream Error',
-            statusCode: 500,
-            errorDetails: error instanceof Error ? error.message : String(error)
-          });
-        }
-      });
-
-      fileStream.on('end', () => {
-        console.log(`✅ Descarga completada: ${document.originalName}`);
-      });
-
-    } catch (error) {
-      console.error(`❌ Error en downloadDocument:`, error);
-      
-      if (!res.headersSent) {
-        if (error instanceof NotFoundException) {
-          return res.status(404).json({
-            message: error.message,
-            error: 'Not Found',
-            statusCode: 404,
-            documentId: id
-          });
-        } else if (error instanceof ForbiddenException) {
-          return res.status(403).json({
-            message: error.message,
-            error: 'Forbidden',
-            statusCode: 403,
-            documentId: id
-          });
-        } else {
-          return res.status(500).json({
-            message: 'Error interno del servidor al descargar el documento',
-            error: 'Internal Server Error',
-            statusCode: 500,
-            documentId: id,
-            errorDetails: error instanceof Error ? error.message : String(error)
-          });
-        }
-      }
-    }
-  }
-
   @Get('file/:id')
   @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
   @ApiOperation({ 
@@ -570,6 +434,169 @@ export class DocumentsController {
       }
     }
   }
+
+  @Get(':id/download')
+  @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
+  @ApiOperation({ 
+    summary: 'Descargar documento',
+    description: 'Descarga un documento específico. Los clientes solo pueden descargar documentos de sus expedientes.'
+  })
+  @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Archivo descargado',
+    schema: {
+      type: 'string',
+      format: 'binary'
+    }
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Acceso prohibido' })
+  @ApiResponse({ status: 404, description: 'Documento no encontrado' })
+  async downloadDocument(
+    @Param('id') id: string,
+    @Request() req,
+    @Res() res: Response,
+  ) {
+    try {
+      console.log(`📥 Intentando descargar documento ID: ${id}`);
+      console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
+
+      // Buscar el documento
+      const document = await this.documentsService.findOne(
+        id,
+        req.user.id,
+        req.user.role,
+      );
+
+      if (!document) {
+        console.log(`❌ Documento no encontrado: ${id}`);
+        return res.status(404).json({
+          message: 'Documento no encontrado',
+          error: 'Not Found',
+          statusCode: 404,
+          documentId: id
+        });
+      }
+
+      console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
+
+      // Obtener el stream del archivo usando el servicio de Cloudinary
+      let fileStream;
+      let fileMetadata;
+      
+      try {
+        const downloadResult = await this.documentsService.getFileStream(document.filename);
+        fileStream = downloadResult.stream;
+        fileMetadata = downloadResult.metadata;
+        console.log(`✅ Stream del archivo creado exitosamente desde Cloudinary`);
+      } catch (streamError) {
+        console.error(`❌ Error al crear stream del archivo:`, streamError);
+        return res.status(404).json({
+          message: 'Archivo no encontrado en el almacenamiento',
+          error: 'File Not Found',
+          statusCode: 404,
+          documentId: id,
+          filename: document.filename,
+          errorDetails: streamError instanceof Error ? streamError.message : String(streamError)
+        });
+      }
+
+      // Configurar headers de respuesta
+      const contentType = fileMetadata?.contentType || document.mimeType || 'application/octet-stream';
+      res.setHeader('Content-Type', contentType);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${document.originalName}"`,
+      );
+
+      // Agregar headers adicionales si están disponibles
+      if (fileMetadata?.contentLength) {
+        res.setHeader('Content-Length', fileMetadata.contentLength);
+      }
+      if (fileMetadata?.lastModified) {
+        res.setHeader('Last-Modified', fileMetadata.lastModified.toUTCString());
+      }
+
+      console.log(`🚀 Iniciando descarga del archivo: ${document.originalName} (${contentType})`);
+
+      // Enviar el archivo
+      fileStream.pipe(res);
+
+      // Manejar errores del stream
+      fileStream.on('error', (error) => {
+        console.error(`❌ Error en el stream del archivo:`, error);
+        if (!res.headersSent) {
+          res.status(500).json({
+            message: 'Error al leer el archivo',
+            error: 'Stream Error',
+            statusCode: 500,
+            errorDetails: error instanceof Error ? error.message : String(error)
+          });
+        }
+      });
+
+      fileStream.on('end', () => {
+        console.log(`✅ Descarga completada: ${document.originalName}`);
+      });
+
+    } catch (error) {
+      console.error(`❌ Error en downloadDocument:`, error);
+      
+      if (!res.headersSent) {
+        if (error instanceof NotFoundException) {
+          return res.status(404).json({
+            message: error.message,
+            error: 'Not Found',
+            statusCode: 404,
+            documentId: id
+          });
+        } else if (error instanceof ForbiddenException) {
+          return res.status(403).json({
+            message: error.message,
+            error: 'Forbidden',
+            statusCode: 403,
+            documentId: id
+          });
+        } else {
+          return res.status(500).json({
+            message: 'Error interno del servidor al descargar el documento',
+            error: 'Internal Server Error',
+            statusCode: 500,
+            documentId: id,
+            errorDetails: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+    }
+  }
+
+  @Get('test-endpoint')
+  @ApiOperation({ 
+    summary: 'Endpoint de prueba',
+    description: 'Endpoint simple para verificar que el controlador esté funcionando'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Endpoint funcionando',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        timestamp: { type: 'string' },
+        controller: { type: 'string' }
+      }
+    }
+  })
+  async testEndpoint() {
+    return {
+      message: 'Documents controller funcionando correctamente',
+      timestamp: new Date().toISOString(),
+      controller: 'DocumentsController'
+    };
+  }
+
+
 
   @Get('debug/upload-status')
   @Roles(Role.ADMIN)
