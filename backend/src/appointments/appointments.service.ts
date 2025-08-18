@@ -13,100 +13,116 @@ export class AppointmentsService {
   ) {}
 
   async findMyAppointments(user: any) {
-    if (user.role === 'ADMIN') {
-      // Admin ve todas las citas
-      return this.prisma.appointment.findMany({
-        include: {
-          lawyer: { select: { id: true, name: true, email: true } },
-          client: {
-            include: {
-              user: { select: { id: true, name: true, email: true } }
+    try {
+      if (user.role === 'ADMIN') {
+        // Admin ve todas las citas
+        return await this.prisma.appointment.findMany({
+          include: {
+            lawyer: { select: { id: true, name: true, email: true } },
+            client: {
+              include: {
+                user: { select: { id: true, name: true, email: true } }
+              }
             }
-          }
-        },
-        orderBy: { date: 'desc' }
-      });
-    } else if (user.role === 'ABOGADO') {
-      // Abogado ve expedientes asignados a ellos
-      return this.prisma.appointment.findMany({
-        where: { lawyerId: user.id },
-        include: {
-          lawyer: { select: { id: true, name: true, email: true } },
-          client: {
-            include: {
-              user: { select: { id: true, name: true, email: true } }
+          },
+          orderBy: { date: 'desc' }
+        });
+      } else if (user.role === 'ABOGADO') {
+        // Abogado ve expedientes asignados a ellos
+        return await this.prisma.appointment.findMany({
+          where: { lawyerId: user.id },
+          include: {
+            lawyer: { select: { id: true, name: true, email: true } },
+            client: {
+              include: {
+                user: { select: { id: true, name: true, email: true } }
+              }
             }
-          }
-        },
-        orderBy: { date: 'desc' }
-      });
-    } else {
-      // Cliente ve solo sus citas
-      const client = await this.prisma.client.findUnique({
-        where: { userId: user.id }
-      });
-      if (!client) throw new ForbiddenException('No eres cliente');
-      return this.prisma.appointment.findMany({
-        where: { clientId: client.id },
-        include: {
-          lawyer: { select: { id: true, name: true, email: true } },
-          client: {
-            include: {
-              user: { select: { id: true, name: true, email: true } }
+          },
+          orderBy: { date: 'desc' }
+        });
+      } else {
+        // Cliente ve solo sus citas
+        const client = await this.prisma.client.findUnique({
+          where: { userId: user.id }
+        });
+        if (!client) throw new ForbiddenException('No eres cliente');
+        return await this.prisma.appointment.findMany({
+          where: { clientId: client.id },
+          include: {
+            lawyer: { select: { id: true, name: true, email: true } },
+            client: {
+              include: {
+                user: { select: { id: true, name: true, email: true } }
+              }
             }
-          }
-        },
-        orderBy: { date: 'desc' }
-      });
+          },
+          orderBy: { date: 'desc' }
+        });
+      }
+    } catch (error) {
+      console.error('Error en findMyAppointments:', error);
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+      throw new BadRequestException(`Error al obtener citas: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   async findAll(user: any) {
-    if (user.role === 'ADMIN') {
-      // Admin ve todas las citas
-      return this.prisma.appointment.findMany({
-        include: {
-          lawyer: { select: { id: true, name: true, email: true } },
-          client: {
-            include: {
-              user: { select: { id: true, name: true, email: true } }
+    try {
+      if (user.role === 'ADMIN') {
+        // Admin ve todas las citas
+        return await this.prisma.appointment.findMany({
+          include: {
+            lawyer: { select: { id: true, name: true, email: true } },
+            client: {
+              include: {
+                user: { select: { id: true, name: true, email: true } }
+              }
             }
-          }
-        },
-        orderBy: { date: 'desc' }
-      });
-    } else if (user.role === 'ABOGADO') {
-      // Abogado ve expedientes asignados a ellos
-      return this.prisma.appointment.findMany({
-        where: { lawyerId: user.id },
-        include: {
-          lawyer: { select: { id: true, name: true, email: true } },
-          client: {
-            include: {
-              user: { select: { id: true, name: true, email: true } }
+          },
+          orderBy: { date: 'desc' }
+        });
+      } else if (user.role === 'ABOGADO') {
+        // Abogado ve expedientes asignados a ellos
+        return await this.prisma.appointment.findMany({
+          where: { lawyerId: user.id },
+          include: {
+            lawyer: { select: { id: true, name: true, email: true } },
+            client: {
+              include: {
+                user: { select: { id: true, name: true, email: true } }
+              }
             }
-          }
-        },
-        orderBy: { date: 'desc' }
-      });
-    } else {
-      // Cliente ve solo sus citas
-      const client = await this.prisma.client.findUnique({
-        where: { userId: user.id }
-      });
-      if (!client) throw new ForbiddenException('No eres cliente');
-      return this.prisma.appointment.findMany({
-        where: { clientId: client.id },
-        include: {
-          lawyer: { select: { id: true, name: true, email: true } },
-          client: {
-            include: {
-              user: { select: { id: true, name: true, email: true } }
+          },
+          orderBy: { date: 'desc' }
+        });
+      } else {
+        // Cliente ve solo sus citas
+        const client = await this.prisma.client.findUnique({
+          where: { userId: user.id }
+        });
+        if (!client) throw new ForbiddenException('No eres cliente');
+        return await this.prisma.appointment.findMany({
+          where: { clientId: client.id },
+          include: {
+            lawyer: { select: { id: true, name: true, email: true } },
+            client: {
+              include: {
+                user: { select: { id: true, name: true, email: true } }
+              }
             }
-          }
-        },
-        orderBy: { date: 'desc' }
-      });
+          },
+          orderBy: { date: 'desc' }
+        });
+      }
+    } catch (error) {
+      console.error('Error en findAll:', error);
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+      throw new BadRequestException(`Error al obtener citas: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

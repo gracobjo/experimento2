@@ -143,3 +143,6 @@ npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
 - Errores de S3 > 1%
 - Tiempo de respuesta > 5s
 
+
+
+

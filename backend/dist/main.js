@@ -74,7 +74,7 @@ async function bootstrap() {
             'http://localhost:8080',
             'https://experimento2-fenm.vercel.app',
             'https://experimento2-fenm-44u7rmivu-gracobjos-projects.vercel.app',
-            'experimento2-production-54c0.up.railway.app',
+            'https://experimento2-production-54c0.up.railway.app',
             /^https:\/\/.*\.vercel\.app$/,
             /^https:\/\/.*\.railway\.app$/
         ];
@@ -85,6 +85,16 @@ async function bootstrap() {
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
         preflightContinue: false,
         optionsSuccessStatus: 204,
+    });
+    app.use((req, res, next) => {
+        console.log(`🔍 [${new Date().toISOString()}] ${req.method} ${req.url}`);
+        console.log(`🔍 Headers:`, req.headers);
+        console.log(`🔍 Origin:`, req.headers.origin);
+        console.log(`🔍 User-Agent:`, req.headers['user-agent']);
+        if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body) {
+            console.log(`🔍 Body:`, JSON.stringify(req.body, null, 2));
+        }
+        next();
     });
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
@@ -216,6 +226,8 @@ async function bootstrap() {
             { path: 'test-health', method: common_1.RequestMethod.GET },
             { path: 'api-test', method: common_1.RequestMethod.GET },
             { path: 'db-status', method: common_1.RequestMethod.GET },
+            { path: 'appointments-test', method: common_1.RequestMethod.GET },
+            { path: 'documents-test', method: common_1.RequestMethod.GET },
         ],
     });
     swagger_1.SwaggerModule.setup('docs', app, document, {
@@ -239,11 +251,14 @@ async function bootstrap() {
     const port = process.env.PORT || 3000;
     await app.listen(port, '0.0.0.0');
     console.log(`🚀 Servidor corriendo en puerto ${port}`);
-    console.log(`🌍 CORS origins configurados: http://localhost:5173, http://localhost:3000, https://experimento2-fenm.vercel.app, experimento2-production-54c0.up.railway.app, *.vercel.app, *.railway.app`);
+    console.log(`🌍 CORS origins configurados: http://localhost:5173, http://localhost:3000, https://experimento2-fenm.vercel.app, https://experimento2-production-54c0.up.railway.app, *.vercel.app, *.railway.app`);
     console.log(`📁 Archivos estáticos disponibles en /uploads`);
     console.log(`📚 Documentación Swagger disponible en /docs`);
     console.log(`💚 Health check disponible en /health`);
     console.log(`🔧 Debug environment disponible en /debug-env`);
+    console.log(`🗄️ Database status disponible en /db-status`);
+    console.log(`📅 Appointments test disponible en /appointments-test`);
+    console.log(`📄 Documents test disponible en /documents-test`);
 }
 bootstrap();
 
@@ -588,10 +603,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthController = void 0;
 const common_1 = __webpack_require__(2);
+const prisma_service_1 = __webpack_require__(8);
 let HealthController = class HealthController {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
     getHealth() {
         return {
             status: 'ok',
@@ -612,9 +632,119 @@ let HealthController = class HealthController {
             endpoints: [
                 '/health',
                 '/debug-env',
-                '/test-health'
+                '/test-health',
+                '/db-status',
+                '/appointments-test'
             ]
         };
+    }
+    async getDbStatus() {
+        try {
+            await this.prisma.$queryRaw `SELECT 1`;
+            const tables = await this.prisma.$queryRaw `
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        ORDER BY table_name
+      `;
+            const appointmentsTable = await this.prisma.$queryRaw `
+        SELECT column_name, data_type, is_nullable
+        FROM information_schema.columns 
+        WHERE table_name = 'appointment'
+        ORDER BY ordinal_position
+      `;
+            return {
+                status: 'ok',
+                timestamp: new Date().toISOString(),
+                database: 'conectado',
+                tables: tables,
+                appointmentsTable: appointmentsTable
+            };
+        }
+        catch (error) {
+            return {
+                status: 'error',
+                timestamp: new Date().toISOString(),
+                database: 'error',
+                error: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined
+            };
+        }
+    }
+    async getAppointmentsTest() {
+        try {
+            const count = await this.prisma.appointment.count();
+            const sample = await this.prisma.appointment.findFirst({
+                include: {
+                    lawyer: { select: { id: true, name: true, email: true } },
+                    client: {
+                        include: {
+                            user: { select: { id: true, name: true, email: true } }
+                        }
+                    }
+                }
+            });
+            return {
+                status: 'ok',
+                timestamp: new Date().toISOString(),
+                totalAppointments: count,
+                sampleAppointment: sample,
+                message: 'Endpoint de appointments funcionando correctamente'
+            };
+        }
+        catch (error) {
+            return {
+                status: 'error',
+                timestamp: new Date().toISOString(),
+                error: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined,
+                message: 'Error en endpoint de appointments'
+            };
+        }
+    }
+    async getDocumentsTest() {
+        try {
+            const documentsCount = await this.prisma.document.count();
+            const sampleDocument = await this.prisma.document.findFirst({
+                include: {
+                    expediente: {
+                        include: {
+                            client: true,
+                            lawyer: true
+                        }
+                    }
+                }
+            });
+            const cloudinaryConfig = {
+                cloudName: process.env.CLOUDINARY_CLOUD_NAME ? 'CONFIGURADO' : 'NO CONFIGURADO',
+                apiKey: process.env.CLOUDINARY_API_KEY ? 'CONFIGURADO' : 'NO CONFIGURADO',
+                apiSecret: process.env.CLOUDINARY_API_SECRET ? 'CONFIGURADO' : 'NO CONFIGURADO'
+            };
+            return {
+                status: 'ok',
+                timestamp: new Date().toISOString(),
+                totalDocuments: documentsCount,
+                sampleDocument: sampleDocument ? {
+                    id: sampleDocument.id,
+                    filename: sampleDocument.filename,
+                    originalName: sampleDocument.originalName,
+                    mimeType: sampleDocument.mimeType,
+                    fileSize: sampleDocument.fileSize,
+                    metadata: sampleDocument.metadata
+                } : null,
+                cloudinaryConfig: cloudinaryConfig,
+                message: 'Endpoint de documentos funcionando correctamente'
+            };
+        }
+        catch (error) {
+            return {
+                status: 'error',
+                timestamp: new Date().toISOString(),
+                error: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined,
+                message: 'Error en endpoint de documentos'
+            };
+        }
     }
 };
 exports.HealthController = HealthController;
@@ -636,8 +766,27 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Object)
 ], HealthController.prototype, "getTestHealth", null);
+__decorate([
+    (0, common_1.Get)('db-status'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], HealthController.prototype, "getDbStatus", null);
+__decorate([
+    (0, common_1.Get)('appointments-test'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], HealthController.prototype, "getAppointmentsTest", null);
+__decorate([
+    (0, common_1.Get)('documents-test'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], HealthController.prototype, "getDocumentsTest", null);
 exports.HealthController = HealthController = __decorate([
-    (0, common_1.Controller)()
+    (0, common_1.Controller)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
 ], HealthController);
 
 
@@ -5202,8 +5351,13 @@ let CloudinaryDocumentsService = CloudinaryDocumentsService_1 = class Cloudinary
             }
         }
         try {
-            const downloadResult = await this.cloudinaryStorage.downloadFile(document.filename);
-            this.logger.log(`Documento descargado exitosamente de Cloudinary: ${document.filename}`);
+            let cloudinaryPublicId = document.metadata?.cloudinaryPublicId;
+            if (!cloudinaryPublicId) {
+                this.logger.log(`Documento ${documentId} no tiene metadatos de Cloudinary, intentando migración...`);
+                cloudinaryPublicId = await this.migrateDocumentToCloudinary(document);
+            }
+            const downloadResult = await this.cloudinaryStorage.downloadFile(cloudinaryPublicId);
+            this.logger.log(`Documento descargado exitosamente de Cloudinary: ${cloudinaryPublicId}`);
             return {
                 stream: downloadResult.stream,
                 metadata: {
@@ -5249,7 +5403,12 @@ let CloudinaryDocumentsService = CloudinaryDocumentsService_1 = class Cloudinary
             }
         }
         try {
-            const cloudinaryInfo = await this.cloudinaryStorage.getFileMetadata(document.filename);
+            let cloudinaryPublicId = document.metadata?.cloudinaryPublicId;
+            if (!cloudinaryPublicId) {
+                this.logger.log(`Documento ${documentId} no tiene metadatos de Cloudinary, intentando migración...`);
+                cloudinaryPublicId = await this.migrateDocumentToCloudinary(document);
+            }
+            const cloudinaryInfo = await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
             return {
                 ...document,
                 cloudinaryInfo: {
@@ -5297,8 +5456,13 @@ let CloudinaryDocumentsService = CloudinaryDocumentsService_1 = class Cloudinary
             }
         }
         try {
-            await this.cloudinaryStorage.deleteFile(document.filename);
-            this.logger.log(`Archivo eliminado de Cloudinary: ${document.filename}`);
+            let cloudinaryPublicId = document.metadata?.cloudinaryPublicId;
+            if (!cloudinaryPublicId) {
+                this.logger.log(`Documento ${documentId} no tiene metadatos de Cloudinary, intentando migración...`);
+                cloudinaryPublicId = await this.migrateDocumentToCloudinary(document);
+            }
+            await this.cloudinaryStorage.deleteFile(cloudinaryPublicId);
+            this.logger.log(`Archivo eliminado de Cloudinary: ${cloudinaryPublicId}`);
             await this.prisma.document.delete({
                 where: { id: documentId }
             });
@@ -5316,7 +5480,17 @@ let CloudinaryDocumentsService = CloudinaryDocumentsService_1 = class Cloudinary
                 include: {
                     expediente: {
                         include: {
-                            client: true,
+                            client: {
+                                include: {
+                                    user: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            email: true,
+                                        }
+                                    }
+                                }
+                            },
                             lawyer: {
                                 select: {
                                     id: true,
@@ -5349,7 +5523,17 @@ let CloudinaryDocumentsService = CloudinaryDocumentsService_1 = class Cloudinary
                 include: {
                     expediente: {
                         include: {
-                            client: true
+                            client: {
+                                include: {
+                                    user: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            email: true,
+                                        }
+                                    }
+                                }
+                            }
                         }
                     },
                     uploadedByUser: {
@@ -5523,8 +5707,45 @@ let CloudinaryDocumentsService = CloudinaryDocumentsService_1 = class Cloudinary
     getFilePath(filename) {
         return `/api/documents/file/${filename}`;
     }
-    getFileStream(filename) {
-        return this.cloudinaryStorage.downloadFile(filename);
+    async getFileStream(filename) {
+        const document = await this.prisma.document.findFirst({
+            where: { filename },
+            include: {
+                expediente: {
+                    include: {
+                        client: true,
+                        lawyer: true,
+                    }
+                }
+            }
+        });
+        if (!document) {
+            throw new common_1.NotFoundException('Documento no encontrado');
+        }
+        let cloudinaryPublicId = document.metadata?.cloudinaryPublicId;
+        if (!cloudinaryPublicId) {
+            cloudinaryPublicId = filename;
+            try {
+                await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
+                await this.prisma.document.update({
+                    where: { id: document.id },
+                    data: {
+                        metadata: {
+                            cloudinaryPublicId: cloudinaryPublicId,
+                            storageType: 'cloudinary',
+                            cloudinaryUrl: document.fileUrl,
+                            updatedAt: new Date().toISOString()
+                        }
+                    }
+                });
+                this.logger.log(`Metadatos de Cloudinary actualizados para documento ${document.id}`);
+            }
+            catch (cloudinaryError) {
+                this.logger.error(`Error verificando archivo en Cloudinary: ${cloudinaryError instanceof Error ? cloudinaryError.message : String(cloudinaryError)}`);
+                throw new common_1.NotFoundException('El archivo no existe en Cloudinary');
+            }
+        }
+        return this.cloudinaryStorage.downloadFile(cloudinaryPublicId);
     }
     async checkFileAccess(filename, currentUserId, userRole) {
         const document = await this.prisma.document.findFirst({
@@ -5554,6 +5775,101 @@ let CloudinaryDocumentsService = CloudinaryDocumentsService_1 = class Cloudinary
             return true;
         }
         return false;
+    }
+    async findDocumentByFilename(filename) {
+        return this.prisma.document.findFirst({
+            where: { filename },
+            include: {
+                expediente: {
+                    include: {
+                        client: true,
+                        lawyer: true,
+                    }
+                }
+            }
+        });
+    }
+    async findDocumentById(id) {
+        return this.prisma.document.findUnique({
+            where: { id },
+            include: {
+                expediente: {
+                    include: {
+                        client: true,
+                        lawyer: true,
+                    }
+                }
+            }
+        });
+    }
+    async checkDocumentAccess(documentId, currentUserId, userRole) {
+        const document = await this.prisma.document.findUnique({
+            where: { id: documentId },
+            include: {
+                expediente: {
+                    include: {
+                        client: true,
+                        lawyer: true,
+                    }
+                }
+            }
+        });
+        if (!document) {
+            return false;
+        }
+        if (userRole === 'CLIENTE') {
+            const client = await this.prisma.client.findUnique({
+                where: { userId: currentUserId }
+            });
+            return client && document.expediente.clientId === client.id;
+        }
+        else if (userRole === 'ABOGADO') {
+            return document.expediente.lawyerId === currentUserId;
+        }
+        else if (userRole === 'ADMIN') {
+            return true;
+        }
+        return false;
+    }
+    async getDocumentStream(documentId) {
+        const document = await this.prisma.document.findUnique({
+            where: { id: documentId },
+            include: {
+                expediente: {
+                    include: {
+                        client: true,
+                        lawyer: true,
+                    }
+                }
+            }
+        });
+        if (!document) {
+            throw new common_1.NotFoundException('Documento no encontrado');
+        }
+        let cloudinaryPublicId = document.metadata?.cloudinaryPublicId;
+        if (!cloudinaryPublicId) {
+            cloudinaryPublicId = document.filename;
+            try {
+                await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
+                await this.prisma.document.update({
+                    where: { id: document.id },
+                    data: {
+                        metadata: {
+                            cloudinaryPublicId: cloudinaryPublicId,
+                            storageType: 'cloudinary',
+                            cloudinaryUrl: document.fileUrl,
+                            updatedAt: new Date().toISOString()
+                        }
+                    }
+                });
+                this.logger.log(`Metadatos de Cloudinary actualizados para documento ${document.id}`);
+            }
+            catch (cloudinaryError) {
+                this.logger.error(`Error verificando archivo en Cloudinary: ${cloudinaryError instanceof Error ? cloudinaryError.message : String(cloudinaryError)}`);
+                throw new common_1.NotFoundException('El archivo no existe en Cloudinary');
+            }
+        }
+        return this.cloudinaryStorage.downloadFile(cloudinaryPublicId);
     }
     async getStorageStats() {
         try {
@@ -5598,6 +5914,41 @@ let CloudinaryDocumentsService = CloudinaryDocumentsService_1 = class Cloudinary
         }
         if (file.size > this.MAX_FILE_SIZE) {
             throw new common_1.BadRequestException(`El archivo es demasiado grande. Tamaño máximo: ${this.MAX_FILE_SIZE / (1024 * 1024)}MB`);
+        }
+    }
+    async migrateDocumentToCloudinary(document) {
+        try {
+            this.logger.log(`Migrando documento ${document.id} a metadatos de Cloudinary`);
+            if (document.filename && !document.filename.startsWith('/uploads/') && !document.filename.startsWith('uploads/')) {
+                const cloudinaryPublicId = document.filename;
+                try {
+                    await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
+                    await this.prisma.document.update({
+                        where: { id: document.id },
+                        data: {
+                            metadata: {
+                                cloudinaryPublicId: cloudinaryPublicId,
+                                storageType: 'cloudinary',
+                                cloudinaryUrl: document.fileUrl,
+                                migratedAt: new Date().toISOString()
+                            }
+                        }
+                    });
+                    this.logger.log(`Documento ${document.id} migrado exitosamente a Cloudinary`);
+                    return cloudinaryPublicId;
+                }
+                catch (cloudinaryError) {
+                    this.logger.error(`Error verificando archivo en Cloudinary: ${cloudinaryError instanceof Error ? cloudinaryError.message : String(cloudinaryError)}`);
+                    throw new common_1.NotFoundException('El archivo no existe en Cloudinary');
+                }
+            }
+            else {
+                throw new common_1.NotFoundException('El archivo local ya no está disponible');
+            }
+        }
+        catch (error) {
+            this.logger.error(`Error migrando documento: ${error instanceof Error ? error.message : String(error)}`);
+            throw error;
         }
     }
 };
@@ -5993,27 +6344,35 @@ let DocumentsController = class DocumentsController {
                 });
             }
             console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
-            const filePath = this.documentsService.getFilePath(document.filename);
-            console.log(`📁 Ruta del archivo: ${filePath}`);
             let fileStream;
+            let fileMetadata;
             try {
-                fileStream = this.documentsService.getFileStream(document.filename);
-                console.log(`✅ Stream del archivo creado exitosamente`);
+                const downloadResult = await this.documentsService.getFileStream(document.filename);
+                fileStream = downloadResult.stream;
+                fileMetadata = downloadResult.metadata;
+                console.log(`✅ Stream del archivo creado exitosamente desde Cloudinary`);
             }
             catch (streamError) {
                 console.error(`❌ Error al crear stream del archivo:`, streamError);
                 return res.status(404).json({
-                    message: 'Archivo físico no encontrado en el servidor',
+                    message: 'Archivo no encontrado en el almacenamiento',
                     error: 'File Not Found',
                     statusCode: 404,
                     documentId: id,
                     filename: document.filename,
-                    filePath: filePath
+                    errorDetails: streamError instanceof Error ? streamError.message : String(streamError)
                 });
             }
-            res.setHeader('Content-Type', document.mimeType);
+            const contentType = fileMetadata?.contentType || document.mimeType || 'application/octet-stream';
+            res.setHeader('Content-Type', contentType);
             res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
-            console.log(`🚀 Iniciando descarga del archivo: ${document.originalName}`);
+            if (fileMetadata?.contentLength) {
+                res.setHeader('Content-Length', fileMetadata.contentLength);
+            }
+            if (fileMetadata?.lastModified) {
+                res.setHeader('Last-Modified', fileMetadata.lastModified.toUTCString());
+            }
+            console.log(`🚀 Iniciando descarga del archivo: ${document.originalName} (${contentType})`);
             fileStream.pipe(res);
             fileStream.on('error', (error) => {
                 console.error(`❌ Error en el stream del archivo:`, error);
@@ -6021,7 +6380,8 @@ let DocumentsController = class DocumentsController {
                     res.status(500).json({
                         message: 'Error al leer el archivo',
                         error: 'Stream Error',
-                        statusCode: 500
+                        statusCode: 500,
+                        errorDetails: error instanceof Error ? error.message : String(error)
                     });
                 }
             });
@@ -6050,69 +6410,57 @@ let DocumentsController = class DocumentsController {
                 }
                 else {
                     return res.status(500).json({
-                        message: 'Error interno del servidor',
+                        message: 'Error interno del servidor al descargar el documento',
                         error: 'Internal Server Error',
                         statusCode: 500,
-                        documentId: id
+                        documentId: id,
+                        errorDetails: error instanceof Error ? error.message : String(error)
                     });
                 }
             }
         }
     }
-    async serveFile(filename, req, res) {
+    async serveFile(id, req, res) {
         try {
-            console.log(`📁 Intentando servir archivo: ${filename}`);
+            console.log(`📁 Intentando servir documento con ID: ${id}`);
             console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
-            const filePath = this.documentsService.getFilePath(filename);
-            console.log(`📂 Ruta del archivo: ${filePath}`);
-            const hasAccess = await this.documentsService.checkFileAccess(filename, req.user.id, req.user.role);
+            const hasAccess = await this.documentsService.checkDocumentAccess(id, req.user.id, req.user.role);
             if (!hasAccess) {
-                console.log(`❌ Usuario ${req.user.id} no tiene acceso al archivo ${filename}`);
+                console.log(`❌ Usuario ${req.user.id} no tiene acceso al documento ${id}`);
                 return res.status(403).json({
-                    message: 'No tienes permisos para acceder a este archivo',
+                    message: 'No tienes permisos para acceder a este documento',
                     error: 'Forbidden',
                     statusCode: 403,
-                    filename: filename
+                    documentId: id
                 });
             }
-            console.log(`✅ Permisos verificados para archivo: ${filename}`);
-            if (!fs.existsSync(filePath)) {
-                console.error(`❌ Archivo físico no encontrado: ${filePath}`);
-                return res.status(404).json({
-                    message: 'Archivo no encontrado en el servidor',
-                    error: 'File Not Found',
-                    statusCode: 404,
-                    filename: filename,
-                    filePath: filePath,
-                    suggestion: 'El archivo puede haberse perdido durante el deploy o el directorio de uploads no existe'
-                });
-            }
-            const stats = fs.statSync(filePath);
-            if (!stats.isFile()) {
-                console.error(`❌ La ruta no es un archivo válido: ${filePath}`);
-                return res.status(400).json({
-                    message: 'La ruta especificada no es un archivo válido',
-                    error: 'Invalid File Path',
-                    statusCode: 400,
-                    filename: filename
-                });
-            }
-            console.log(`✅ Archivo encontrado: ${filename} (${stats.size} bytes)`);
+            console.log(`✅ Permisos verificados para documento: ${id}`);
             let fileStream;
             try {
-                fileStream = this.documentsService.getFileStream(filename);
-                console.log(`✅ Stream del archivo creado exitosamente`);
+                fileStream = await this.documentsService.getDocumentStream(id);
+                console.log(`✅ Stream del documento creado exitosamente`);
             }
             catch (streamError) {
-                console.error(`❌ Error al crear stream del archivo:`, streamError);
-                return res.status(500).json({
-                    message: 'Error al leer el archivo',
-                    error: 'Stream Error',
-                    statusCode: 500,
-                    filename: filename
+                console.error(`❌ Error al crear stream del documento:`, streamError);
+                return res.status(404).json({
+                    message: 'Documento no encontrado en Cloudinary',
+                    error: 'File Not Found',
+                    statusCode: 404,
+                    documentId: id,
+                    suggestion: 'El documento puede haberse perdido o no estar disponible en Cloudinary'
                 });
             }
-            const ext = filename.split('.').pop()?.toLowerCase();
+            const document = await this.documentsService.findDocumentById(id);
+            if (!document) {
+                return res.status(404).json({
+                    message: 'Documento no encontrado en la base de datos',
+                    error: 'Document Not Found',
+                    statusCode: 404,
+                    documentId: id
+                });
+            }
+            const originalName = document.originalName;
+            const ext = originalName.split('.').pop()?.toLowerCase();
             let contentType = 'application/octet-stream';
             if (ext === 'pdf')
                 contentType = 'application/pdf';
@@ -6133,52 +6481,34 @@ let DocumentsController = class DocumentsController {
             else if (ext === 'docx')
                 contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
             res.setHeader('Content-Type', contentType);
-            res.setHeader('Content-Length', stats.size);
+            res.setHeader('Content-Disposition', `inline; filename="${originalName}"`);
             res.setHeader('Cache-Control', 'public, max-age=3600');
-            console.log(`🚀 Iniciando envío del archivo: ${filename} (${contentType})`);
+            console.log(`🚀 Iniciando envío del documento: ${originalName} (${contentType})`);
             fileStream.pipe(res);
             fileStream.on('error', (error) => {
-                console.error(`❌ Error en el stream del archivo:`, error);
+                console.error(`❌ Error en el stream del documento:`, error);
                 if (!res.headersSent) {
                     res.status(500).json({
-                        message: 'Error al leer el archivo',
+                        message: 'Error al transmitir el documento',
                         error: 'Stream Error',
                         statusCode: 500,
-                        filename: filename
+                        documentId: id
                     });
                 }
             });
             fileStream.on('end', () => {
-                console.log(`✅ Archivo enviado exitosamente: ${filename}`);
+                console.log(`✅ Documento enviado completamente: ${id}`);
             });
         }
         catch (error) {
-            console.error(`❌ Error en serveFile:`, error);
+            console.error(`❌ Error general al servir documento:`, error);
             if (!res.headersSent) {
-                if (error instanceof common_1.NotFoundException) {
-                    return res.status(404).json({
-                        message: error.message,
-                        error: 'Not Found',
-                        statusCode: 404,
-                        filename: filename
-                    });
-                }
-                else if (error instanceof common_1.ForbiddenException) {
-                    return res.status(403).json({
-                        message: error.message,
-                        error: 'Forbidden',
-                        statusCode: 403,
-                        filename: filename
-                    });
-                }
-                else {
-                    return res.status(500).json({
-                        message: 'Error interno del servidor',
-                        error: 'Internal Server Error',
-                        statusCode: 500,
-                        filename: filename
-                    });
-                }
+                res.status(500).json({
+                    message: 'Error interno del servidor',
+                    error: 'Internal Server Error',
+                    statusCode: 500,
+                    documentId: id
+                });
             }
         }
     }
@@ -6541,13 +6871,13 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], DocumentsController.prototype, "downloadDocument", null);
 __decorate([
-    (0, common_1.Get)('file/:filename'),
+    (0, common_1.Get)('file/:id'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
     (0, swagger_1.ApiOperation)({
         summary: 'Servir archivo estático',
-        description: 'Sirve un archivo estático desde la carpeta uploads. Los clientes solo pueden acceder a archivos de sus expedientes.'
+        description: 'Sirve un archivo estático desde Cloudinary usando el ID del documento. Los clientes solo pueden acceder a archivos de sus expedientes.'
     }),
-    (0, swagger_1.ApiParam)({ name: 'filename', description: 'Nombre del archivo', type: 'string' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
     (0, swagger_1.ApiResponse)({
         status: 200,
         description: 'Archivo servido correctamente',
@@ -6559,7 +6889,7 @@ __decorate([
     (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
     (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Archivo no encontrado' }),
-    __param(0, (0, common_1.Param)('filename')),
+    __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
     __param(2, (0, common_1.Res)()),
     __metadata("design:type", Function),
@@ -7207,99 +7537,117 @@ let AppointmentsService = class AppointmentsService {
         this.emailService = emailService;
     }
     async findMyAppointments(user) {
-        if (user.role === 'ADMIN') {
-            return this.prisma.appointment.findMany({
-                include: {
-                    lawyer: { select: { id: true, name: true, email: true } },
-                    client: {
-                        include: {
-                            user: { select: { id: true, name: true, email: true } }
+        try {
+            if (user.role === 'ADMIN') {
+                return await this.prisma.appointment.findMany({
+                    include: {
+                        lawyer: { select: { id: true, name: true, email: true } },
+                        client: {
+                            include: {
+                                user: { select: { id: true, name: true, email: true } }
+                            }
                         }
-                    }
-                },
-                orderBy: { date: 'desc' }
-            });
+                    },
+                    orderBy: { date: 'desc' }
+                });
+            }
+            else if (user.role === 'ABOGADO') {
+                return await this.prisma.appointment.findMany({
+                    where: { lawyerId: user.id },
+                    include: {
+                        lawyer: { select: { id: true, name: true, email: true } },
+                        client: {
+                            include: {
+                                user: { select: { id: true, name: true, email: true } }
+                            }
+                        }
+                    },
+                    orderBy: { date: 'desc' }
+                });
+            }
+            else {
+                const client = await this.prisma.client.findUnique({
+                    where: { userId: user.id }
+                });
+                if (!client)
+                    throw new common_1.ForbiddenException('No eres cliente');
+                return await this.prisma.appointment.findMany({
+                    where: { clientId: client.id },
+                    include: {
+                        lawyer: { select: { id: true, name: true, email: true } },
+                        client: {
+                            include: {
+                                user: { select: { id: true, name: true, email: true } }
+                            }
+                        }
+                    },
+                    orderBy: { date: 'desc' }
+                });
+            }
         }
-        else if (user.role === 'ABOGADO') {
-            return this.prisma.appointment.findMany({
-                where: { lawyerId: user.id },
-                include: {
-                    lawyer: { select: { id: true, name: true, email: true } },
-                    client: {
-                        include: {
-                            user: { select: { id: true, name: true, email: true } }
-                        }
-                    }
-                },
-                orderBy: { date: 'desc' }
-            });
-        }
-        else {
-            const client = await this.prisma.client.findUnique({
-                where: { userId: user.id }
-            });
-            if (!client)
-                throw new common_1.ForbiddenException('No eres cliente');
-            return this.prisma.appointment.findMany({
-                where: { clientId: client.id },
-                include: {
-                    lawyer: { select: { id: true, name: true, email: true } },
-                    client: {
-                        include: {
-                            user: { select: { id: true, name: true, email: true } }
-                        }
-                    }
-                },
-                orderBy: { date: 'desc' }
-            });
+        catch (error) {
+            console.error('Error en findMyAppointments:', error);
+            if (error instanceof common_1.ForbiddenException) {
+                throw error;
+            }
+            throw new common_1.BadRequestException(`Error al obtener citas: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
     async findAll(user) {
-        if (user.role === 'ADMIN') {
-            return this.prisma.appointment.findMany({
-                include: {
-                    lawyer: { select: { id: true, name: true, email: true } },
-                    client: {
-                        include: {
-                            user: { select: { id: true, name: true, email: true } }
+        try {
+            if (user.role === 'ADMIN') {
+                return await this.prisma.appointment.findMany({
+                    include: {
+                        lawyer: { select: { id: true, name: true, email: true } },
+                        client: {
+                            include: {
+                                user: { select: { id: true, name: true, email: true } }
+                            }
                         }
-                    }
-                },
-                orderBy: { date: 'desc' }
-            });
+                    },
+                    orderBy: { date: 'desc' }
+                });
+            }
+            else if (user.role === 'ABOGADO') {
+                return await this.prisma.appointment.findMany({
+                    where: { lawyerId: user.id },
+                    include: {
+                        lawyer: { select: { id: true, name: true, email: true } },
+                        client: {
+                            include: {
+                                user: { select: { id: true, name: true, email: true } }
+                            }
+                        }
+                    },
+                    orderBy: { date: 'desc' }
+                });
+            }
+            else {
+                const client = await this.prisma.client.findUnique({
+                    where: { userId: user.id }
+                });
+                if (!client)
+                    throw new common_1.ForbiddenException('No eres cliente');
+                return await this.prisma.appointment.findMany({
+                    where: { clientId: client.id },
+                    include: {
+                        lawyer: { select: { id: true, name: true, email: true } },
+                        client: {
+                            include: {
+                                user: { select: { id: true, name: true, email: true } }
+                            }
+                        }
+                    },
+                    orderBy: { date: 'desc' }
+                });
+            }
         }
-        else if (user.role === 'ABOGADO') {
-            return this.prisma.appointment.findMany({
-                where: { lawyerId: user.id },
-                include: {
-                    lawyer: { select: { id: true, name: true, email: true } },
-                    client: {
-                        include: {
-                            user: { select: { id: true, name: true, email: true } }
-                        }
-                    }
-                },
-                orderBy: { date: 'desc' }
-            });
-        }
-        else {
-            const client = await this.prisma.client.findUnique({
-                where: { userId: user.id }
-            });
-            if (!client)
-                throw new common_1.ForbiddenException('No eres cliente');
-            return this.prisma.appointment.findMany({
-                where: { clientId: client.id },
-                include: {
-                    lawyer: { select: { id: true, name: true, email: true } },
-                    client: {
-                        include: {
-                            user: { select: { id: true, name: true, email: true } }
-                        }
-                    }
-                },
-                orderBy: { date: 'desc' }
-            });
+        catch (error) {
+            console.error('Error en findAll:', error);
+            if (error instanceof common_1.ForbiddenException) {
+                throw error;
+            }
+            throw new common_1.BadRequestException(`Error al obtener citas: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
     async findOne(id, user) {

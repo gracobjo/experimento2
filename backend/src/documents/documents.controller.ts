@@ -335,35 +335,44 @@ export class DocumentsController {
 
       console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
 
-      // Verificar que el archivo físico existe
-      const filePath = this.documentsService.getFilePath(document.filename);
-      console.log(`📁 Ruta del archivo: ${filePath}`);
-
-      // Intentar obtener el stream del archivo
+      // Obtener el stream del archivo usando el servicio de Cloudinary
       let fileStream;
+      let fileMetadata;
+      
       try {
-        fileStream = this.documentsService.getFileStream(document.filename);
-        console.log(`✅ Stream del archivo creado exitosamente`);
+        const downloadResult = await this.documentsService.getFileStream(document.filename);
+        fileStream = downloadResult.stream;
+        fileMetadata = downloadResult.metadata;
+        console.log(`✅ Stream del archivo creado exitosamente desde Cloudinary`);
       } catch (streamError) {
         console.error(`❌ Error al crear stream del archivo:`, streamError);
         return res.status(404).json({
-          message: 'Archivo físico no encontrado en el servidor',
+          message: 'Archivo no encontrado en el almacenamiento',
           error: 'File Not Found',
           statusCode: 404,
           documentId: id,
           filename: document.filename,
-          filePath: filePath
+          errorDetails: streamError instanceof Error ? streamError.message : String(streamError)
         });
       }
 
       // Configurar headers de respuesta
-      res.setHeader('Content-Type', document.mimeType);
+      const contentType = fileMetadata?.contentType || document.mimeType || 'application/octet-stream';
+      res.setHeader('Content-Type', contentType);
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="${document.originalName}"`,
       );
 
-      console.log(`🚀 Iniciando descarga del archivo: ${document.originalName}`);
+      // Agregar headers adicionales si están disponibles
+      if (fileMetadata?.contentLength) {
+        res.setHeader('Content-Length', fileMetadata.contentLength);
+      }
+      if (fileMetadata?.lastModified) {
+        res.setHeader('Last-Modified', fileMetadata.lastModified.toUTCString());
+      }
+
+      console.log(`🚀 Iniciando descarga del archivo: ${document.originalName} (${contentType})`);
 
       // Enviar el archivo
       fileStream.pipe(res);
@@ -375,7 +384,8 @@ export class DocumentsController {
           res.status(500).json({
             message: 'Error al leer el archivo',
             error: 'Stream Error',
-            statusCode: 500
+            statusCode: 500,
+            errorDetails: error instanceof Error ? error.message : String(error)
           });
         }
       });
@@ -404,10 +414,11 @@ export class DocumentsController {
           });
         } else {
           return res.status(500).json({
-            message: 'Error interno del servidor',
+            message: 'Error interno del servidor al descargar el documento',
             error: 'Internal Server Error',
             statusCode: 500,
-            documentId: id
+            documentId: id,
+            errorDetails: error instanceof Error ? error.message : String(error)
           });
         }
       }

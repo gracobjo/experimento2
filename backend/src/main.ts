@@ -39,7 +39,7 @@ async function bootstrap() {
         'http://localhost:8080',
         'https://experimento2-fenm.vercel.app',
         'https://experimento2-fenm-44u7rmivu-gracobjos-projects.vercel.app',
-        'experimento2-production-54c0.up.railway.app',
+        'https://experimento2-production-54c0.up.railway.app',
         /^https:\/\/.*\.vercel\.app$/,
         /^https:\/\/.*\.railway\.app$/
       ];
@@ -51,6 +51,21 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
     preflightContinue: false,
     optionsSuccessStatus: 204,
+  });
+
+  // Middleware de logging para debug
+  app.use((req, res, next) => {
+    console.log(`🔍 [${new Date().toISOString()}] ${req.method} ${req.url}`);
+    console.log(`🔍 Headers:`, req.headers);
+    console.log(`🔍 Origin:`, req.headers.origin);
+    console.log(`🔍 User-Agent:`, req.headers['user-agent']);
+    
+    // Log del body para requests POST/PUT
+    if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body) {
+      console.log(`🔍 Body:`, JSON.stringify(req.body, null, 2));
+    }
+    
+    next();
   });
   
   // Configuración global de pipes
@@ -201,6 +216,8 @@ async function bootstrap() {
       { path: 'test-health', method: RequestMethod.GET },
       { path: 'api-test', method: RequestMethod.GET },
       { path: 'db-status', method: RequestMethod.GET },
+      { path: 'appointments-test', method: RequestMethod.GET },
+      { path: 'documents-test', method: RequestMethod.GET },
     ],
   });
 
@@ -229,10 +246,13 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 Servidor corriendo en puerto ${port}`);
-  console.log(`🌍 CORS origins configurados: http://localhost:5173, http://localhost:3000, https://experimento2-fenm.vercel.app, experimento2-production-54c0.up.railway.app, *.vercel.app, *.railway.app`);
+  console.log(`🌍 CORS origins configurados: http://localhost:5173, http://localhost:3000, https://experimento2-fenm.vercel.app, https://experimento2-production-54c0.up.railway.app, *.vercel.app, *.railway.app`);
   console.log(`📁 Archivos estáticos disponibles en /uploads`);
   console.log(`📚 Documentación Swagger disponible en /docs`);
   console.log(`💚 Health check disponible en /health`);
   console.log(`🔧 Debug environment disponible en /debug-env`);
+  console.log(`🗄️ Database status disponible en /db-status`);
+  console.log(`📅 Appointments test disponible en /appointments-test`);
+  console.log(`📄 Documents test disponible en /documents-test`);
 }
 bootstrap();

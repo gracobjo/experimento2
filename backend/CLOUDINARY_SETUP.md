@@ -52,3 +52,6 @@ Cloudinary ya está instalado en tu backend. Verifica que aparezca en `package.j
 - ✅ **Archivos persistentes** entre deploys
 - ✅ **No más errores 404** por archivos perdidos
 
+
+
+
