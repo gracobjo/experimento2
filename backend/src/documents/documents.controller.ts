@@ -289,6 +289,115 @@ export class DocumentsController {
     return this.documentsService.findOne(id, req.user.id, req.user.role);
   }
 
+  @Get('debug/document/:id')
+  @Roles(Role.ADMIN, Role.ABOGADO)
+  @ApiOperation({ 
+    summary: 'Diagnóstico de documento específico',
+    description: 'Endpoint para diagnosticar problemas con un documento específico por ID (solo ADMIN y ABOGADO)'
+  })
+  @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Información completa del documento',
+    schema: {
+      type: 'object',
+      properties: {
+        documentId: { type: 'string' },
+        exists: { type: 'boolean' },
+        documentInfo: { type: 'object' },
+        cloudinaryStatus: { type: 'string' },
+        cloudinaryError: { type: 'string' },
+        endpointTest: { type: 'object' }
+      }
+    }
+  })
+  async debugDocument(
+    @Param('id') id: string,
+    @Request() req,
+  ) {
+    try {
+      console.log(`🔍 Diagnóstico completo para documento ID: ${id}`);
+      
+      const result: any = {
+        documentId: id,
+        exists: false,
+        documentInfo: null,
+        cloudinaryStatus: 'unknown',
+        cloudinaryError: null,
+        endpointTest: {}
+      };
+
+      // 1. Verificar si existe en la base de datos
+      try {
+        const document = await this.documentsService.findOne(
+          id,
+          req.user.id,
+          req.user.role,
+        );
+
+        if (document) {
+          result.exists = true;
+          result.documentInfo = {
+            id: document.id,
+            filename: document.filename,
+            originalName: document.originalName,
+            mimeType: document.mimeType,
+            fileUrl: document.fileUrl,
+            metadata: document.metadata,
+            expedienteId: document.expedienteId,
+            uploadedBy: document.uploadedBy
+          };
+
+          console.log(`📄 Documento encontrado en BD: ${document.filename}`);
+
+          // 2. Verificar estado en Cloudinary
+          try {
+            const downloadResult = await this.documentsService.getFileStream(document.filename);
+            result.cloudinaryStatus = 'available';
+            result.endpointTest = {
+              hasStream: !!downloadResult.stream,
+              hasMetadata: !!downloadResult.metadata,
+              streamType: typeof downloadResult.stream,
+              metadataKeys: downloadResult.metadata ? Object.keys(downloadResult.metadata) : []
+            };
+            console.log(`✅ Archivo accesible en Cloudinary`);
+          } catch (cloudinaryErr) {
+            result.cloudinaryStatus = 'error';
+            result.cloudinaryError = cloudinaryErr instanceof Error ? cloudinaryErr.message : String(cloudinaryErr);
+            console.error(`❌ Error de Cloudinary:`, cloudinaryErr);
+          }
+
+        } else {
+          console.log(`❌ Documento no encontrado en BD: ${id}`);
+        }
+
+      } catch (dbError) {
+        console.error(`❌ Error consultando BD:`, dbError);
+        result.cloudinaryError = `Error BD: ${dbError instanceof Error ? dbError.message : String(dbError)}`;
+      }
+
+      // 3. Probar endpoint file/:id
+      try {
+        const testUrl = `/api/documents/file/${id}`;
+        console.log(`🧪 Probando endpoint: ${testUrl}`);
+        result.endpointTest.fileEndpoint = testUrl;
+      } catch (endpointError) {
+        console.error(`❌ Error probando endpoint:`, endpointError);
+      }
+
+      console.log(`🔍 Diagnóstico completado para documento ${id}`);
+      return result;
+
+    } catch (error) {
+      console.error(`❌ Error en debugDocument:`, error);
+      return {
+        documentId: id,
+        error: error instanceof Error ? error.message : String(error),
+        status: 'error'
+      };
+    }
+  }
+
   @Get('debug/cloudinary-status/:id')
   @Roles(Role.ADMIN, Role.ABOGADO)
   @ApiOperation({ 
