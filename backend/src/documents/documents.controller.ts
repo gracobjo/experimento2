@@ -467,14 +467,50 @@ export class DocumentsController {
       }
 
       // Configurar headers de respuesta para visualización (no descarga)
-      const contentType = fileMetadata?.contentType || document.mimeType || 'application/octet-stream';
+      let contentType = fileMetadata?.contentType || document.mimeType || 'application/octet-stream';
+      
+      // Mejorar detección de MIME types para archivos comunes
+      if (document.originalName) {
+        const extension = document.originalName.toLowerCase().split('.').pop();
+        switch (extension) {
+          case 'docx':
+            contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            break;
+          case 'doc':
+            contentType = 'application/msword';
+            break;
+          case 'pdf':
+            contentType = 'application/pdf';
+            break;
+          case 'txt':
+            contentType = 'text/plain';
+            break;
+          case 'csv':
+            contentType = 'text/csv';
+            break;
+          case 'jpg':
+          case 'jpeg':
+            contentType = 'image/jpeg';
+            break;
+          case 'png':
+            contentType = 'image/png';
+            break;
+          case 'gif':
+            contentType = 'image/gif';
+            break;
+          case 'webp':
+            contentType = 'image/webp';
+            break;
+        }
+      }
+      
       res.setHeader('Content-Type', contentType);
       
       // Para imágenes y PDFs, permitir visualización inline
       if (contentType.startsWith('image/') || contentType === 'application/pdf') {
         res.setHeader('Content-Disposition', 'inline');
       } else {
-        // Para otros tipos de archivo, forzar descarga
+        // Para otros tipos de archivo, forzar descarga con extensión correcta
         res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
       }
 
