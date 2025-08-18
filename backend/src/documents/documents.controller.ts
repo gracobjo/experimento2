@@ -289,6 +289,116 @@ export class DocumentsController {
     return this.documentsService.findOne(id, req.user.id, req.user.role);
   }
 
+  @Get('debug/cloudinary-status/:id')
+  @Roles(Role.ADMIN, Role.ABOGADO)
+  @ApiOperation({ 
+    summary: 'Diagnóstico de Cloudinary',
+    description: 'Endpoint para diagnosticar problemas con archivos en Cloudinary (solo ADMIN y ABOGADO)'
+  })
+  @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Estado del archivo en Cloudinary',
+    schema: {
+      type: 'object',
+      properties: {
+        documentId: { type: 'string' },
+        filename: { type: 'string' },
+        cloudinaryStatus: { type: 'string' },
+        cloudinaryError: { type: 'string' },
+        metadata: { type: 'object' }
+      }
+    }
+  })
+  async debugCloudinaryStatus(
+    @Param('id') id: string,
+    @Request() req,
+  ) {
+    try {
+      console.log(`🔍 Diagnóstico Cloudinary para documento ID: ${id}`);
+      
+      // Buscar el documento
+      const document = await this.documentsService.findOne(
+        id,
+        req.user.id,
+        req.user.role,
+      );
+
+      if (!document) {
+        return {
+          documentId: id,
+          error: 'Documento no encontrado en la base de datos',
+          status: 'not_found'
+        };
+      }
+
+      console.log(`📄 Documento encontrado: ${document.filename}`);
+
+      // Intentar acceder a Cloudinary
+      let cloudinaryStatus = 'unknown';
+      let cloudinaryError = null;
+      let metadata = null;
+
+      try {
+        const downloadResult = await this.documentsService.getFileStream(document.filename);
+        cloudinaryStatus = 'available';
+        metadata = {
+          hasStream: !!downloadResult.stream,
+          hasMetadata: !!downloadResult.metadata,
+          streamType: typeof downloadResult.stream
+        };
+      } catch (cloudinaryErr) {
+        cloudinaryStatus = 'error';
+        cloudinaryError = cloudinaryErr instanceof Error ? cloudinaryErr.message : String(cloudinaryErr);
+        console.error(`❌ Error de Cloudinary:`, cloudinaryErr);
+      }
+
+      return {
+        documentId: id,
+        filename: document.filename,
+        originalName: document.originalName,
+        cloudinaryStatus,
+        cloudinaryError,
+        metadata,
+        documentMetadata: document.metadata,
+        fileUrl: document.fileUrl
+      };
+
+    } catch (error) {
+      console.error(`❌ Error en debugCloudinaryStatus:`, error);
+      return {
+        documentId: id,
+        error: error instanceof Error ? error.message : String(error),
+        status: 'error'
+      };
+    }
+  }
+
+  @Get('test-simple')
+  @ApiOperation({ 
+    summary: 'Endpoint de prueba simple',
+    description: 'Endpoint básico para verificar que el controlador esté funcionando'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Controlador funcionando',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        timestamp: { type: 'string' },
+        status: { type: 'string' }
+      }
+    }
+  })
+  async testSimple() {
+    return {
+      message: 'Documents controller funcionando correctamente',
+      timestamp: new Date().toISOString(),
+      status: 'ok'
+    };
+  }
+
   @Get('file/:id')
   @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
   @ApiOperation({ 

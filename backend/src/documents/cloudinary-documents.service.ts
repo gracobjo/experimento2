@@ -330,10 +330,18 @@ export class CloudinaryDocumentsService {
         cloudinaryPublicId = await this.migrateDocumentToCloudinary(document);
       }
       
-      // Eliminar archivo de Cloudinary
-      await this.cloudinaryStorage.deleteFile(cloudinaryPublicId);
-      
-      this.logger.log(`Archivo eliminado de Cloudinary: ${cloudinaryPublicId}`);
+      // Intentar eliminar archivo de Cloudinary (puede no existir)
+      try {
+        await this.cloudinaryStorage.deleteFile(cloudinaryPublicId);
+        this.logger.log(`Archivo eliminado de Cloudinary: ${cloudinaryPublicId}`);
+      } catch (cloudinaryError) {
+        // Si el archivo no existe en Cloudinary, solo loguear la advertencia
+        if (cloudinaryError instanceof Error && cloudinaryError.message.includes('not found')) {
+          this.logger.warn(`Archivo no encontrado en Cloudinary: ${cloudinaryPublicId} - continuando con eliminación de BD`);
+        } else {
+          this.logger.warn(`Error eliminando archivo de Cloudinary: ${cloudinaryError instanceof Error ? cloudinaryError.message : String(cloudinaryError)} - continuando con eliminación de BD`);
+        }
+      }
 
       // Eliminar registro de base de datos
       await this.prisma.document.delete({

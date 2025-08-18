@@ -104,27 +104,16 @@ function listAvailableConfigs() {
   return Object.keys(FALLBACK_CONFIGS);
 }
 
-// Exportar funciones
-window.FALLBACK_CONFIG = {
-  apply: applyFallbackConfig,
-  switch: switchConfig,
-  getCurrent: getCurrentConfig,
-  listAvailable: listAvailableConfigs,
-  detectEnvironment: detectEnvironment
-};
-
-// Aplicar configuración automáticamente
+// Aplicar configuración automáticamente cuando se carga la página
 document.addEventListener('DOMContentLoaded', () => {
   applyFallbackConfig();
 });
 
-// Exportar para uso en módulos
-export {
-  applyFallbackConfig,
-  switchConfig,
-  getCurrentConfig,
-  listAvailableConfigs,
-  detectEnvironment,
-  FALLBACK_CONFIGS
-};
-
+// Exportar funciones para uso global
+window.FALLBACK_CONFIGS = FALLBACK_CONFIGS;
+window.detectEnvironment = detectEnvironment;
+window.getFallbackConfig = getFallbackConfig;
+window.applyFallbackConfig = applyFallbackConfig;
+window.switchConfig = switchConfig;
+window.getCurrentConfig = getCurrentConfig;
+window.listAvailableConfigs = listAvailableConfigs;
