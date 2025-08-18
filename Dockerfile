@@ -4,14 +4,14 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copia los archivos de dependencias y Prisma
-COPY backend/package*.json ./
-COPY backend/prisma ./prisma/
+COPY package*.json ./
+COPY prisma ./prisma/
 
 # Instala TODAS las dependencias (incluyendo dev)
 RUN npm install
 
-# Copia el código fuente del backend
-COPY backend/ .
+# Copia el código fuente
+COPY . .
 
 # Genera el cliente de Prisma
 RUN npx prisma generate
@@ -24,18 +24,13 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# --- Instala Chromium y dependencias para Puppeteer ---
+# --- Instala dependencias básicas del sistema ---
 RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont
+    ca-certificates
 
 # Copia los archivos de dependencias y Prisma
-COPY backend/package*.json ./
-COPY backend/prisma ./prisma/
+COPY package*.json ./
+COPY prisma ./prisma/
 
 # Instala solo dependencias de producción
 RUN npm install --only=production
@@ -52,13 +47,9 @@ COPY --from=builder /app/src/invoices/templates ./dist/invoices/templates
 # Copia scripts necesarios
 COPY backend/scripts ./scripts
 
-# Variable de entorno para Puppeteer (importante para Alpine)
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-
-# Copia el script de inicio
-COPY backend/start.sh ./start.sh
-RUN chmod +x ./start.sh
+# Variable de entorno para el puerto de la aplicación
+ENV PORT=3000
 
 EXPOSE 3000
 
-CMD ["./start.sh"] 
+CMD ["npm", "run", "start:prod"] 
