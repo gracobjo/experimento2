@@ -44,15 +44,11 @@ export class CloudinaryStorageService {
       stream.push(file.buffer);
       stream.push(null);
 
-      // Obtener extensión del archivo original
-      const originalName = file.originalname || 'file';
-      const extension = originalName.includes('.') ? originalName.split('.').pop() : '';
-      
       // Configurar opciones de upload
       const uploadOptions: any = {
         folder,
         resource_type: 'auto', // Detecta automáticamente el tipo
-        public_id: `${Date.now()}-${Math.random().toString(36).substring(7)}${extension ? '.' + extension : ''}`,
+        public_id: `${Date.now()}-${Math.random().toString(36).substring(7)}`,
         overwrite: false,
         unique_filename: true,
       };

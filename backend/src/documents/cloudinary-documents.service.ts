@@ -95,7 +95,7 @@ export class CloudinaryDocumentsService {
       // Guardar información en base de datos
       const document = await this.prisma.document.create({
         data: {
-          filename: uploadResult.publicId, // Usar publicId de Cloudinary
+          filename: `${uploadResult.publicId}.${file.originalname.split('.').pop()}`, // Añadir extensión para compatibilidad
           originalName: file.originalname,
           fileUrl: uploadResult.url, // URL de Cloudinary
           fileSize: file.size,
@@ -105,7 +105,7 @@ export class CloudinaryDocumentsService {
           uploadedBy: currentUserId,
           // Agregar metadatos de Cloudinary
           metadata: {
-            cloudinaryPublicId: uploadResult.publicId,
+            cloudinaryPublicId: uploadResult.publicId, // Sin extensión
             storageType: 'cloudinary',
             cloudinaryUrl: uploadResult.url
           } as any
@@ -636,13 +636,23 @@ export class CloudinaryDocumentsService {
     let cloudinaryPublicId = (document.metadata as any)?.cloudinaryPublicId;
     
     if (!cloudinaryPublicId) {
-      // Si no hay metadatos, asumir que filename es el publicId de Cloudinary
-      // Esto es el caso cuando se sube un documento nuevo
-      cloudinaryPublicId = filename;
+      // Si no hay metadatos, extraer el publicId del filename
+      // El filename tiene formato: timestamp-randomId.extension
+      // Necesitamos extraer solo la parte: timestamp-randomId
+      const filenameParts = filename.split('.');
+      if (filenameParts.length > 1) {
+        // Quitar la extensión del final
+        cloudinaryPublicId = filenameParts.slice(0, -1).join('.');
+      } else {
+        // Si no hay extensión, usar el filename completo
+        cloudinaryPublicId = filename;
+      }
       
-      // Verificar que el archivo existe en Cloudinary
-      try {
-        await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
+      this.logger.log(`PublicId extraído del filename: ${filename} -> ${cloudinaryPublicId}`);
+      
+              // Verificar que el archivo existe en Cloudinary
+        try {
+          await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
         
         // Actualizar metadatos en la base de datos para futuras consultas
         await this.prisma.document.update({
