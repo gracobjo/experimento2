@@ -1,14 +1,14 @@
-# Dependencies
-node_modules
+# Dependencies (se instalan en el contenedor)
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Production build
-dist
-build
+# Production build (se genera en el contenedor)
+dist/
+build/
 
-# Environment files
+# Environment files (se configuran en Railway)
 .env
 .env.local
 .env.development.local
@@ -16,8 +16,8 @@ build
 .env.production.local
 
 # IDE files
-.vscode
-.idea
+.vscode/
+.idea/
 *.swp
 *.swo
 
@@ -26,28 +26,21 @@ build
 Thumbs.db
 
 # Git
-.git
+.git/
 .gitignore
 
 # Documentation
 *.md
 documentacion/
 
-# Testing
-test/
-testing/
-*.test.js
-*.test.ts
-*.spec.js
-*.spec.ts
-
-# Frontend (we only need backend for this deployment)
+# Frontend (no necesario para backend)
 frontend/
 
-# Chatbot
+# Chatbot (no necesario para backend)
 chatbot/
+chatbot-repo/
 
-# Assets and uploads
+# Assets and uploads (no necesarios para build)
 assets/
 uploads/
 
@@ -56,9 +49,9 @@ uploads/
 *.temp
 *.log
 
-# PDF files (they're large and not needed for build)
-*.pdf
-
-# Test files
-test-*.js
-test-*.pdf 
+# Test files (mantener para build)
+# test/
+# *.test.js
+# *.test.ts
+# *.spec.js
+# *.spec.ts 
