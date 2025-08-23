@@ -9,8 +9,14 @@ COPY package*.json ./
 # Instala TODAS las dependencias (incluyendo dev)
 RUN npm install
 
-# Copia el código fuente completo
+# Copia el código fuente completo (incluyendo prisma)
 COPY . .
+
+# Verifica que el schema de Prisma esté disponible
+RUN ls -la && \
+    ls -la prisma/ && \
+    echo "=== Prisma Schema Content ===" && \
+    cat prisma/schema.prisma | head -10
 
 # Genera el cliente de Prisma
 RUN npx prisma generate
@@ -38,6 +44,12 @@ COPY --from=builder /app/dist ./dist
 
 # Copia Prisma desde el builder
 COPY --from=builder /app/prisma ./prisma
+
+# Verifica que el schema de Prisma esté disponible en producción
+RUN ls -la && \
+    ls -la prisma/ && \
+    echo "=== Production Prisma Schema Content ===" && \
+    cat prisma/schema.prisma | head -10
 
 # Genera el cliente de Prisma en producción
 RUN npx prisma generate

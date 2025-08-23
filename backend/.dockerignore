@@ -1,0 +1,49 @@
+# Dependencies (se instalan en el contenedor)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Production build (se genera en el contenedor)
+dist/
+build/
+
+# Environment files (se configuran en Railway)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+documentacion/
+
+# Assets and uploads (no necesarios para build)
+uploads/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# IMPORTANTE: NO excluir estos directorios/archivos
+# prisma/ - Necesario para generar el cliente
+# src/ - Código fuente
+# package*.json - Dependencias
+# tsconfig.json - Configuración de TypeScript
+# nest-cli.json - Configuración de NestJS
