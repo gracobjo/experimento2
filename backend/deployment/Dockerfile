@@ -3,14 +3,13 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copia los archivos de dependencias y Prisma
+# Copia los archivos de dependencias
 COPY package*.json ./
-COPY prisma ./prisma/
 
 # Instala TODAS las dependencias (incluyendo dev)
 RUN npm install
 
-# Copia el código fuente
+# Copia el código fuente completo
 COPY . .
 
 # Genera el cliente de Prisma
@@ -28,18 +27,20 @@ WORKDIR /app
 RUN apk add --no-cache \
     ca-certificates
 
-# Copia los archivos de dependencias y Prisma
+# Copia los archivos de dependencias
 COPY package*.json ./
-COPY prisma ./prisma/
 
 # Instala solo dependencias de producción
 RUN npm install --only=production
 
-# Genera el cliente de Prisma en producción
-RUN npx prisma generate
-
 # Copia la app compilada desde el builder
 COPY --from=builder /app/dist ./dist
+
+# Copia Prisma desde el builder
+COPY --from=builder /app/prisma ./prisma
+
+# Genera el cliente de Prisma en producción
+RUN npx prisma generate
 
 # (Opcional) Copia plantillas si las usas en tiempo de ejecución
 COPY --from=builder /app/src/invoices/templates ./dist/invoices/templates
