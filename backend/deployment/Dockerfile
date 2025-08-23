@@ -3,14 +3,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copia los archivos de dependencias
-COPY package*.json ./
+# Copia los archivos de dependencias del backend
+COPY backend/package*.json ./
 
 # Instala TODAS las dependencias (incluyendo dev)
 RUN npm install
 
-# Copia el código fuente completo (incluyendo prisma)
-COPY . .
+# Copia el código fuente del backend
+COPY backend/ ./
 
 # Verifica que el schema de Prisma esté disponible
 RUN ls -la && \
@@ -33,8 +33,8 @@ WORKDIR /app
 RUN apk add --no-cache \
     ca-certificates
 
-# Copia los archivos de dependencias
-COPY package*.json ./
+# Copia los archivos de dependencias del backend
+COPY backend/package*.json ./
 
 # Instala solo dependencias de producción
 RUN npm install --only=production
