@@ -45,6 +45,10 @@ COPY --from=builder /app/dist ./dist
 # Copia Prisma desde el builder
 COPY --from=builder /app/prisma ./prisma
 
+# Copia el script de inicio y hazlo ejecutable
+COPY --from=builder /app/start-simple.sh ./start-simple.sh
+RUN chmod +x ./start-simple.sh
+
 # Verifica que el schema de Prisma esté disponible en producción
 RUN ls -la && \
     ls -la prisma/ && \
@@ -62,4 +66,4 @@ ENV PORT=3000
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start:prod"] 
+CMD ["./start-simple.sh"] 
