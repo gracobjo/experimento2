@@ -65,6 +65,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const checkAuth = async () => {
     try {
       const token = localStorage.getItem('token');
+      const savedUser = localStorage.getItem('user');
+      
+      if (token && savedUser) {
+        try {
+          // Intentar cargar usuario desde localStorage primero
+          const userData = JSON.parse(savedUser);
+          if (userData && userData.role) {
+            setUser(userData);
+            setLoading(false);
+            return;
+          }
+        } catch (parseError) {
+          console.warn('Error parseando usuario guardado:', parseError);
+        }
+      }
       
       if (token) {
         const response = await api.get('/auth/me', {
@@ -73,13 +88,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Verifica la estructura del usuario
         if (response.data && response.data.role) {
-          setUser(response.data);
+          const userData = {
+            id: response.data.id,
+            email: response.data.email,
+            name: response.data.name,
+            role: response.data.role
+          };
+          
+          // Guardar en localStorage y estado
+          localStorage.setItem('user', JSON.stringify(userData));
+          setUser(userData);
         } else {
           throw new Error('Datos de usuario incompletos');
         }
       }
     } catch (error) {
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
     } finally {
       setLoading(false);
     }
@@ -91,13 +116,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { token, user } = response.data;
       
       localStorage.setItem('token', token);
+      
       // Guarda TODOS los datos del usuario incluyendo el role
-      setUser({
+      const userData = {
         id: user.id,
         email: user.email,
         name: user.name,
         role: user.role // Asegúrate que esto viene del backend
-      });
+      };
+      
+      // Guardar usuario en localStorage para persistencia
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      // Actualizar estado de React
+      setUser(userData);
       
       // No redirigir aquí, dejar que el componente Login maneje la redirección
       // El componente Login ya tiene la lógica de redirección basada en el rol
@@ -108,6 +140,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
     window.location.href = '/login'; // Redirige al login tras logout
   };
