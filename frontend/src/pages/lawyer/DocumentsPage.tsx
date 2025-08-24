@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import FileUpload from '../../components/forms/FileUpload';
+import { getBackendUrl } from '../../config/config';
 
 interface Document {
   id: string;
@@ -244,47 +245,29 @@ const DocumentsPage = () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('No hay token de autenticación. Por favor, inicia sesión de nuevo.');
+        setError('No hay token de autenticación. Por favor, inicia sesión de nuevo.');
         return;
       }
 
-      console.log(`📥 Intentando visualizar documento: ${originalName} (ID: ${documentId})`);
+      console.log(`🔍 Intentando visualizar documento: ${originalName} (ID: ${documentId})`);
 
-      // Hacer la petición al backend con autenticación para visualización
-      const response = await fetch(`${(import.meta as any).env.VITE_API_URL || 'https://experimento2-production-54c0.up.railway.app'}/api/documents/file/${documentId}`, {
-        method: 'GET',
+      // Hacer petición autenticada al endpoint usando el ID del documento
+      const response = await fetch(`${getBackendUrl()}/api/documents/file/${documentId}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Authorization': `Bearer ${token}`,
+        },
       });
 
+      console.log(`📡 Respuesta del servidor: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
-        if (response.status === 401) {
-          alert('Sesión expirada. Por favor, inicia sesión de nuevo.');
-          return;
-        }
-
-        // Intentar obtener detalles del error
-        let errorMessage = `Error ${response.status}: ${response.statusText}`;
-        try {
-          const errorData = await response.json();
-          if (errorData.message) {
-            errorMessage = errorData.message;
-          }
-          if (errorData.suggestion) {
-            errorMessage += `\n\nSugerencia: ${errorData.suggestion}`;
-          }
-        } catch (e) {
-          // Si no se puede parsear JSON, usar el mensaje por defecto
-        }
-
-        // Mostrar mensaje de error más informativo
         if (response.status === 404) {
-          errorMessage = `El documento "${originalName}" no se encuentra en el servidor.\n\nEsto puede deberse a:\n• El archivo se perdió durante el deploy\n• El directorio de uploads no existe\n• Problema de permisos\n\nPor favor, contacta al administrador del sistema.`;
+          throw new Error(`Documento no encontrado en el servidor. Verifica que el archivo exista.`);
+        } else if (response.status === 403) {
+          throw new Error(`No tienes permisos para acceder a este documento.`);
+        } else {
+          throw new Error(`Error del servidor: ${response.status} ${response.statusText}`);
         }
-
-        alert(`Error al visualizar el documento:\n\n${errorMessage}`);
-        return;
       }
 
       console.log(`✅ Documento cargado exitosamente: ${originalName}`);
@@ -294,7 +277,7 @@ const DocumentsPage = () => {
       const url = window.URL.createObjectURL(blob);
       
       // Determinar el tipo de archivo para decidir cómo manejarlo
-      const fileExtension = originalName.toLowerCase().split('.').pop();
+      const fileExtension = originalName.toLowerCase().split('.').pop() || '';
       const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(fileExtension);
       const isPdf = fileExtension === 'pdf';
       const isText = ['txt', 'md', 'log', 'csv'].includes(fileExtension);
@@ -303,12 +286,16 @@ const DocumentsPage = () => {
       const isSpreadsheet = ['xlsx', 'xls', 'ods'].includes(fileExtension);
       const isPresentation = ['pptx', 'ppt', 'odp'].includes(fileExtension);
       
+      console.log(`📁 Tipo de archivo detectado: ${fileExtension} (Imagen: ${isImage}, PDF: ${isPdf}, Texto: ${isText}, Código: ${isCode}, Documento: ${isDocument})`);
+      
       // Estrategia de visualización basada en el tipo de archivo
       if (isImage || isPdf) {
         // Para imágenes y PDFs, abrir en nueva pestaña para visualización
+        console.log(`🖼️ Abriendo ${isImage ? 'imagen' : 'PDF'} en nueva pestaña`);
         window.open(url, '_blank');
       } else if (isText || isCode) {
         // Para archivos de texto y código, mostrar contenido inline
+        console.log(`📝 Mostrando archivo de texto/código inline`);
         try {
           const textContent = await blob.text();
           showTextPreview(originalName, textContent, fileExtension);
@@ -318,25 +305,35 @@ const DocumentsPage = () => {
         }
       } else if (isDocument || isSpreadsheet || isPresentation) {
         // Para documentos de Office, intentar usar Google Docs Viewer
+        console.log(`📊 Abriendo documento de Office con Google Docs Viewer`);
         const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(window.location.origin + '/api/documents/file/' + documentId)}&embedded=true`;
         window.open(googleDocsUrl, '_blank');
       } else {
         // Para otros tipos, descargar directamente
+        console.log(`📥 Descargando archivo de tipo desconocido`);
         downloadFile(url, originalName);
       }
       
       // Limpiar URL después de un tiempo
       setTimeout(() => window.URL.revokeObjectURL(url), 5000);
 
-    } catch (error) {
-      console.error('Error visualizando documento:', error);
+    } catch (error: any) {
+      console.error('❌ Error viewing document:', error);
       
-      let errorMessage = 'Error desconocido al visualizar el documento';
-      if (error instanceof Error) {
-        errorMessage = error.message;
+      // Mostrar error más específico al usuario
+      let errorMessage = 'Error al visualizar el documento';
+      
+      if (error.message.includes('Documento no encontrado')) {
+        errorMessage = 'El documento no se encuentra en el servidor. Puede haber sido eliminado o movido.';
+      } else if (error.message.includes('No tienes permisos')) {
+        errorMessage = 'No tienes permisos para acceder a este documento.';
+      } else if (error.message.includes('Error del servidor')) {
+        errorMessage = 'Error en el servidor. Intenta nuevamente más tarde.';
+      } else if (error.message.includes('network') || error.message.includes('fetch')) {
+        errorMessage = 'Error de conexión. Verifica tu conexión a internet.';
       }
       
-      alert(`Error al visualizar el documento:\n\n${errorMessage}\n\nPor favor, verifica tu conexión a internet e intenta nuevamente.`);
+      setError(errorMessage);
     }
   };
 
