@@ -69,26 +69,17 @@ export class DocumentsService {
     // Validar archivo
     this.validateFile(file);
 
-    // Crear directorio de uploads si no existe
-    const uploadPath = path.join(process.cwd(), this.UPLOAD_DIR);
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-
     // Generar nombre único para el archivo
     const fileExtension = path.extname(file.originalname);
     const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(2)}${fileExtension}`;
-    const filePath = path.join(uploadPath, uniqueFilename);
 
-    // Guardar archivo
-    fs.writeFileSync(filePath, file.buffer);
-
-    // Guardar información en base de datos
+    // Guardar archivo directamente en PostgreSQL
     const document = await this.prisma.document.create({
       data: {
         filename: uniqueFilename,
         originalName: file.originalname,
-        fileUrl: `/uploads/${uniqueFilename}`,
+        fileUrl: null, // No necesitamos URL externa
+        fileData: file.buffer, // Almacenar directamente en PostgreSQL
         fileSize: file.size,
         mimeType: file.mimetype,
         description: uploadDocumentDto.description,
@@ -131,96 +122,15 @@ export class DocumentsService {
     return document;
   }
 
-  async findMyDocuments(currentUserId: string, userRole: string) {
-    if (userRole === 'ADMIN') {
-      // Admin ve todos los documentos
-      return this.prisma.document.findMany({
-        include: {
-          expediente: {
-            include: {
-              client: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true,
-                    }
-                  }
-                }
-              },
-              lawyer: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                }
-              }
-            }
-          },
-          uploadedByUser: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            }
-          }
-        },
-        orderBy: {
-          uploadedAt: 'desc'
-        }
-      });
-    } else if (userRole === 'ABOGADO') {
-      // Abogado ve documentos de expedientes donde es el abogado asignado
-      return this.prisma.document.findMany({
-        where: {
-          expediente: {
-            lawyerId: currentUserId
-          }
-        },
-        include: {
-          expediente: {
-            include: {
-              client: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true,
-                    }
-                  }
-                }
-              },
-              lawyer: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                }
-              }
-            }
-          },
-          uploadedByUser: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            }
-          }
-        },
-        orderBy: {
-          uploadedAt: 'desc'
-        }
-      });
-    } else {
-      // Cliente ve documentos de sus expedientes
+  // Métodos simples para reemplazar Cloudinary
+  async findMyDocuments(userId: string, userRole: string) {
+    if (userRole === 'CLIENTE') {
       const client = await this.prisma.client.findUnique({
-        where: { userId: currentUserId }
+        where: { userId }
       });
       
       if (!client) {
-        throw new ForbiddenException('No eres cliente');
+        return [];
       }
 
       return this.prisma.document.findMany({
@@ -231,32 +141,46 @@ export class DocumentsService {
         },
         include: {
           expediente: {
-            include: {
-              client: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true,
-                    }
-                  }
-                }
-              },
-              lawyer: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                }
-              }
-            }
-          },
-          uploadedByUser: {
             select: {
               id: true,
-              name: true,
-              email: true,
+              title: true,
+              status: true
+            }
+          }
+        },
+        orderBy: {
+          uploadedAt: 'desc'
+        }
+      });
+    } else if (userRole === 'ABOGADO') {
+      return this.prisma.document.findMany({
+        where: {
+          expediente: {
+            lawyerId: userId
+          }
+        },
+        include: {
+          expediente: {
+            select: {
+              id: true,
+              title: true,
+              status: true
+            }
+          }
+        },
+        orderBy: {
+          uploadedAt: 'desc'
+        }
+      });
+    } else {
+      // ADMIN puede ver todos
+      return this.prisma.document.findMany({
+        include: {
+          expediente: {
+            select: {
+              id: true,
+              title: true,
+              status: true
             }
           }
         },
@@ -267,79 +191,33 @@ export class DocumentsService {
     }
   }
 
-  async findAll(currentUserId: string, userRole: string) {
-    let whereClause = {};
-
-    // Filtrar por rol del usuario
-    if (userRole === 'CLIENTE') {
-      const client = await this.prisma.client.findUnique({
-        where: { userId: currentUserId }
+  async findAll(userId: string, userRole: string) {
+    if (userRole === 'ADMIN') {
+      return this.prisma.document.findMany({
+        include: {
+          expediente: {
+            select: {
+              id: true,
+              title: true,
+              status: true
+            }
+          }
+        },
+        orderBy: {
+          uploadedAt: 'desc'
+        }
       });
-      
-      if (!client) {
-        throw new NotFoundException('Cliente no encontrado');
-      }
-      
-      whereClause = {
-        expediente: {
-          clientId: client.id
-        }
-      };
-    } else if (userRole === 'ABOGADO') {
-      whereClause = {
-        expediente: {
-          lawyerId: currentUserId
-        }
-      };
+    } else {
+      return this.findMyDocuments(userId, userRole);
     }
-    // Los admins ven todos los documentos
-
-    return this.prisma.document.findMany({
-      where: whereClause,
-      include: {
-        expediente: {
-          include: {
-            client: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                  }
-                }
-              }
-            },
-            lawyer: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              }
-            },
-          }
-        },
-        uploadedByUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          }
-        },
-      },
-      orderBy: {
-        uploadedAt: 'desc'
-      },
-    });
   }
 
-  async findByExpediente(expedienteId: string, currentUserId: string, userRole: string) {
-    // Verificar que el expediente existe y el usuario tiene permisos
+  async findByExpediente(expedienteId: string, userId: string, userRole: string) {
     const expediente = await this.prisma.expediente.findUnique({
       where: { id: expedienteId },
       include: {
         client: true,
-        lawyer: true,
+        lawyer: true
       }
     });
 
@@ -350,71 +228,32 @@ export class DocumentsService {
     // Verificar permisos
     if (userRole === 'CLIENTE') {
       const client = await this.prisma.client.findUnique({
-        where: { userId: currentUserId }
+        where: { userId }
       });
       
       if (!client || expediente.clientId !== client.id) {
         throw new ForbiddenException('No tienes permisos para ver documentos de este expediente');
       }
     } else if (userRole === 'ABOGADO') {
-      if (expediente.lawyerId !== currentUserId) {
+      if (expediente.lawyerId !== userId) {
         throw new ForbiddenException('No tienes permisos para ver documentos de este expediente');
       }
     }
-    // Los admins pueden ver cualquier documento
 
     return this.prisma.document.findMany({
       where: { expedienteId },
-      orderBy: {
-        uploadedAt: 'desc'
-      },
+      orderBy: { uploadedAt: 'desc' }
     });
   }
 
-  async findOne(id: string, currentUserId: string, userRole: string) {
+  async findOne(id: string, userId: string, userRole: string) {
     const document = await this.prisma.document.findUnique({
       where: { id },
       include: {
         expediente: {
           include: {
             client: true,
-            lawyer: true,
-          }
-        },
-      }
-    });
-
-    if (!document) {
-      throw new NotFoundException('Documento no encontrado');
-    }
-
-    // Verificar permisos
-    if (userRole === 'CLIENTE') {
-      const client = await this.prisma.client.findUnique({
-        where: { userId: currentUserId }
-      });
-      
-      if (!client || document.expediente.clientId !== client.id) {
-        throw new ForbiddenException('No tienes permisos para ver este documento');
-      }
-    } else if (userRole === 'ABOGADO') {
-      if (document.expediente.lawyerId !== currentUserId) {
-        throw new ForbiddenException('No tienes permisos para ver este documento');
-      }
-    }
-    // Los admins pueden ver cualquier documento
-
-    return document;
-  }
-
-  async remove(id: string, currentUserId: string, userRole: string) {
-    const document = await this.prisma.document.findUnique({
-      where: { id },
-      include: {
-        expediente: {
-          include: {
-            client: true,
-            lawyer: true,
+            lawyer: true
           }
         }
       }
@@ -425,28 +264,40 @@ export class DocumentsService {
     }
 
     // Verificar permisos
-    if (userRole === 'ABOGADO') {
-      if (document.expediente.lawyerId !== currentUserId) {
-        throw new ForbiddenException('Solo puedes eliminar documentos de expedientes asignados a ti');
-      }
-    } else if (userRole === 'CLIENTE') {
+    if (userRole === 'CLIENTE') {
       const client = await this.prisma.client.findUnique({
-        where: { userId: currentUserId }
+        where: { userId }
       });
       
       if (!client || document.expediente.clientId !== client.id) {
-        throw new ForbiddenException('Solo puedes eliminar documentos de tus propios expedientes');
+        throw new ForbiddenException('No tienes permisos para ver este documento');
+      }
+    } else if (userRole === 'ABOGADO') {
+      if (document.expediente.lawyerId !== userId) {
+        throw new ForbiddenException('No tienes permisos para ver este documento');
       }
     }
-    // Los admins pueden eliminar cualquier documento
 
-    // Eliminar archivo físico
-    const filePath = path.join(process.cwd(), this.UPLOAD_DIR, document.filename);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    return document;
+  }
+
+  async remove(id: string, userId: string, userRole: string) {
+    const document = await this.findOne(id, userId, userRole);
+    
+    // Solo el propietario o admin puede eliminar
+    if (userRole !== 'ADMIN' && document.uploadedBy !== userId) {
+      throw new ForbiddenException('No tienes permisos para eliminar este documento');
     }
 
-    // Eliminar registro de la base de datos
+    // Eliminar archivo físico si existe
+    if (document.fileUrl && document.fileUrl.startsWith('/uploads/')) {
+      const filePath = path.join(process.cwd(), 'uploads', document.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    // Eliminar de la base de datos
     await this.prisma.document.delete({
       where: { id }
     });
@@ -529,43 +380,7 @@ export class DocumentsService {
     }
   }
 
-  getFileStream(filename: string) {
-    console.log(`🔍 Buscando archivo: ${filename}`);
-    
-    const filePath = path.join(process.cwd(), this.UPLOAD_DIR, filename);
-    console.log(`📁 Ruta completa del archivo: ${filePath}`);
-    
-    // Verificar si el directorio de uploads existe
-    const uploadDir = path.join(process.cwd(), this.UPLOAD_DIR);
-    if (!fs.existsSync(uploadDir)) {
-      console.error(`❌ Directorio de uploads no existe: ${uploadDir}`);
-      throw new NotFoundException(`Directorio de uploads no encontrado: ${this.UPLOAD_DIR}`);
-    }
-    
-    // Verificar si el archivo existe
-    if (!fs.existsSync(filePath)) {
-      console.error(`❌ Archivo no encontrado: ${filePath}`);
-      throw new NotFoundException(`Archivo no encontrado: ${filename}`);
-    }
-    
-    // Verificar que es un archivo (no un directorio)
-    const stats = fs.statSync(filePath);
-    if (!stats.isFile()) {
-      console.error(`❌ La ruta no es un archivo: ${filePath}`);
-      throw new NotFoundException(`La ruta no es un archivo válido: ${filename}`);
-    }
-    
-    console.log(`✅ Archivo encontrado: ${filename} (${stats.size} bytes)`);
-    
-    try {
-      const stream = fs.createReadStream(filePath);
-      console.log(`✅ Stream creado exitosamente para: ${filename}`);
-      return stream;
-    } catch (error) {
-      console.error(`❌ Error al crear stream para ${filename}:`, error);
-      throw new NotFoundException(`Error al leer el archivo: ${filename}`);
-    }
-  }
+
 
   getFilePath(filename: string): string {
     return path.join(process.cwd(), this.UPLOAD_DIR, filename);
@@ -617,4 +432,40 @@ export class DocumentsService {
       return false;
     }
   }
+
+  // Método para obtener archivo como stream desde PostgreSQL
+  async getFileStream(documentId: string) {
+    const document = await this.prisma.document.findUnique({
+      where: { id: documentId },
+      select: {
+        fileData: true,
+        mimeType: true,
+        originalName: true,
+        fileSize: true,
+        uploadedAt: true,
+      }
+    });
+
+    if (!document || !document.fileData) {
+      throw new NotFoundException('Archivo no encontrado o sin datos');
+    }
+
+    // Crear un stream desde el buffer
+    const { Readable } = require('stream');
+    const stream = Readable.from(document.fileData);
+
+    // Agregar metadatos al stream
+    stream.metadata = {
+      contentType: document.mimeType,
+      contentLength: document.fileSize,
+      lastModified: document.uploadedAt,
+    };
+
+    return {
+      stream,
+      metadata: stream.metadata
+    };
+  }
+
+
 } 

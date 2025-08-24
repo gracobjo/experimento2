@@ -2,59 +2,57 @@ generator client {
   provider = "prisma-client-js"
 }
 
-/// @seed="ts-node prisma/seed.ts"
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id                    String   @id @default(uuid())
-  name                  String
-  email                 String   @unique
-  password              String
-  role                  Role     @default(CLIENTE)
-  resetPasswordToken   String?
-  resetPasswordExpires DateTime?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  appointmentsAsLawyer Appointment[]
-  client                Client?
-  documents             Document[]    @relation("UserDocuments")
-  expedientesAsLawyer  Expediente[]  @relation("LawyerExpedientes")
-  lawyer                Lawyer?
-  receivedMessages      ChatMessage[] @relation("ReceivedMessages")
-  sentMessages          ChatMessage[] @relation("SentMessages")
-  assignedTasks         Task[]        @relation("AssignedTasks")
-  createdTasks          Task[]        @relation("CreatedTasks")
-  facturasEmitidas      Invoice[]     @relation("EmisorFacturas")
-  facturasRecibidas     Invoice[]     @relation("ReceptorFacturas")
-  layouts               Layout[]
-  teleassistanceSessions TeleassistanceSession[] @relation("UserTeleassistanceSessions")
-  assistantSessions     TeleassistanceSession[] @relation("AssistantTeleassistanceSessions")
-  teleassistanceMessages TeleassistanceMessage[]
-  assignedVisitorAppointments VisitorAppointment[] @relation("AssignedVisitorAppointments")
-  notes                 Note[]      @relation("UserNotes")
-  refreshTokens         RefreshToken[]
-  blacklistedTokens     BlacklistedToken[]
-  invoiceAuditHistory   InvoiceAuditHistory[]
-  emailLogs             EmailLog[]
-  chatbotConversations ChatbotConversation[]
+  id                          String                  @id @default(uuid())
+  name                        String
+  email                       String                  @unique
+  password                    String
+  role                        Role                    @default(CLIENTE)
+  createdAt                   DateTime                @default(now())
+  updatedAt                   DateTime                @updatedAt
+  resetPasswordExpires        DateTime?
+  resetPasswordToken          String?
+  appointmentsAsLawyer        Appointment[]
+  blacklistedTokens           BlacklistedToken[]
+  client                      Client?
+  documents                   Document[]              @relation("UserDocuments")
+  expedientesAsLawyer         Expediente[]            @relation("LawyerExpedientes")
+  facturasEmitidas            Invoice[]               @relation("EmisorFacturas")
+  facturasRecibidas           Invoice[]               @relation("ReceptorFacturas")
+  invoiceAuditHistory         InvoiceAuditHistory[]
+  lawyer                      Lawyer?
+  notes                       Note[]                  @relation("UserNotes")
+  refreshTokens               RefreshToken[]
+  receivedMessages            ChatMessage[]           @relation("ReceivedMessages")
+  sentMessages                ChatMessage[]           @relation("SentMessages")
+  chatbotConversations        ChatbotConversation[]
+  emailLogs                   EmailLog[]
+  layouts                     Layout[]
+  assignedTasks               Task[]                  @relation("AssignedTasks")
+  createdTasks                Task[]                  @relation("CreatedTasks")
+  teleassistanceMessages      TeleassistanceMessage[]
+  assistantSessions           TeleassistanceSession[] @relation("AssistantTeleassistanceSessions")
+  teleassistanceSessions      TeleassistanceSession[] @relation("UserTeleassistanceSessions")
+  assignedVisitorAppointments VisitorAppointment[]    @relation("AssignedVisitorAppointments")
 }
 
 model Client {
-  id           String        @id @default(uuid())
-  userId       String        @unique
-  dni          String        @unique
-  phone        String?
-  address      String?
-  createdAt    DateTime      @default(now())
-  appointments Appointment[]
-  user         User          @relation(fields: [userId], references: [id])
-  expedientes  Expediente[]
-  tasks        Task[]
+  id              String            @id @default(uuid())
+  userId          String            @unique
+  dni             String            @unique
+  phone           String?
+  address         String?
+  createdAt       DateTime          @default(now())
+  appointments    Appointment[]
+  user            User              @relation(fields: [userId], references: [id])
+  expedientes     Expediente[]
   provisionFondos ProvisionFondos[]
+  tasks           Task[]
 }
 
 model Lawyer {
@@ -68,34 +66,35 @@ model Lawyer {
 }
 
 model Expediente {
-  id          String     @id @default(uuid())
-  title       String
-  description String?
-  status      Status
-  clientId    String
-  lawyerId    String
-  createdAt   DateTime   @default(now())
-  documents   Document[]
-  client      Client     @relation(fields: [clientId], references: [id])
-  lawyer      User       @relation("LawyerExpedientes", fields: [lawyerId], references: [id])
-  tasks       Task[]
-  facturas    Invoice[]
+  id              String            @id @default(uuid())
+  title           String
+  description     String?
+  status          Status
+  clientId        String
+  lawyerId        String
+  createdAt       DateTime          @default(now())
+  documents       Document[]
+  client          Client            @relation(fields: [clientId], references: [id])
+  lawyer          User              @relation("LawyerExpedientes", fields: [lawyerId], references: [id])
+  facturas        Invoice[]
+  notes           Note[]
   provisionFondos ProvisionFondos[]
-  notes       Note[]
+  tasks           Task[]
 }
 
 model Document {
   id             String     @id @default(uuid())
   expedienteId   String
   filename       String
-  fileUrl        String
+  fileUrl        String?
   uploadedAt     DateTime   @default(now())
   description    String?
   fileSize       Int
   mimeType       String
   originalName   String
   uploadedBy     String
-  metadata       Json?      // Metadatos adicionales (Cloudinary, S3, etc.)
+  metadata       Json?
+  fileData       Bytes?
   expediente     Expediente @relation(fields: [expedienteId], references: [id])
   uploadedByUser User       @relation("UserDocuments", fields: [uploadedBy], references: [id])
 }
@@ -107,31 +106,31 @@ model Appointment {
   date     DateTime
   location String?
   notes    String?
-  status   String   @default("PENDIENTE") // PENDIENTE, CONFIRMADA, CANCELADA, COMPLETADA
+  status   String   @default("PENDIENTE")
   client   Client   @relation(fields: [clientId], references: [id])
   lawyer   User     @relation(fields: [lawyerId], references: [id])
 }
 
 model VisitorAppointment {
-  id                String   @id @default(uuid())
-  fullName          String
-  age               Int
-  phone             String
-  email             String
-  consultationReason String
-  preferredDate     DateTime
-  alternativeDate   DateTime?
-  consultationType  String
-  notes             String?
-  location          String?
-  status            String   @default("PENDIENTE") // PENDIENTE, CONFIRMADA, CANCELADA, COMPLETADA
-  assignedLawyerId  String?
-  confirmedDate     DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  assignedLawyer    User?    @relation("AssignedVisitorAppointments", fields: [assignedLawyerId], references: [id])
+  id                   String                @id @default(uuid())
+  fullName             String
+  age                  Int
+  phone                String
+  email                String
+  consultationReason   String
+  preferredDate        DateTime
+  alternativeDate      DateTime?
+  consultationType     String
+  notes                String?
+  location             String?
+  status               String                @default("PENDIENTE")
+  assignedLawyerId     String?
+  confirmedDate        DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
   chatbotConversations ChatbotConversation[]
-  emailLogs         EmailLog[]
+  emailLogs            EmailLog[]
+  assignedLawyer       User?                 @relation("AssignedVisitorAppointments", fields: [assignedLawyerId], references: [id])
 
   @@map("visitor_appointments")
 }
@@ -159,99 +158,89 @@ model ChatBotMessage {
   @@map("chat_bot_messages")
 }
 
-// Nuevo modelo para persistir conversaciones del chatbot
 model ChatbotConversation {
-  id                String   @id @default(uuid())
-  sessionId         String   @unique
-  userId            String?  // ID del usuario si está autenticado
-  userEmail         String?  // Email del usuario si lo proporciona
-  userPhone         String?  // Teléfono del usuario si lo proporciona
-  conversationType  String   // "appointment", "general", "support"
-  status            String   @default("ACTIVE") // "ACTIVE", "COMPLETED", "ABANDONED"
-  startedAt         DateTime @default(now())
-  completedAt       DateTime?
-  totalMessages     Int      @default(0)
-  userMessages      Int      @default(0)
-  botMessages       Int      @default(0)
-  lastActivity      DateTime @updatedAt
-  language          String   @default("es")
-  userAgent         String?  // Información del navegador
-  ipAddress         String?  // IP del usuario
-  metadata          Json?    // Datos adicionales (ubicación, dispositivo, etc.)
-
-  // Relaciones
-  messages          ChatbotMessageDetail[]
-  appointment       VisitorAppointment? @relation(fields: [appointmentId], references: [id])
-  appointmentId     String?
-  user              User?    @relation(fields: [userId], references: [id])
+  id               String                 @id @default(uuid())
+  sessionId        String                 @unique
+  userId           String?
+  userEmail        String?
+  userPhone        String?
+  conversationType String
+  status           String                 @default("ACTIVE")
+  startedAt        DateTime               @default(now())
+  completedAt      DateTime?
+  totalMessages    Int                    @default(0)
+  userMessages     Int                    @default(0)
+  botMessages      Int                    @default(0)
+  lastActivity     DateTime               @updatedAt
+  language         String                 @default("es")
+  userAgent        String?
+  ipAddress        String?
+  metadata         Json?
+  appointmentId    String?
+  appointment      VisitorAppointment?    @relation(fields: [appointmentId], references: [id])
+  user             User?                  @relation(fields: [userId], references: [id])
+  messages         ChatbotMessageDetail[]
 
   @@map("chatbot_conversations")
 }
 
-// Nuevo modelo para mensajes detallados del chatbot
 model ChatbotMessageDetail {
-  id                String   @id @default(uuid())
-  conversationId    String
-  messageType       String   // "user_input", "bot_response", "system_message"
-  content           String   // Contenido del mensaje
-  intent            String?  // Intención detectada
-  confidence        Float?   // Nivel de confianza de la detección
-  entities          Json?    // Entidades extraídas (nombres, fechas, etc.)
-  sentiment         String?  // "positive", "negative", "neutral"
-  timestamp         DateTime @default(now())
-  processingTime    Int?     // Tiempo de procesamiento en ms
-  error             String?  // Error si ocurrió alguno
-
-  // Relaciones
-  conversation      ChatbotConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  id             String              @id @default(uuid())
+  conversationId String
+  messageType    String
+  content        String
+  intent         String?
+  confidence     Float?
+  entities       Json?
+  sentiment      String?
+  timestamp      DateTime            @default(now())
+  processingTime Int?
+  error          String?
+  conversation   ChatbotConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@map("chatbot_message_details")
 }
 
-// Nuevo modelo para auditoría de emails
 model EmailLog {
-  id                String   @id @default(uuid())
-  recipient         String   // Email del destinatario
-  subject           String   // Asunto del email
-  template          String   // Tipo de plantilla usada
-  status            String   // "SENT", "DELIVERED", "FAILED", "BOUNCED"
-  sentAt            DateTime @default(now())
-  deliveredAt       DateTime?
-  failedAt          DateTime?
-  error             String?  // Mensaje de error si falla
-  retryCount        Int      @default(0)
-  maxRetries        Int      @default(3)
-  emailProvider     String?  // Proveedor de email usado
-  messageId         String?  // ID del mensaje del proveedor
-  metadata          Json?    // Datos adicionales (headers, attachments, etc.)
-
-  // Relaciones opcionales
-  appointmentId     String?  // Si está relacionado con una cita
-  appointment       VisitorAppointment? @relation(fields: [appointmentId], references: [id])
-  userId            String?  // Si está relacionado con un usuario
-  user              User?    @relation(fields: [userId], references: [id])
+  id            String              @id @default(uuid())
+  recipient     String
+  subject       String
+  template      String
+  status        String
+  sentAt        DateTime            @default(now())
+  deliveredAt   DateTime?
+  failedAt      DateTime?
+  error         String?
+  retryCount    Int                 @default(0)
+  maxRetries    Int                 @default(3)
+  emailProvider String?
+  messageId     String?
+  metadata      Json?
+  appointmentId String?
+  userId        String?
+  appointment   VisitorAppointment? @relation(fields: [appointmentId], references: [id])
+  user          User?               @relation(fields: [userId], references: [id])
 
   @@map("email_logs")
 }
 
-// Nuevo modelo para analytics del chatbot
 model ChatbotAnalytics {
-  id                String   @id @default(uuid())
-  date              DateTime @default(now())
-  totalConversations Int     @default(0)
-  completedConversations Int @default(0)
-  abandonedConversations Int @default(0)
-  totalMessages     Int      @default(0)
-  averageMessagesPerConversation Float @default(0)
-  appointmentBookings Int    @default(0)
-  conversionRate    Float    @default(0) // % de conversaciones que resultan en citas
-  averageResponseTime Float  @default(0) // Tiempo promedio de respuesta del bot
-  topIntents        Json?    // Intenciones más comunes
-  topEntities       Json?    // Entidades más extraídas
-  userSatisfaction  Float?   // Puntuación de satisfacción del usuario
-  errorRate         Float    @default(0) // % de errores
-  languageDistribution Json? // Distribución por idiomas
-  deviceDistribution Json?   // Distribución por dispositivos
+  id                             String   @id @default(uuid())
+  date                           DateTime @default(now())
+  totalConversations             Int      @default(0)
+  completedConversations         Int      @default(0)
+  abandonedConversations         Int      @default(0)
+  totalMessages                  Int      @default(0)
+  averageMessagesPerConversation Float    @default(0)
+  appointmentBookings            Int      @default(0)
+  conversionRate                 Float    @default(0)
+  averageResponseTime            Float    @default(0)
+  topIntents                     Json?
+  topEntities                    Json?
+  userSatisfaction               Float?
+  errorRate                      Float    @default(0)
+  languageDistribution           Json?
+  deviceDistribution             Json?
 
   @@map("chatbot_analytics")
 }
@@ -282,113 +271,84 @@ model Parametro {
   clave     String   @unique
   valor     String
   etiqueta  String
-  tipo      String   // 'string', 'number', 'email', 'image', etc.
+  tipo      String
   updatedAt DateTime @updatedAt
 }
 
-enum Role {
-  ADMIN
-  ABOGADO
-  CLIENTE
-}
-
-enum Status {
-  ABIERTO
-  EN_PROCESO
-  CERRADO
-}
-
-enum InvoiceStatus {
-  BORRADOR
-  EMITIDA
-  ENVIADA
-  NOTIFICADA
-  ACEPTADA
-  RECHAZADA
-  ANULADA
-}
-
-enum Sender {
-  USER
-  BOT
-}
-
 model Invoice {
-  id                String        @id @default(uuid())
-  numeroFactura     String        @unique
-  fechaFactura      DateTime
-  tipoFactura       String        // F=Completa, R=Rectificativa
-  emisorId          String        // User (abogado/despacho)
-  receptorId        String        // User (cliente)
-  expedienteId      String?       // Relación opcional con Expediente
-  importeTotal      Float
-  baseImponible     Float
-  cuotaIVA          Float
-  tipoIVA           Float
-  descuento         Float?        // Porcentaje de descuento
-  retencion         Float?        // Porcentaje de retención
-  aplicarIVA        Boolean       @default(true) // Si se debe aplicar IVA
-  tipoImpuesto      String?       // Tipo de impuesto: 'iva' o 'retencion'
-  regimenIvaEmisor  String
-  claveOperacion    String        // Por defecto '01'
-  metodoPago        String
-  fechaOperacion    DateTime
-  xml               String?       // XML Facturae generado
-  xmlFirmado        String?       // XML firmado digitalmente
-  estado            String        @default("borrador") // borrador, emitida, enviada, notificada, aceptada, rechazada, anulada
-  motivoAnulacion    String?       // Motivo de anulación (nullable)
-  selloTiempo       DateTime?     // Sello de tiempo TSA
-  externalId        String?       // ID en sistema externo (AEAT, FACE, etc.)
-  sistemaEnvio      String?       // Sistema al que se envió (AEAT, FACE, etc.)
-  fechaEnvio        DateTime?     // Fecha de envío a sistema externo
-  paymentDate       DateTime?     // Fecha de pago de la factura
-  // Campos para facturas rectificativas
-  facturaOriginalId String?       // ID de la factura original (para rectificativas)
-  tipoRectificacion String?       // R1, R2, R3, R4 (para rectificativas)
-  motivoRectificacion String?     // Motivo de la rectificación
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  emisor            User          @relation("EmisorFacturas", fields: [emisorId], references: [id])
-  receptor          User          @relation("ReceptorFacturas", fields: [receptorId], references: [id])
-  expediente        Expediente?   @relation(fields: [expedienteId], references: [id])
-  items             InvoiceItem[]
-  provisionFondos    ProvisionFondos[]
-  auditHistory      InvoiceAuditHistory[]
-  // Relación con factura original (para rectificativas)
-  facturaOriginal   Invoice?      @relation("FacturaRectificativa", fields: [facturaOriginalId], references: [id])
-  facturasRectificativas Invoice[] @relation("FacturaRectificativa")
+  id                     String                @id @default(uuid())
+  numeroFactura          String                @unique
+  fechaFactura           DateTime
+  tipoFactura            String
+  emisorId               String
+  receptorId             String
+  expedienteId           String?
+  importeTotal           Float
+  baseImponible          Float
+  cuotaIVA               Float
+  tipoIVA                Float
+  regimenIvaEmisor       String
+  claveOperacion         String
+  metodoPago             String
+  fechaOperacion         DateTime
+  xml                    String?
+  xmlFirmado             String?
+  estado                 String                @default("borrador")
+  selloTiempo            DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  motivoAnulacion        String?
+  aplicarIVA             Boolean               @default(true)
+  descuento              Float?
+  retencion              Float?
+  externalId             String?
+  fechaEnvio             DateTime?
+  sistemaEnvio           String?
+  paymentDate            DateTime?
+  facturaOriginalId      String?
+  motivoRectificacion    String?
+  tipoRectificacion      String?
+  tipoImpuesto           String?
+  emisor                 User                  @relation("EmisorFacturas", fields: [emisorId], references: [id])
+  expediente             Expediente?           @relation(fields: [expedienteId], references: [id])
+  facturaOriginal        Invoice?              @relation("FacturaRectificativa", fields: [facturaOriginalId], references: [id])
+  facturasRectificativas Invoice[]             @relation("FacturaRectificativa")
+  receptor               User                  @relation("ReceptorFacturas", fields: [receptorId], references: [id])
+  auditHistory           InvoiceAuditHistory[]
+  items                  InvoiceItem[]
+  provisionFondos        ProvisionFondos[]
 }
 
 model InvoiceItem {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   invoiceId   String
   description String
   quantity    Int
   unitPrice   Float
   total       Float
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+  invoice     Invoice @relation(fields: [invoiceId], references: [id])
 }
 
 model ProvisionFondos {
-  id           String     @id @default(uuid())
+  id           String      @id @default(uuid())
   clientId     String
   expedienteId String?
   invoiceId    String?
   amount       Float
-  date         DateTime   @default(now())
+  date         DateTime    @default(now())
   description  String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  client       Client     @relation(fields: [clientId], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  client       Client      @relation(fields: [clientId], references: [id])
   expediente   Expediente? @relation(fields: [expedienteId], references: [id])
-  invoice      Invoice?   @relation(fields: [invoiceId], references: [id])
+  invoice      Invoice?    @relation(fields: [invoiceId], references: [id])
 }
 
 model Layout {
   id            String   @id @default(uuid())
   name          String
-  slug          String   @unique // 'home', 'about', etc.
-  components    Json     // Array de componentes serializado
+  slug          String   @unique
+  components    Json
   version       Int      @default(1)
   isActive      Boolean  @default(false)
   createdBy     String
@@ -418,89 +378,85 @@ model Note {
   title        String
   content      String
   authorId     String
-  isPrivate    Boolean    @default(false) // Si es true, solo visible para abogados
+  isPrivate    Boolean    @default(false)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
-  
-  expediente   Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
   author       User       @relation("UserNotes", fields: [authorId], references: [id], onDelete: Cascade)
+  expediente   Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
 }
 
-// Configuración de menús y elementos del sitio
 model MenuConfig {
-  id          String   @id @default(uuid())
-  name        String   // 'main-nav', 'sidebar-admin', 'sidebar-lawyer', 'sidebar-client'
-  role        Role     // Para qué rol es el menú
-  orientation String   @default("horizontal") // 'horizontal', 'vertical'
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id          String     @id @default(uuid())
+  name        String
+  role        Role
+  orientation String     @default("horizontal")
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
   items       MenuItem[]
 }
 
 model MenuItem {
-  id          String     @id @default(uuid())
+  id           String     @id @default(uuid())
   menuConfigId String
-  label       String     // Texto visible del enlace
-  url         String     // URL de destino
-  icon        String?    // Icono (emoji o clase CSS)
-  order       Int        @default(0)
-  isVisible   Boolean    @default(true)
-  isExternal  Boolean    @default(false) // Si es enlace externo
-  parentId    String?    // Para submenús
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  menuConfig  MenuConfig @relation(fields: [menuConfigId], references: [id], onDelete: Cascade)
-  parent      MenuItem?  @relation("MenuItemParent", fields: [parentId], references: [id])
-  children    MenuItem[] @relation("MenuItemParent")
+  label        String
+  url          String
+  icon         String?
+  order        Int        @default(0)
+  isVisible    Boolean    @default(true)
+  isExternal   Boolean    @default(false)
+  parentId     String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  menuConfig   MenuConfig @relation(fields: [menuConfigId], references: [id], onDelete: Cascade)
+  parent       MenuItem?  @relation("MenuItemParent", fields: [parentId], references: [id])
+  children     MenuItem[] @relation("MenuItemParent")
 }
 
 model SiteConfig {
   id          String   @id @default(uuid())
-  key         String   @unique // 'site_name', 'logo_url', 'favicon_url', 'primary_color', etc.
+  key         String   @unique
   value       String
-  type        String   @default("string") // 'string', 'image', 'color', 'boolean', 'json'
-  category    String   @default("general") // 'branding', 'layout', 'contact', 'social'
+  type        String   @default("string")
+  category    String   @default("general")
   description String?
-  isPublic    Boolean  @default(false) // Si se puede acceder sin autenticación
+  isPublic    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
 model TeleassistanceSession {
-  id          String   @id @default(cuid())
+  id          String                  @id @default(cuid())
   userId      String
   assistantId String
-  issueType   String   // AUTOFIRMA, CERTIFICADO_DIGITAL, SEDES, etc.
+  issueType   String
   description String
-  remoteTool  String?  // REMOTELY_ANYWHERE, TEAMVIEWER, etc.
-  status      String   @default("PENDING") // PENDING, ACTIVE, COMPLETED, CANCELLED
-  sessionCode String   @unique
+  remoteTool  String?
+  status      String                  @default("PENDING")
+  sessionCode String                  @unique
   resolution  String?
   notes       String?
   startedAt   DateTime?
   completedAt DateTime?
-  duration    Int?     // duración en minutos
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user      User @relation("UserTeleassistanceSessions", fields: [userId], references: [id])
-  assistant User @relation("AssistantTeleassistanceSessions", fields: [assistantId], references: [id])
-  messages  TeleassistanceMessage[]
+  duration    Int?
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  messages    TeleassistanceMessage[]
+  assistant   User                    @relation("AssistantTeleassistanceSessions", fields: [assistantId], references: [id])
+  user        User                    @relation("UserTeleassistanceSessions", fields: [userId], references: [id])
 
   @@map("teleassistance_sessions")
 }
 
 model TeleassistanceMessage {
-  id          String   @id @default(cuid())
+  id          String                @id @default(cuid())
   sessionId   String
   senderId    String
   content     String
-  messageType String   @default("TEXT") // TEXT, INSTRUCTION, SYSTEM
-  createdAt   DateTime @default(now())
-
-  session TeleassistanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  sender  User                   @relation(fields: [senderId], references: [id])
+  messageType String                @default("TEXT")
+  createdAt   DateTime              @default(now())
+  sender      User                  @relation(fields: [senderId], references: [id])
+  session     TeleassistanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("teleassistance_messages")
 }
@@ -515,21 +471,19 @@ model RefreshToken {
   ipAddress String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([token])
 }
 
 model BlacklistedToken {
-  id           String   @id @default(uuid())
-  tokenHash    String   @unique
-  userId       String
-  expiresAt    DateTime
+  id            String   @id @default(uuid())
+  tokenHash     String   @unique
+  userId        String
+  expiresAt     DateTime
   blacklistedAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([tokenHash])
   @@index([userId])
@@ -539,20 +493,46 @@ model BlacklistedToken {
 model InvoiceAuditHistory {
   id          String   @id @default(uuid())
   invoiceId   String
-  userId      String   // Usuario que realizó el cambio
-  action      String   // 'created', 'updated', 'deleted', 'status_changed'
-  fieldName   String?  // Campo específico que cambió
-  oldValue    String?  // Valor anterior
-  newValue    String?  // Nuevo valor
-  description String   // Descripción del cambio
-  ipAddress   String?  // IP del usuario
-  userAgent   String?  // User agent del navegador
+  userId      String
+  action      String
+  fieldName   String?
+  oldValue    String?
+  newValue    String?
+  description String
+  ipAddress   String?
+  userAgent   String?
   createdAt   DateTime @default(now())
-  
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id])
-  
+
   @@index([invoiceId])
   @@index([userId])
   @@index([createdAt])
+}
+
+enum Role {
+  ADMIN
+  ABOGADO
+  CLIENTE
+}
+
+enum Status {
+  ABIERTO
+  EN_PROCESO
+  CERRADO
+}
+
+enum InvoiceStatus {
+  BORRADOR
+  EMITIDA
+  ENVIADA
+  NOTIFICADA
+  ACEPTADA
+  RECHAZADA
+  ANULADA
+}
+
+enum Sender {
+  USER
+  BOT
 }

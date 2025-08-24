@@ -20,7 +20,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody, ApiParam, ApiConsumes } from '@nestjs/swagger';
-import { CloudinaryDocumentsService } from './cloudinary-documents.service';
+import { PostgresStorageService } from '../storage/postgres-storage.service';
 import { DocumentsService } from './documents.service';
 import { UploadDocumentDto } from './dto/upload-document.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -37,7 +37,7 @@ import * as path from 'path';
 export class DocumentsController {
   constructor(
     private readonly documentsService: DocumentsService,
-    private readonly cloudinaryService: CloudinaryDocumentsService
+    private readonly postgresStorageService: PostgresStorageService
   ) {}
 
   @Post('upload')
@@ -107,11 +107,14 @@ export class DocumentsController {
     @Body() uploadDocumentDto: UploadDocumentDto,
     @Request() req,
   ) {
-    return this.cloudinaryService.uploadDocument(
-      file,
-      uploadDocumentDto,
+    return this.postgresStorageService.storeFile(
+      file.buffer,
+      file.filename,
+      file.originalname,
+      file.mimetype,
+      uploadDocumentDto.expedienteId,
       req.user.id,
-      req.user.role,
+      uploadDocumentDto.description,
     );
   }
 
@@ -181,12 +184,12 @@ export class DocumentsController {
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente' })
   findMyDocuments(@Request() req) {
-    return this.cloudinaryService.findMyDocuments(req.user.id, req.user.role);
+    return this.documentsService.findMyDocuments(req.user.id, req.user.role);
   }
 
   @ApiResponse({ status: 401, description: 'No autorizado' })
   findAll(@Request() req) {
-    return this.cloudinaryService.findAll(req.user.id, req.user.role);
+    return this.documentsService.findAll(req.user.id, req.user.role);
   }
 
   @Get('stats')
@@ -254,7 +257,7 @@ export class DocumentsController {
     @Param('expedienteId') expedienteId: string,
     @Request() req,
   ) {
-    return this.cloudinaryService.findByExpediente(
+    return this.documentsService.findByExpediente(
       expedienteId,
       req.user.id,
       req.user.role,
@@ -291,7 +294,7 @@ export class DocumentsController {
   @ApiResponse({ status: 403, description: 'Acceso prohibido' })
   @ApiResponse({ status: 404, description: 'Documento no encontrado' })
   findOne(@Param('id') id: string, @Request() req) {
-    return this.cloudinaryService.findOne(id, req.user.id, req.user.role);
+    return this.documentsService.findOne(id, req.user.id, req.user.role);
   }
 
   @Get('debug/document/:id')
@@ -334,7 +337,7 @@ export class DocumentsController {
 
       // 1. Verificar si existe en la base de datos
       try {
-        const document = await this.cloudinaryService.findOne(
+        const document = await this.documentsService.findOne(
           id,
           req.user.id,
           req.user.role,
@@ -357,7 +360,7 @@ export class DocumentsController {
 
           // 2. Verificar estado en Cloudinary
           try {
-            const downloadResult = await this.cloudinaryService.getFileStream(document.filename);
+            const downloadResult = await this.documentsService.getFileStream(document.filename);
             result.cloudinaryStatus = 'available';
             result.endpointTest = {
               hasStream: !!downloadResult.stream,
@@ -432,7 +435,7 @@ export class DocumentsController {
       console.log(`🔍 Diagnóstico Cloudinary para documento ID: ${id}`);
       
       // Buscar el documento
-      const document = await this.cloudinaryService.findOne(
+      const document = await this.documentsService.findOne(
         id,
         req.user.id,
         req.user.role,
@@ -454,7 +457,7 @@ export class DocumentsController {
       let metadata = null;
 
       try {
-        const downloadResult = await this.cloudinaryService.getFileStream(document.filename);
+        const downloadResult = await this.documentsService.getFileStream(document.filename);
         cloudinaryStatus = 'available';
         metadata = {
           hasStream: !!downloadResult.stream,
@@ -541,7 +544,7 @@ export class DocumentsController {
       console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
 
       // Buscar el documento por ID
-      const document = await this.cloudinaryService.findOne(
+      const document = await this.documentsService.findOne(
         id,
         req.user.id,
         req.user.role,
@@ -566,7 +569,7 @@ export class DocumentsController {
       
       try {
         console.log(`🔄 Obteniendo stream desde Cloudinary...`);
-        const downloadResult = await this.cloudinaryService.getFileStream(document.filename);
+        const downloadResult = await this.documentsService.getFileStream(document.filename);
         fileStream = downloadResult.stream;
         fileMetadata = downloadResult.metadata;
         console.log(`✅ Stream del archivo creado exitosamente`);
@@ -726,7 +729,7 @@ export class DocumentsController {
       console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
 
       // Buscar el documento
-      const document = await this.cloudinaryService.findOne(
+      const document = await this.documentsService.findOne(
         id,
         req.user.id,
         req.user.role,
@@ -749,7 +752,7 @@ export class DocumentsController {
       let fileMetadata;
       
       try {
-        const downloadResult = await this.cloudinaryService.getFileStream(document.filename);
+        const downloadResult = await this.documentsService.getFileStream(document.filename);
         fileStream = downloadResult.stream;
         fileMetadata = downloadResult.metadata;
         console.log(`✅ Stream del archivo creado exitosamente desde Cloudinary`);
@@ -1001,7 +1004,7 @@ export class DocumentsController {
   @ApiResponse({ status: 403, description: 'Rol insuficiente' })
   @ApiResponse({ status: 404, description: 'Documento no encontrado' })
   remove(@Param('id') id: string, @Request() req) {
-    return this.cloudinaryService.remove(id, req.user.id, req.user.role);
+    return this.documentsService.remove(id, req.user.id, req.user.role);
   }
 
   @Get('debug/file-access/:id')
@@ -1042,7 +1045,7 @@ export class DocumentsController {
       console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
 
       // Buscar el documento
-      const document = await this.cloudinaryService.findOne(
+      const document = await this.documentsService.findOne(
         id,
         req.user.id,
         req.user.role,
@@ -1101,7 +1104,7 @@ export class DocumentsController {
 
       // Intentar acceder al archivo a través del servicio
       try {
-        const downloadResult = await this.cloudinaryService.getFileStream(document.filename);
+        const downloadResult = await this.documentsService.getFileStream(document.filename);
         result.cloudinaryStatus = 'accessible';
         result.accessTest.serviceAccess = {
           status: 'success',
