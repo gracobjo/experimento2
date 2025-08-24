@@ -403,12 +403,6 @@ let AppController = class AppController {
             ]
         };
     }
-    getHealth() {
-        return {
-            status: 'ok',
-            timestamp: new Date().toISOString(),
-        };
-    }
     getDebugEnv() {
         return {
             jwtSecret: process.env.JWT_SECRET ? 'CONFIGURADO' : 'NO CONFIGURADO',
@@ -467,12 +461,6 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Object)
 ], AppController.prototype, "getApiTest", null);
-__decorate([
-    (0, common_1.Get)('health'),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", Object)
-], AppController.prototype, "getHealth", null);
 __decorate([
     (0, common_1.Get)('debug-env'),
     __metadata("design:type", Function),
