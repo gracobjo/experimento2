@@ -95,8 +95,28 @@ export class CloudinaryStorageService {
 
       this.logger.log(`Intentando descargar archivo de Cloudinary: ${publicId}`);
 
-      // Obtener información del archivo
-      const info = await cloudinary.api.resource(publicId);
+      // SOLUCIÓN: Usar el mismo enfoque de fallback que getFileMetadata
+      let info;
+      try {
+        // Primero intentar con el método directo
+        info = await cloudinary.api.resource(publicId);
+      } catch (directError) {
+        this.logger.log(`Método directo falló, usando búsqueda por prefix: ${publicId}`);
+        
+        // Si falla, usar búsqueda por prefix que funciona
+        const resourcesResult = await cloudinary.api.resources({
+          prefix: publicId,
+          max_results: 1,
+          type: 'upload'
+        });
+        
+        if (resourcesResult.resources && resourcesResult.resources.length > 0) {
+          info = resourcesResult.resources[0];
+          this.logger.log(`Archivo encontrado por prefix: ${info.public_id}`);
+        } else {
+          throw new Error('No se pudo encontrar el archivo en Cloudinary');
+        }
+      }
       
       if (!info) {
         throw new Error('No se pudo obtener información del archivo desde Cloudinary');
@@ -194,9 +214,22 @@ export class CloudinaryStorageService {
         return false;
       }
 
-      await cloudinary.api.resource(publicId);
-      return true;
+      // SOLUCIÓN: Usar el mismo enfoque de fallback que getFileMetadata
+      try {
+        await cloudinary.api.resource(publicId);
+        return true;
+      } catch (directError) {
+        // Si falla, usar búsqueda por prefix que funciona
+        const resourcesResult = await cloudinary.api.resources({
+          prefix: publicId,
+          max_results: 1,
+          type: 'upload'
+        });
+        
+        return resourcesResult.resources && resourcesResult.resources.length > 0;
+      }
     } catch (error) {
+      this.logger.error(`Error verificando existencia del archivo: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }
@@ -219,7 +252,28 @@ export class CloudinaryStorageService {
 
       this.logger.log(`Obteniendo metadatos del archivo: ${publicId}`);
 
-      const info = await cloudinary.api.resource(publicId);
+      // SOLUCIÓN: Usar api.resources() con prefix en lugar de api.resource() que falla
+      let info;
+      try {
+        // Primero intentar con el método directo
+        info = await cloudinary.api.resource(publicId);
+      } catch (directError) {
+        this.logger.log(`Método directo falló, usando búsqueda por prefix: ${publicId}`);
+        
+        // Si falla, usar búsqueda por prefix que funciona
+        const resourcesResult = await cloudinary.api.resources({
+          prefix: publicId,
+          max_results: 1,
+          type: 'upload'
+        });
+        
+        if (resourcesResult.resources && resourcesResult.resources.length > 0) {
+          info = resourcesResult.resources[0];
+          this.logger.log(`Archivo encontrado por prefix: ${info.public_id}`);
+        } else {
+          throw new Error('No se pudo encontrar el archivo en Cloudinary');
+        }
+      }
       
       if (!info) {
         throw new Error('No se pudo obtener información del archivo desde Cloudinary');
