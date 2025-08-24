@@ -15,6 +15,7 @@ import {
   FileTypeValidator,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -515,28 +516,32 @@ export class DocumentsController {
   @Get('file/:id')
   @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
   @ApiOperation({ 
-    summary: 'Ver documento',
-    description: 'Sirve un documento específico para visualización. Los clientes solo pueden ver documentos de sus expedientes.'
+    summary: 'Obtener URL del documento',
+    description: 'Devuelve la URL directa de Cloudinary para un documento específico. Los clientes solo pueden acceder a documentos de sus expedientes.'
   })
   @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
   @ApiResponse({ 
     status: 200, 
-    description: 'Archivo servido',
+    description: 'URL del documento',
     schema: {
-      type: 'string',
-      format: 'binary'
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'URL directa de Cloudinary' },
+        filename: { type: 'string', description: 'Nombre original del archivo' },
+        mimeType: { type: 'string', description: 'Tipo MIME del archivo' },
+        fileSize: { type: 'number', description: 'Tamaño del archivo en bytes' }
+      }
     }
   })
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Acceso prohibido' })
   @ApiResponse({ status: 404, description: 'Documento no encontrado' })
-  async serveFile(
+  async getDocumentUrl(
     @Param('id') id: string,
     @Request() req,
-    @Res() res: Response,
   ) {
     try {
-      console.log(`📁 Intentando servir archivo ID: ${id}`);
+      console.log(`📁 Intentando obtener URL del documento ID: ${id}`);
       console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
 
       // Buscar el documento por ID
@@ -548,131 +553,30 @@ export class DocumentsController {
 
       if (!document) {
         console.log(`❌ Documento no encontrado: ${id}`);
-        return res.status(404).json({
-          message: 'Documento no encontrado',
-          error: 'Not Found',
-          statusCode: 404,
-          documentId: id
-        });
+        throw new NotFoundException('Documento no encontrado');
       }
 
       console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
       console.log(`🔗 URL del archivo: ${document.fileUrl}`);
 
-      // Intentar obtener el stream del archivo
-      let fileStream;
-      let fileMetadata;
-      let useDirectUrl = false;
-      
-      try {
-        const downloadResult = await this.cloudinaryService.getFileStream(document.filename);
-        fileStream = downloadResult.stream;
-        fileMetadata = downloadResult.metadata;
-        console.log(`✅ Stream del archivo creado exitosamente`);
-      } catch (streamError) {
-        console.error(`❌ Error al crear stream del archivo:`, streamError);
-        console.log(`🔄 Intentando fallback a URL directa de Cloudinary...`);
-        
-        // Fallback: usar URL directa de Cloudinary
-        useDirectUrl = true;
-        
-        // Configurar metadatos básicos para URL directa
-        const fileExtension = document.originalName.toLowerCase().split('.').pop() || '';
-        fileMetadata = {
-          contentType: this.getContentTypeFromExtension(fileExtension),
-          contentLength: document.fileSize || 0,
-          lastModified: document.uploadedAt || new Date()
-        };
-      }
-
-      // Configurar headers de respuesta
-      let contentType = fileMetadata?.contentType || document.mimeType || 'application/octet-stream';
-      
-      // Mejorar detección de MIME types para archivos comunes
-      if (!fileMetadata?.contentType) {
-        const fileExtension = document.originalName.toLowerCase().split('.').pop();
-        contentType = this.getContentTypeFromExtension(fileExtension);
-      }
-      
-      res.setHeader('Content-Type', contentType);
-      
-      // Para imágenes y PDFs, permitir visualización inline
-      if (contentType.startsWith('image/') || contentType === 'application/pdf') {
-        res.setHeader('Content-Disposition', 'inline');
-      } else {
-        // Para otros tipos de archivo, forzar descarga con extensión correcta
-        res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
-      }
-
-      // Agregar headers adicionales si están disponibles
-      if (fileMetadata?.contentLength) {
-        res.setHeader('Content-Length', fileMetadata.contentLength);
-      }
-      if (fileMetadata?.lastModified) {
-        res.setHeader('Last-Modified', fileMetadata.lastModified.toUTCString());
-      }
-
-      // Headers para cache y CORS
-      res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache por 1 hora
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-      console.log(`🚀 Sirviendo archivo: ${document.originalName} (${contentType})`);
-
-      if (useDirectUrl) {
-        // Fallback: redirigir a URL directa de Cloudinary
-        console.log(`🔄 Redirigiendo a URL directa de Cloudinary: ${document.fileUrl}`);
-        return res.redirect(document.fileUrl);
-      } else {
-        // Enviar el archivo como stream
-        fileStream.pipe(res);
-
-        // Manejar errores del stream
-        fileStream.on('error', (error) => {
-          console.error(`❌ Error en el stream del archivo:`, error);
-          if (!res.headersSent) {
-            res.status(500).json({
-              message: 'Error al leer el archivo',
-              error: 'Stream Error',
-              statusCode: 500,
-              errorDetails: error instanceof Error ? error.message : String(error)
-            });
-          }
-        });
-
-        fileStream.on('end', () => {
-          console.log(`✅ Archivo servido exitosamente: ${document.originalName}`);
-        });
-      }
+      // Devolver la URL directa de Cloudinary
+      return {
+        url: document.fileUrl,
+        filename: document.originalName,
+        mimeType: document.mimeType,
+        fileSize: document.fileSize,
+        message: 'URL del documento obtenida exitosamente'
+      };
 
     } catch (error) {
-      console.error(`❌ Error en serveFile:`, error);
+      console.error(`❌ Error en getDocumentUrl:`, error);
       
-      if (!res.headersSent) {
-        if (error instanceof NotFoundException) {
-          return res.status(404).json({
-            message: error.message,
-            error: 'Not Found',
-            statusCode: 404,
-            documentId: id
-          });
-        } else if (error instanceof ForbiddenException) {
-          return res.status(403).json({
-            message: error.message,
-            error: 'Forbidden',
-            statusCode: 403,
-            documentId: id
-          });
-        } else {
-          return res.status(500).json({
-            message: 'Error interno del servidor',
-            error: 'Internal Server Error',
-            statusCode: 500,
-            documentId: id,
-            errorDetails: error instanceof Error ? error.message : String(error)
-          });
-        }
+      if (error instanceof NotFoundException) {
+        throw error;
+      } else if (error instanceof ForbiddenException) {
+        throw error;
+      } else {
+        throw new BadRequestException('Error al obtener la URL del documento');
       }
     }
   }
