@@ -6066,17 +6066,24 @@ let CloudinaryStorageService = CloudinaryStorageService_1 = class CloudinaryStor
             if (!this.isConfigured) {
                 throw new Error('Cloudinary Storage no está configurado');
             }
+            this.logger.log(`Intentando descargar archivo de Cloudinary: ${publicId}`);
             const info = await cloudinary_1.v2.api.resource(publicId);
+            if (!info) {
+                throw new Error('No se pudo obtener información del archivo desde Cloudinary');
+            }
+            this.logger.log(`Información del archivo obtenida: ${info.public_id}, formato: ${info.format}, tipo: ${info.resource_type}`);
             const downloadUrl = cloudinary_1.v2.url(publicId, {
                 secure: true,
                 resource_type: info.resource_type
             });
+            this.logger.log(`URL de descarga generada: ${downloadUrl}`);
             const response = await fetch(downloadUrl);
             if (!response.ok) {
-                throw new Error(`Error descargando archivo: ${response.statusText}`);
+                throw new Error(`Error descargando archivo: ${response.status} ${response.statusText}`);
             }
             const arrayBuffer = await response.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
+            this.logger.log(`Archivo descargado, tamaño: ${buffer.length} bytes`);
             const stream = new stream_1.Readable();
             stream.push(buffer);
             stream.push(null);
@@ -6098,6 +6105,12 @@ let CloudinaryStorageService = CloudinaryStorageService_1 = class CloudinaryStor
         }
         catch (error) {
             this.logger.error(`Error descargando archivo de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
+            if (error instanceof Error && (error.message.includes('fetch') ||
+                error.message.includes('network') ||
+                error.message.includes('timeout'))) {
+                this.logger.warn(`Error de red detectado, sugiriendo uso de URL directa`);
+                throw new Error(`Error de red al descargar archivo. Intente acceder directamente a la URL del archivo.`);
+            }
             throw error;
         }
     }
@@ -7135,16 +7148,25 @@ let DocumentsController = class DocumentsController {
                 });
             }
             console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
+            console.log(`🔗 URL del archivo: ${document.fileUrl}`);
+            if (document.fileUrl && document.fileUrl.includes('cloudinary.com')) {
+                console.log(`☁️ Archivo en Cloudinary, redirigiendo a URL directa`);
+                return res.redirect(document.fileUrl);
+            }
             let fileStream;
             let fileMetadata;
             try {
                 const downloadResult = await this.cloudinaryService.getFileStream(document.filename);
                 fileStream = downloadResult.stream;
                 fileMetadata = downloadResult.metadata;
-                console.log(`✅ Stream del archivo creado exitosamente desde Cloudinary`);
+                console.log(`✅ Stream del archivo creado exitosamente`);
             }
             catch (streamError) {
                 console.error(`❌ Error al crear stream del archivo:`, streamError);
+                if (document.fileUrl && document.fileUrl.startsWith('http')) {
+                    console.log(`🔄 Intentando redirección a URL directa: ${document.fileUrl}`);
+                    return res.redirect(document.fileUrl);
+                }
                 return res.status(404).json({
                     message: 'Archivo no encontrado en el almacenamiento',
                     error: 'File Not Found',
@@ -7243,7 +7265,7 @@ let DocumentsController = class DocumentsController {
                 }
                 else {
                     return res.status(500).json({
-                        message: 'Error interno del servidor al servir el archivo',
+                        message: 'Error interno del servidor',
                         error: 'Internal Server Error',
                         statusCode: 500,
                         documentId: id,
@@ -7429,6 +7451,97 @@ let DocumentsController = class DocumentsController {
     }
     remove(id, req) {
         return this.cloudinaryService.remove(id, req.user.id, req.user.role);
+    }
+    async debugFileAccess(id, req) {
+        try {
+            console.log(`🔍 Diagnóstico de acceso a archivo ID: ${id}`);
+            console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
+            const document = await this.cloudinaryService.findOne(id, req.user.id, req.user.role);
+            if (!document) {
+                throw new common_1.NotFoundException('Documento no encontrado');
+            }
+            console.log(`📄 Documento encontrado: ${document.filename}`);
+            const result = {
+                documentId: document.id,
+                filename: document.filename,
+                originalName: document.originalName,
+                fileUrl: document.fileUrl,
+                mimeType: document.mimeType,
+                fileSize: document.fileSize,
+                cloudinaryStatus: 'unknown',
+                cloudinaryError: null,
+                accessTest: {},
+                recommendations: []
+            };
+            if (document.fileUrl && document.fileUrl.includes('cloudinary.com')) {
+                result.cloudinaryStatus = 'cloudinary_url';
+                result.recommendations.push('Archivo detectado en Cloudinary');
+                try {
+                    const urlResponse = await fetch(document.fileUrl, { method: 'HEAD' });
+                    result.accessTest.urlAccess = {
+                        status: urlResponse.status,
+                        statusText: urlResponse.statusText,
+                        accessible: urlResponse.ok
+                    };
+                    if (urlResponse.ok) {
+                        result.recommendations.push('URL de Cloudinary accesible directamente');
+                    }
+                    else {
+                        result.recommendations.push('URL de Cloudinary no accesible - verificar permisos');
+                    }
+                }
+                catch (urlError) {
+                    result.accessTest.urlAccess = {
+                        error: urlError instanceof Error ? urlError.message : String(urlError),
+                        accessible: false
+                    };
+                    result.recommendations.push('Error al verificar URL de Cloudinary');
+                }
+            }
+            else {
+                result.cloudinaryStatus = 'local_or_other';
+                result.recommendations.push('Archivo no detectado en Cloudinary');
+            }
+            try {
+                const downloadResult = await this.cloudinaryService.getFileStream(document.filename);
+                result.cloudinaryStatus = 'accessible';
+                result.accessTest.serviceAccess = {
+                    status: 'success',
+                    streamCreated: true,
+                    metadata: downloadResult.metadata
+                };
+                result.recommendations.push('Archivo accesible a través del servicio');
+            }
+            catch (serviceError) {
+                result.cloudinaryStatus = 'error';
+                result.cloudinaryError = serviceError instanceof Error ? serviceError.message : String(serviceError);
+                result.accessTest.serviceAccess = {
+                    status: 'error',
+                    error: result.cloudinaryError
+                };
+                result.recommendations.push('Error al acceder al archivo a través del servicio');
+            }
+            if (result.mimeType === 'application/pdf') {
+                result.recommendations.push('Archivo PDF detectado - verificar visor del navegador');
+            }
+            if (result.fileSize > 5 * 1024 * 1024) {
+                result.recommendations.push('Archivo grande (>5MB) - puede causar problemas de timeout');
+            }
+            console.log(`✅ Diagnóstico completado para documento ${id}`);
+            return result;
+        }
+        catch (error) {
+            console.error(`❌ Error en debugFileAccess:`, error);
+            if (error instanceof common_1.NotFoundException) {
+                throw error;
+            }
+            else if (error instanceof common_1.ForbiddenException) {
+                throw error;
+            }
+            else {
+                throw new Error(`Error interno: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        }
     }
 };
 exports.DocumentsController = DocumentsController;
@@ -7767,7 +7880,7 @@ __decorate([
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
     (0, swagger_1.ApiOperation)({
         summary: 'Servir archivo estático',
-        description: 'Sirve un archivo estático desde Cloudinary. Los clientes solo pueden acceder a archivos de sus expedientes.'
+        description: 'Sirve un archivo estático desde Cloudinary o almacenamiento local. Los clientes solo pueden acceder a archivos de sus expedientes.'
     }),
     (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
     (0, swagger_1.ApiResponse)({
@@ -7912,6 +8025,42 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], DocumentsController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Get)('debug/file-access/:id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Diagnóstico de acceso a archivos',
+        description: 'Endpoint para diagnosticar problemas de acceso a archivos (solo ADMIN y ABOGADO)'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Diagnóstico del archivo',
+        schema: {
+            type: 'object',
+            properties: {
+                documentId: { type: 'string' },
+                filename: { type: 'string' },
+                originalName: { type: 'string' },
+                fileUrl: { type: 'string' },
+                mimeType: { type: 'string' },
+                fileSize: { type: 'number' },
+                cloudinaryStatus: { type: 'string' },
+                cloudinaryError: { type: 'string' },
+                accessTest: { type: 'object' },
+                recommendations: { type: 'array', items: { type: 'string' } }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Documento no encontrado' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], DocumentsController.prototype, "debugFileAccess", null);
 exports.DocumentsController = DocumentsController = __decorate([
     (0, swagger_1.ApiTags)('documents'),
     (0, common_1.Controller)('documents'),

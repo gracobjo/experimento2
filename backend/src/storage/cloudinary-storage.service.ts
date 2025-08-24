@@ -93,8 +93,16 @@ export class CloudinaryStorageService {
         throw new Error('Cloudinary Storage no está configurado');
       }
 
+      this.logger.log(`Intentando descargar archivo de Cloudinary: ${publicId}`);
+
       // Obtener información del archivo
       const info = await cloudinary.api.resource(publicId);
+      
+      if (!info) {
+        throw new Error('No se pudo obtener información del archivo desde Cloudinary');
+      }
+
+      this.logger.log(`Información del archivo obtenida: ${info.public_id}, formato: ${info.format}, tipo: ${info.resource_type}`);
       
       // Generar URL de descarga
       const downloadUrl = cloudinary.url(publicId, {
@@ -102,14 +110,18 @@ export class CloudinaryStorageService {
         resource_type: info.resource_type
       });
 
-      // Crear stream de descarga
+      this.logger.log(`URL de descarga generada: ${downloadUrl}`);
+
+      // Crear stream de descarga con mejor manejo de errores
       const response = await fetch(downloadUrl);
       if (!response.ok) {
-        throw new Error(`Error descargando archivo: ${response.statusText}`);
+        throw new Error(`Error descargando archivo: ${response.status} ${response.statusText}`);
       }
 
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
+      
+      this.logger.log(`Archivo descargado, tamaño: ${buffer.length} bytes`);
       
       // Crear stream desde buffer
       const stream = new Readable();
@@ -134,6 +146,17 @@ export class CloudinaryStorageService {
       };
     } catch (error) {
       this.logger.error(`Error descargando archivo de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
+      
+      // Si es un error de red o de Cloudinary, intentar con URL directa
+      if (error instanceof Error && (
+        error.message.includes('fetch') || 
+        error.message.includes('network') ||
+        error.message.includes('timeout')
+      )) {
+        this.logger.warn(`Error de red detectado, sugiriendo uso de URL directa`);
+        throw new Error(`Error de red al descargar archivo. Intente acceder directamente a la URL del archivo.`);
+      }
+      
       throw error;
     }
   }
