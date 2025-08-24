@@ -52,7 +52,8 @@ export class PostgresStorageService {
         originalName: document.originalName,
       };
     } catch (error) {
-      this.logger.error(`Error almacenando archivo: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      this.logger.error(`Error almacenando archivo: ${errorMessage}`);
       throw error;
     }
   }
@@ -86,14 +87,20 @@ export class PostgresStorageService {
 
       this.logger.log(`Archivo obtenido exitosamente: ${document.originalName}`);
       
+      // Convertir Uint8Array a Buffer si es necesario
+      const fileData = Buffer.isBuffer(document.fileData) 
+        ? document.fileData 
+        : Buffer.from(document.fileData);
+      
       return {
-        fileData: document.fileData,
+        fileData,
         mimeType: document.mimeType,
         originalName: document.originalName,
         fileSize: document.fileSize,
       };
     } catch (error) {
-      this.logger.error(`Error obteniendo archivo: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      this.logger.error(`Error obteniendo archivo: ${errorMessage}`);
       throw error;
     }
   }
@@ -110,7 +117,8 @@ export class PostgresStorageService {
 
       return !!(document && document.fileData);
     } catch (error) {
-      this.logger.error(`Error verificando existencia del archivo: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      this.logger.error(`Error verificando existencia del archivo: ${errorMessage}`);
       return false;
     }
   }
@@ -129,7 +137,8 @@ export class PostgresStorageService {
       this.logger.log(`Archivo eliminado exitosamente: ${result.filename}`);
       return true;
     } catch (error) {
-      this.logger.error(`Error eliminando archivo: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      this.logger.error(`Error eliminando archivo: ${errorMessage}`);
       return false;
     }
   }
@@ -160,7 +169,8 @@ export class PostgresStorageService {
 
       return document;
     } catch (error) {
-      this.logger.error(`Error obteniendo metadatos: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      this.logger.error(`Error obteniendo metadatos: ${errorMessage}`);
       return null;
     }
   }
