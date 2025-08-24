@@ -12,6 +12,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { ReportsModule } from './reports/reports.module';
 import { AdminModule } from './admin/admin.module';
 import { ChatModule } from './chat/chat.module';
+import { ChatbotModule } from './chatbot/chatbot.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ParametrosModule } from './parametros/parametros.module';
 import { InvoicesModule } from './invoices/invoices.module';
@@ -36,6 +37,7 @@ import { NotesModule } from './notes/notes.module';
     ReportsModule,
     AdminModule,
     ChatModule,
+    ChatbotModule,
     ParametrosModule,
     InvoicesModule,
     ProvisionFondosModule,

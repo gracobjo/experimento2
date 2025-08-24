@@ -10,35 +10,37 @@ datasource db {
 }
 
 model User {
-  id                   String        @id @default(uuid())
-  name                 String
-  email                String        @unique
-  password             String
-  role                 Role
+  id                    String   @id @default(uuid())
+  name                  String
+  email                 String   @unique
+  password              String
+  role                  Role     @default(CLIENTE)
   resetPasswordToken   String?
   resetPasswordExpires DateTime?
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
   appointmentsAsLawyer Appointment[]
-  client               Client?
-  documents            Document[]    @relation("UserDocuments")
+  client                Client?
+  documents             Document[]    @relation("UserDocuments")
   expedientesAsLawyer  Expediente[]  @relation("LawyerExpedientes")
-  lawyer               Lawyer?
-  receivedMessages     ChatMessage[] @relation("ReceivedMessages")
-  sentMessages         ChatMessage[] @relation("SentMessages")
-  assignedTasks        Task[]        @relation("AssignedTasks")
-  createdTasks         Task[]        @relation("CreatedTasks")
-  facturasEmitidas     Invoice[]     @relation("EmisorFacturas")
-  facturasRecibidas    Invoice[]     @relation("ReceptorFacturas")
-  layouts              Layout[]
+  lawyer                Lawyer?
+  receivedMessages      ChatMessage[] @relation("ReceivedMessages")
+  sentMessages          ChatMessage[] @relation("SentMessages")
+  assignedTasks         Task[]        @relation("AssignedTasks")
+  createdTasks          Task[]        @relation("CreatedTasks")
+  facturasEmitidas      Invoice[]     @relation("EmisorFacturas")
+  facturasRecibidas     Invoice[]     @relation("ReceptorFacturas")
+  layouts               Layout[]
   teleassistanceSessions TeleassistanceSession[] @relation("UserTeleassistanceSessions")
-  assistantSessions    TeleassistanceSession[] @relation("AssistantTeleassistanceSessions")
+  assistantSessions     TeleassistanceSession[] @relation("AssistantTeleassistanceSessions")
   teleassistanceMessages TeleassistanceMessage[]
   assignedVisitorAppointments VisitorAppointment[] @relation("AssignedVisitorAppointments")
-  notes                Note[]      @relation("UserNotes")
-  refreshTokens        RefreshToken[]
-  blacklistedTokens    BlacklistedToken[]
-  invoiceAuditHistory  InvoiceAuditHistory[]
+  notes                 Note[]      @relation("UserNotes")
+  refreshTokens         RefreshToken[]
+  blacklistedTokens     BlacklistedToken[]
+  invoiceAuditHistory   InvoiceAuditHistory[]
+  emailLogs             EmailLog[]
+  chatbotConversations ChatbotConversation[]
 }
 
 model Client {
@@ -128,6 +130,8 @@ model VisitorAppointment {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   assignedLawyer    User?    @relation("AssignedVisitorAppointments", fields: [assignedLawyerId], references: [id])
+  chatbotConversations ChatbotConversation[]
+  emailLogs         EmailLog[]
 
   @@map("visitor_appointments")
 }
@@ -153,6 +157,103 @@ model ChatBotMessage {
   createdAt DateTime @default(now())
 
   @@map("chat_bot_messages")
+}
+
+// Nuevo modelo para persistir conversaciones del chatbot
+model ChatbotConversation {
+  id                String   @id @default(uuid())
+  sessionId         String   @unique
+  userId            String?  // ID del usuario si está autenticado
+  userEmail         String?  // Email del usuario si lo proporciona
+  userPhone         String?  // Teléfono del usuario si lo proporciona
+  conversationType  String   // "appointment", "general", "support"
+  status            String   @default("ACTIVE") // "ACTIVE", "COMPLETED", "ABANDONED"
+  startedAt         DateTime @default(now())
+  completedAt       DateTime?
+  totalMessages     Int      @default(0)
+  userMessages      Int      @default(0)
+  botMessages       Int      @default(0)
+  lastActivity      DateTime @updatedAt
+  language          String   @default("es")
+  userAgent         String?  // Información del navegador
+  ipAddress         String?  // IP del usuario
+  metadata          Json?    // Datos adicionales (ubicación, dispositivo, etc.)
+
+  // Relaciones
+  messages          ChatbotMessageDetail[]
+  appointment       VisitorAppointment? @relation(fields: [appointmentId], references: [id])
+  appointmentId     String?
+  user              User?    @relation(fields: [userId], references: [id])
+
+  @@map("chatbot_conversations")
+}
+
+// Nuevo modelo para mensajes detallados del chatbot
+model ChatbotMessageDetail {
+  id                String   @id @default(uuid())
+  conversationId    String
+  messageType       String   // "user_input", "bot_response", "system_message"
+  content           String   // Contenido del mensaje
+  intent            String?  // Intención detectada
+  confidence        Float?   // Nivel de confianza de la detección
+  entities          Json?    // Entidades extraídas (nombres, fechas, etc.)
+  sentiment         String?  // "positive", "negative", "neutral"
+  timestamp         DateTime @default(now())
+  processingTime    Int?     // Tiempo de procesamiento en ms
+  error             String?  // Error si ocurrió alguno
+
+  // Relaciones
+  conversation      ChatbotConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("chatbot_message_details")
+}
+
+// Nuevo modelo para auditoría de emails
+model EmailLog {
+  id                String   @id @default(uuid())
+  recipient         String   // Email del destinatario
+  subject           String   // Asunto del email
+  template          String   // Tipo de plantilla usada
+  status            String   // "SENT", "DELIVERED", "FAILED", "BOUNCED"
+  sentAt            DateTime @default(now())
+  deliveredAt       DateTime?
+  failedAt          DateTime?
+  error             String?  // Mensaje de error si falla
+  retryCount        Int      @default(0)
+  maxRetries        Int      @default(3)
+  emailProvider     String?  // Proveedor de email usado
+  messageId         String?  // ID del mensaje del proveedor
+  metadata          Json?    // Datos adicionales (headers, attachments, etc.)
+
+  // Relaciones opcionales
+  appointmentId     String?  // Si está relacionado con una cita
+  appointment       VisitorAppointment? @relation(fields: [appointmentId], references: [id])
+  userId            String?  // Si está relacionado con un usuario
+  user              User?    @relation(fields: [userId], references: [id])
+
+  @@map("email_logs")
+}
+
+// Nuevo modelo para analytics del chatbot
+model ChatbotAnalytics {
+  id                String   @id @default(uuid())
+  date              DateTime @default(now())
+  totalConversations Int     @default(0)
+  completedConversations Int @default(0)
+  abandonedConversations Int @default(0)
+  totalMessages     Int      @default(0)
+  averageMessagesPerConversation Float @default(0)
+  appointmentBookings Int    @default(0)
+  conversionRate    Float    @default(0) // % de conversaciones que resultan en citas
+  averageResponseTime Float  @default(0) // Tiempo promedio de respuesta del bot
+  topIntents        Json?    // Intenciones más comunes
+  topEntities       Json?    // Entidades más extraídas
+  userSatisfaction  Float?   // Puntuación de satisfacción del usuario
+  errorRate         Float    @default(0) // % de errores
+  languageDistribution Json? // Distribución por idiomas
+  deviceDistribution Json?   // Distribución por dispositivos
+
+  @@map("chatbot_analytics")
 }
 
 model Task {

@@ -1252,6 +1252,99 @@ def process_message(text: str, language: str = "es", conversation_history: list 
 
 Responde con el número de la opción que prefieras o escribe tu consulta directamente."""
 
+# Función para crear conversación en el backend
+def create_backend_conversation(session_id: str, user_email: str = None, user_phone: str = None, conversation_type: str = "appointment"):
+    """Crea una nueva conversación en el backend"""
+    try:
+        conversation_data = {
+            "sessionId": session_id,
+            "userEmail": user_email,
+            "userPhone": user_phone,
+            "conversationType": conversation_type,
+            "userAgent": "Chatbot-Python",
+            "ipAddress": "127.0.0.1",  # Se puede mejorar para obtener IP real
+            "metadata": {
+                "source": "chatbot",
+                "version": "1.0.0"
+            }
+        }
+        
+        response = requests.post(f"{BACKEND_URL}/api/chatbot/conversations", json=conversation_data, timeout=10)
+        if response.status_code == 201:
+            return response.json()
+        else:
+            print(f"[DEBUG] Error creando conversación: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        print(f"[DEBUG] Error creando conversación: {e}")
+        return None
+
+# Función para agregar mensaje a la conversación
+def add_backend_message(conversation_id: str, message_type: str, content: str, intent: str = None, confidence: float = None, entities: dict = None, sentiment: str = None, processing_time: int = None, error: str = None):
+    """Agrega un mensaje a la conversación en el backend"""
+    try:
+        message_data = {
+            "messageType": message_type,
+            "content": content,
+            "intent": intent,
+            "confidence": confidence,
+            "entities": entities,
+            "sentiment": sentiment,
+            "processingTime": processing_time,
+            "error": error
+        }
+        
+        response = requests.post(f"{BACKEND_URL}/api/chatbot/conversations/{conversation_id}/messages", json=message_data, timeout=10)
+        if response.status_code == 201:
+            return response.json()
+        else:
+            print(f"[DEBUG] Error agregando mensaje: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        print(f"[DEBUG] Error agregando mensaje: {e}")
+        return None
+
+# Función para completar conversación
+def complete_backend_conversation(conversation_id: str, appointment_id: str = None):
+    """Completa una conversación en el backend"""
+    try:
+        data = {}
+        if appointment_id:
+            data["appointmentId"] = appointment_id
+            
+        response = requests.put(f"{BACKEND_URL}/api/chatbot/conversations/{conversation_id}/complete", json=data, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"[DEBUG] Error completando conversación: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        print(f"[DEBUG] Error completando conversación: {e}")
+        return None
+
+# Función para registrar email
+def log_backend_email(recipient: str, subject: str, template: str, appointment_id: str = None, user_id: str = None, metadata: dict = None):
+    """Registra el envío de un email en el backend"""
+    try:
+        email_data = {
+            "recipient": recipient,
+            "subject": subject,
+            "template": template,
+            "appointmentId": appointment_id,
+            "userId": user_id,
+            "metadata": metadata or {}
+        }
+        
+        response = requests.post(f"{BACKEND_URL}/api/chatbot/email-logs", json=email_data, timeout=10)
+        if response.status_code == 201:
+            return response.json()
+        else:
+            print(f"[DEBUG] Error registrando email: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        print(f"[DEBUG] Error registrando email: {e}")
+        return None
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
