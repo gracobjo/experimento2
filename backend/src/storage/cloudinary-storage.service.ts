@@ -151,10 +151,12 @@ export class CloudinaryStorageService {
       if (error instanceof Error && (
         error.message.includes('fetch') || 
         error.message.includes('network') ||
-        error.message.includes('timeout')
+        error.message.includes('timeout') ||
+        error.message.includes('404') ||
+        error.message.includes('not found')
       )) {
-        this.logger.warn(`Error de red detectado, sugiriendo uso de URL directa`);
-        throw new Error(`Error de red al descargar archivo. Intente acceder directamente a la URL del archivo.`);
+        this.logger.warn(`Error de red o archivo no encontrado detectado, sugiriendo uso de URL directa`);
+        throw new Error(`Error al descargar archivo desde Cloudinary. El archivo puede no existir o haber problemas de conectividad.`);
       }
       
       throw error;
@@ -200,6 +202,46 @@ export class CloudinaryStorageService {
   }
 
   /**
+   * Obtener metadatos de un archivo en Cloudinary
+   */
+  async getFileMetadata(publicId: string): Promise<{
+    publicId: string;
+    resourceType: string;
+    format: string;
+    size: number;
+    createdAt: Date;
+    url: string;
+  }> {
+    try {
+      if (!this.isConfigured) {
+        throw new Error('Cloudinary Storage no está configurado');
+      }
+
+      this.logger.log(`Obteniendo metadatos del archivo: ${publicId}`);
+
+      const info = await cloudinary.api.resource(publicId);
+      
+      if (!info) {
+        throw new Error('No se pudo obtener información del archivo desde Cloudinary');
+      }
+
+      this.logger.log(`Metadatos obtenidos exitosamente: ${info.public_id}`);
+
+      return {
+        publicId: info.public_id,
+        resourceType: info.resource_type,
+        format: info.format,
+        size: info.bytes || 0,
+        createdAt: new Date(info.created_at),
+        url: info.secure_url
+      };
+    } catch (error) {
+      this.logger.error(`Error obteniendo metadatos del archivo: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
    * Eliminar archivo de Cloudinary
    */
   async deleteFile(publicId: string): Promise<void> {
@@ -217,35 +259,6 @@ export class CloudinaryStorageService {
       }
     } catch (error) {
       this.logger.error(`Error eliminando archivo de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Obtener metadatos del archivo
-   */
-  async getFileMetadata(publicId: string): Promise<any> {
-    try {
-      if (!this.isConfigured) {
-        throw new Error('Cloudinary Storage no está configurado');
-      }
-
-      const info = await cloudinary.api.resource(publicId);
-      
-      return {
-        publicId: info.public_id,
-        resourceType: info.resource_type,
-        format: info.format,
-        width: info.width,
-        height: info.height,
-        size: info.bytes,
-        createdAt: info.created_at,
-        updatedAt: info.updated_at,
-        url: info.secure_url,
-        context: info.context || {},
-      };
-    } catch (error) {
-      this.logger.error(`Error obteniendo metadatos del archivo: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }

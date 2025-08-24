@@ -515,8 +515,8 @@ export class DocumentsController {
   @Get('file/:id')
   @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
   @ApiOperation({ 
-    summary: 'Servir archivo estático',
-    description: 'Sirve un archivo estático desde Cloudinary o almacenamiento local. Los clientes solo pueden acceder a archivos de sus expedientes.'
+    summary: 'Ver documento',
+    description: 'Sirve un documento específico para visualización. Los clientes solo pueden ver documentos de sus expedientes.'
   })
   @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
   @ApiResponse({ 
@@ -559,10 +559,10 @@ export class DocumentsController {
       console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
       console.log(`🔗 URL del archivo: ${document.fileUrl}`);
 
-      // Siempre obtener el archivo a través del backend para mantener autenticación
-      // No redirigir a Cloudinary directamente ya que puede causar problemas de permisos
+      // Intentar obtener el stream del archivo
       let fileStream;
       let fileMetadata;
+      let useDirectUrl = false;
       
       try {
         const downloadResult = await this.cloudinaryService.getFileStream(document.filename);
@@ -571,53 +571,27 @@ export class DocumentsController {
         console.log(`✅ Stream del archivo creado exitosamente`);
       } catch (streamError) {
         console.error(`❌ Error al crear stream del archivo:`, streamError);
+        console.log(`🔄 Intentando fallback a URL directa de Cloudinary...`);
         
-        return res.status(404).json({
-          message: 'Archivo no encontrado en el almacenamiento',
-          error: 'File Not Found',
-          statusCode: 404,
-          documentId: id,
-          filename: document.filename,
-          errorDetails: streamError instanceof Error ? streamError.message : String(streamError)
-        });
+        // Fallback: usar URL directa de Cloudinary
+        useDirectUrl = true;
+        
+        // Configurar metadatos básicos para URL directa
+        const fileExtension = document.originalName.toLowerCase().split('.').pop() || '';
+        fileMetadata = {
+          contentType: this.getContentTypeFromExtension(fileExtension),
+          contentLength: document.fileSize || 0,
+          lastModified: document.uploadedAt || new Date()
+        };
       }
 
-      // Configurar headers de respuesta para visualización (no descarga)
+      // Configurar headers de respuesta
       let contentType = fileMetadata?.contentType || document.mimeType || 'application/octet-stream';
       
       // Mejorar detección de MIME types para archivos comunes
-      if (document.originalName) {
-        const extension = document.originalName.toLowerCase().split('.').pop();
-        switch (extension) {
-          case 'docx':
-            contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-            break;
-          case 'doc':
-            contentType = 'application/msword';
-            break;
-          case 'pdf':
-            contentType = 'application/pdf';
-            break;
-          case 'txt':
-            contentType = 'text/plain';
-            break;
-          case 'csv':
-            contentType = 'text/csv';
-            break;
-          case 'jpg':
-          case 'jpeg':
-            contentType = 'image/jpeg';
-            break;
-          case 'png':
-            contentType = 'image/png';
-            break;
-          case 'gif':
-            contentType = 'image/gif';
-            break;
-          case 'webp':
-            contentType = 'image/webp';
-            break;
-        }
+      if (!fileMetadata?.contentType) {
+        const fileExtension = document.originalName.toLowerCase().split('.').pop();
+        contentType = this.getContentTypeFromExtension(fileExtension);
       }
       
       res.setHeader('Content-Type', contentType);
@@ -646,25 +620,31 @@ export class DocumentsController {
 
       console.log(`🚀 Sirviendo archivo: ${document.originalName} (${contentType})`);
 
-      // Enviar el archivo
-      fileStream.pipe(res);
+      if (useDirectUrl) {
+        // Fallback: redirigir a URL directa de Cloudinary
+        console.log(`🔄 Redirigiendo a URL directa de Cloudinary: ${document.fileUrl}`);
+        return res.redirect(document.fileUrl);
+      } else {
+        // Enviar el archivo como stream
+        fileStream.pipe(res);
 
-      // Manejar errores del stream
-      fileStream.on('error', (error) => {
-        console.error(`❌ Error en el stream del archivo:`, error);
-        if (!res.headersSent) {
-          res.status(500).json({
-            message: 'Error al leer el archivo',
-            error: 'Stream Error',
-            statusCode: 500,
-            errorDetails: error instanceof Error ? error.message : String(error)
-          });
-        }
-      });
+        // Manejar errores del stream
+        fileStream.on('error', (error) => {
+          console.error(`❌ Error en el stream del archivo:`, error);
+          if (!res.headersSent) {
+            res.status(500).json({
+              message: 'Error al leer el archivo',
+              error: 'Stream Error',
+              statusCode: 500,
+              errorDetails: error instanceof Error ? error.message : String(error)
+            });
+          }
+        });
 
-      fileStream.on('end', () => {
-        console.log(`✅ Archivo servido exitosamente: ${document.originalName}`);
-      });
+        fileStream.on('end', () => {
+          console.log(`✅ Archivo servido exitosamente: ${document.originalName}`);
+        });
+      }
 
     } catch (error) {
       console.error(`❌ Error en serveFile:`, error);
@@ -694,6 +674,43 @@ export class DocumentsController {
           });
         }
       }
+    }
+  }
+
+  // Método auxiliar para determinar Content-Type basado en extensión
+  private getContentTypeFromExtension(extension?: string): string {
+    if (!extension) return 'application/octet-stream';
+    
+    switch (extension.toLowerCase()) {
+      case 'pdf':
+        return 'application/pdf';
+      case 'doc':
+        return 'application/msword';
+      case 'docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case 'xls':
+        return 'application/vnd.ms-excel';
+      case 'xlsx':
+        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      case 'ppt':
+        return 'application/vnd.ms-powerpoint';
+      case 'pptx':
+        return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+      case 'txt':
+        return 'text/plain';
+      case 'csv':
+        return 'text/csv';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'application/octet-stream';
     }
   }
 

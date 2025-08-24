@@ -649,17 +649,44 @@ export class CloudinaryDocumentsService {
       }
       
       this.logger.log(`PublicId extraído del filename: ${filename} -> ${cloudinaryPublicId}`);
+    }
+    
+    // Verificar que el archivo existe en Cloudinary
+    try {
+      await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
       
-              // Verificar que el archivo existe en Cloudinary
-        try {
-          await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
+      // Actualizar metadatos en la base de datos para futuras consultas
+      await this.prisma.document.update({
+        where: { id: document.id },
+        data: {
+          metadata: {
+            cloudinaryPublicId: cloudinaryPublicId,
+            storageType: 'cloudinary',
+            cloudinaryUrl: document.fileUrl,
+            updatedAt: new Date().toISOString()
+          } as any
+        }
+      });
+      
+      this.logger.log(`Metadatos de Cloudinary actualizados para documento ${document.id}`);
+      
+    } catch (cloudinaryError) {
+      this.logger.error(`Error verificando archivo en Cloudinary: ${cloudinaryError instanceof Error ? cloudinaryError.message : String(cloudinaryError)}`);
+      
+      // Si no se puede verificar en Cloudinary, intentar con el filename original
+      // Esto puede pasar si el archivo fue subido con un nombre diferente
+      try {
+        const alternativePublicId = filename;
+        await this.cloudinaryStorage.getFileMetadata(alternativePublicId);
         
-        // Actualizar metadatos en la base de datos para futuras consultas
+        this.logger.log(`Archivo encontrado con filename alternativo: ${alternativePublicId}`);
+        
+        // Actualizar metadatos
         await this.prisma.document.update({
           where: { id: document.id },
           data: {
             metadata: {
-              cloudinaryPublicId: cloudinaryPublicId,
+              cloudinaryPublicId: alternativePublicId,
               storageType: 'cloudinary',
               cloudinaryUrl: document.fileUrl,
               updatedAt: new Date().toISOString()
@@ -667,10 +694,10 @@ export class CloudinaryDocumentsService {
           }
         });
         
-        this.logger.log(`Metadatos de Cloudinary actualizados para documento ${document.id}`);
+        cloudinaryPublicId = alternativePublicId;
         
-      } catch (cloudinaryError) {
-        this.logger.error(`Error verificando archivo en Cloudinary: ${cloudinaryError instanceof Error ? cloudinaryError.message : String(cloudinaryError)}`);
+      } catch (alternativeError) {
+        this.logger.error(`Error con filename alternativo: ${alternativeError instanceof Error ? alternativeError.message : String(alternativeError)}`);
         throw new NotFoundException('El archivo no existe en Cloudinary');
       }
     }

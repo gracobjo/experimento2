@@ -293,29 +293,40 @@ const DocumentsPage = () => {
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       
-      // Determinar el tipo de archivo para decidir si visualizar o descargar
+      // Determinar el tipo de archivo para decidir cómo manejarlo
       const fileExtension = originalName.toLowerCase().split('.').pop();
-      const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension);
+      const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(fileExtension);
       const isPdf = fileExtension === 'pdf';
+      const isText = ['txt', 'md', 'log', 'csv'].includes(fileExtension);
+      const isCode = ['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'json', 'xml', 'py', 'java', 'cpp', 'c', 'php'].includes(fileExtension);
+      const isDocument = ['docx', 'doc', 'odt', 'rtf'].includes(fileExtension);
+      const isSpreadsheet = ['xlsx', 'xls', 'ods'].includes(fileExtension);
+      const isPresentation = ['pptx', 'ppt', 'odp'].includes(fileExtension);
       
+      // Estrategia de visualización basada en el tipo de archivo
       if (isImage || isPdf) {
         // Para imágenes y PDFs, abrir en nueva pestaña para visualización
         window.open(url, '_blank');
+      } else if (isText || isCode) {
+        // Para archivos de texto y código, mostrar contenido inline
+        try {
+          const textContent = await blob.text();
+          showTextPreview(originalName, textContent, fileExtension);
+        } catch (error) {
+          console.warn('No se pudo leer como texto, descargando...', error);
+          downloadFile(url, originalName);
+        }
+      } else if (isDocument || isSpreadsheet || isPresentation) {
+        // Para documentos de Office, intentar usar Google Docs Viewer
+        const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(window.location.origin + '/api/documents/file/' + documentId)}&embedded=true`;
+        window.open(googleDocsUrl, '_blank');
       } else {
-        // Para otros tipos (DOCX, TXT, etc.), descargar directamente
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = originalName;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        // Para otros tipos, descargar directamente
+        downloadFile(url, originalName);
       }
       
-      // Limpiar URL para imágenes y PDFs después de un tiempo
-      if (isImage || isPdf) {
-        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-      }
+      // Limpiar URL después de un tiempo
+      setTimeout(() => window.URL.revokeObjectURL(url), 5000);
 
     } catch (error) {
       console.error('Error visualizando documento:', error);
@@ -327,6 +338,137 @@ const DocumentsPage = () => {
       
       alert(`Error al visualizar el documento:\n\n${errorMessage}\n\nPor favor, verifica tu conexión a internet e intenta nuevamente.`);
     }
+  };
+
+  // Función auxiliar para descargar archivos
+  const downloadFile = (url: string, filename: string) => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  // Función para mostrar previsualización de texto
+  const showTextPreview = (filename: string, content: string, fileExtension: string) => {
+    // Crear modal para mostrar el contenido del texto
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    
+    // Determinar el lenguaje para syntax highlighting
+    const languageMap: { [key: string]: string } = {
+      'js': 'javascript',
+      'ts': 'typescript',
+      'jsx': 'javascript',
+      'tsx': 'typescript',
+      'html': 'html',
+      'css': 'css',
+      'json': 'json',
+      'xml': 'xml',
+      'py': 'python',
+      'java': 'java',
+      'cpp': 'cpp',
+      'c': 'c',
+      'php': 'php',
+      'md': 'markdown'
+    };
+    
+    const language = languageMap[fileExtension] || 'text';
+    
+    modal.innerHTML = `
+      <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+        <div class="flex items-center justify-between p-4 border-b bg-gray-50">
+          <div class="flex items-center space-x-2">
+            <span class="text-lg font-semibold">📄 ${filename}</span>
+            <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">${fileExtension.toUpperCase()}</span>
+          </div>
+          <div class="flex space-x-2">
+            <button class="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700" onclick="this.closest('.fixed').querySelector('.download-btn').click()">
+              💾 Descargar
+            </button>
+            <button class="px-3 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600" onclick="this.closest('.fixed').remove()">
+              ✕ Cerrar
+            </button>
+          </div>
+        </div>
+        <div class="p-4 overflow-auto max-h-[calc(90vh-80px)]">
+          <pre class="bg-gray-900 text-green-400 p-4 rounded text-sm overflow-x-auto"><code class="language-${language}">${escapeHtml(content)}</code></pre>
+        </div>
+        <a href="#" class="download-btn hidden" download="${filename}"></a>
+      </div>
+    `;
+    
+    // Agregar estilos CSS para el modal
+    const style = document.createElement('style');
+    style.textContent = `
+      .fixed { position: fixed !important; }
+      .inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+      .bg-black { background-color: rgba(0, 0, 0, 0.5); }
+      .bg-opacity-50 { background-color: rgba(0, 0, 0, 0.5); }
+      .flex { display: flex; }
+      .items-center { align-items: center; }
+      .justify-center { justify-content: center; }
+      .z-50 { z-index: 50; }
+      .bg-white { background-color: white; }
+      .rounded-lg { border-radius: 0.5rem; }
+      .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+      .max-w-4xl { max-width: 56rem; }
+      .w-full { width: 100%; }
+      .mx-4 { margin-left: 1rem; margin-right: 1rem; }
+      .max-h-\\[90vh\\] { max-height: 90vh; }
+      .overflow-hidden { overflow: hidden; }
+      .p-4 { padding: 1rem; }
+      .border-b { border-bottom-width: 1px; }
+      .bg-gray-50 { background-color: #f9fafb; }
+      .text-lg { font-size: 1.125rem; }
+      .font-semibold { font-weight: 600; }
+      .space-x-2 > * + * { margin-left: 0.5rem; }
+      .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+      .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+      .text-xs { font-size: 0.75rem; }
+      .bg-blue-100 { background-color: #dbeafe; }
+      .text-blue-800 { color: #1e40af; }
+      .rounded { border-radius: 0.25rem; }
+      .space-x-2 > * + * { margin-left: 0.5rem; }
+      .text-sm { font-size: 0.875rem; }
+      .bg-blue-600 { background-color: #2563eb; }
+      .text-white { color: white; }
+      .hover\\:bg-blue-700:hover { background-color: #1d4ed8; }
+      .bg-gray-500 { background-color: #6b7280; }
+      .hover\\:bg-gray-600:hover { background-color: #4b5563; }
+      .overflow-auto { overflow: auto; }
+      .max-h-\\[calc\\(90vh-80px\\)\\] { max-height: calc(90vh - 80px); }
+      .bg-gray-900 { background-color: #111827; }
+      .text-green-400 { color: #4ade80; }
+      .text-sm { font-size: 0.875rem; }
+      .overflow-x-auto { overflow-x: auto; }
+      .hidden { display: none; }
+    `;
+    
+    document.head.appendChild(style);
+    document.body.appendChild(modal);
+    
+    // Cerrar modal al hacer clic fuera
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
+    
+    // Cerrar con Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        modal.remove();
+      }
+    });
+  };
+
+  // Función para escapar HTML
+  const escapeHtml = (text: string) => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   };
 
   if (loading) {
