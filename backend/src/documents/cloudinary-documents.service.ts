@@ -632,23 +632,45 @@ export class CloudinaryDocumentsService {
       throw new NotFoundException('Documento no encontrado');
     }
 
-    // Obtener el publicId de Cloudinary
+    // Obtener el publicId de Cloudinary desde la URL completa
     let cloudinaryPublicId = (document.metadata as any)?.cloudinaryPublicId;
     
     if (!cloudinaryPublicId) {
-      // Si no hay metadatos, extraer el publicId del filename
-      // El filename tiene formato: timestamp-randomId.extension
-      // Necesitamos extraer solo la parte: timestamp-randomId
-      const filenameParts = filename.split('.');
-      if (filenameParts.length > 1) {
-        // Quitar la extensión del final
-        cloudinaryPublicId = filenameParts.slice(0, -1).join('.');
-      } else {
-        // Si no hay extensión, usar el filename completo
-        cloudinaryPublicId = filename;
+      // Extraer el publicId de la URL completa de Cloudinary
+      // La URL tiene formato: https://res.cloudinary.com/cloud_name/image/upload/v1234567890/ruta/archivo.pdf
+      // Necesitamos extraer: ruta/archivo (sin extensión)
+      if (document.fileUrl && document.fileUrl.includes('cloudinary.com')) {
+        try {
+          const url = new URL(document.fileUrl);
+          const pathParts = url.pathname.split('/');
+          
+          // Buscar la parte después de 'upload' que contiene la ruta del archivo
+          const uploadIndex = pathParts.findIndex(part => part === 'upload');
+          if (uploadIndex !== -1 && uploadIndex + 2 < pathParts.length) {
+            // Tomar todo después de 'upload/v1234567890/'
+            const filePath = pathParts.slice(uploadIndex + 2).join('/');
+            
+            // Quitar la extensión del final si existe
+            const filePathWithoutExt = filePath.replace(/\.[^/.]+$/, '');
+            
+            cloudinaryPublicId = filePathWithoutExt;
+            this.logger.log(`PublicId extraído de la URL: ${document.fileUrl} -> ${cloudinaryPublicId}`);
+          }
+        } catch (urlError) {
+          this.logger.warn(`Error parseando URL de Cloudinary: ${urlError}`);
+        }
       }
       
-      this.logger.log(`PublicId extraído del filename: ${filename} -> ${cloudinaryPublicId}`);
+      // Si no se pudo extraer de la URL, usar el filename como fallback
+      if (!cloudinaryPublicId) {
+        const filenameParts = filename.split('.');
+        if (filenameParts.length > 1) {
+          cloudinaryPublicId = filenameParts.slice(0, -1).join('.');
+        } else {
+          cloudinaryPublicId = filename;
+        }
+        this.logger.log(`PublicId extraído del filename como fallback: ${filename} -> ${cloudinaryPublicId}`);
+      }
     }
     
     // Verificar que el archivo existe en Cloudinary
