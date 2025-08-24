@@ -16,6 +16,348 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden; /* Prevenir scroll horizontal */
+}
+
+/* Configuración de scroll para dispositivos móviles */
+html {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+}
+
+/* Estilos responsivos base */
+.container-responsive {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Breakpoints responsivos */
+@media (min-width: 640px) {
+  .container-responsive {
+    padding: 0 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .container-responsive {
+    padding: 0 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-responsive {
+    padding: 0 2.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container-responsive {
+    padding: 0 3rem;
+  }
+}
+
+/* Estilos para pantallas pequeñas */
+@media (max-width: 639px) {
+  .mobile-full-width {
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
+  }
+  
+  .mobile-padding {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .mobile-text-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  
+  .mobile-text-xs {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+  
+  .mobile-grid-1 {
+    grid-template-columns: 1fr;
+  }
+  
+  .mobile-stack {
+    flex-direction: column;
+  }
+  
+  .mobile-center {
+    text-align: center;
+  }
+}
+
+/* Estilos para pantallas medianas */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .tablet-grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .tablet-text-base {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+}
+
+/* Estilos para pantallas grandes */
+@media (min-width: 1024px) {
+  .desktop-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .desktop-text-lg {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+}
+
+/* Manejo de scroll en dispositivos móviles */
+.mobile-scroll-container {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+.mobile-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mobile-scroll-container::-webkit-scrollbar-track {
+  background: #f7fafc;
+  border-radius: 3px;
+}
+
+.mobile-scroll-container::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.mobile-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+/* Estilos para elementos que deben ser responsivos */
+.responsive-card {
+  @apply bg-white shadow rounded-lg p-4;
+}
+
+@media (min-width: 640px) {
+  .responsive-card {
+    @apply p-6;
+  }
+}
+
+.responsive-text {
+  @apply text-base;
+}
+
+@media (max-width: 639px) {
+  .responsive-text {
+    @apply text-sm;
+  }
+}
+
+.responsive-heading {
+  @apply text-2xl font-bold;
+}
+
+@media (min-width: 640px) {
+  .responsive-heading {
+    @apply text-3xl;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-heading {
+    @apply text-4xl;
+  }
+}
+
+/* Estilos para botones responsivos */
+.responsive-button {
+  @apply px-3 py-2 text-sm;
+}
+
+@media (min-width: 640px) {
+  .responsive-button {
+    @apply px-4 py-2 text-base;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-button {
+    @apply px-6 py-3 text-lg;
+  }
+}
+
+/* Estilos para grids responsivos */
+.responsive-grid {
+  @apply grid gap-4;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .responsive-grid {
+    @apply gap-6;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .responsive-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Estilos para navegación responsiva */
+.responsive-nav {
+  @apply flex flex-col space-y-2;
+}
+
+@media (min-width: 768px) {
+  .responsive-nav {
+    @apply flex-row space-y-0 space-x-4;
+  }
+}
+
+/* Estilos para modales responsivos */
+.responsive-modal {
+  @apply w-11/12 max-w-md mx-auto;
+}
+
+@media (min-width: 640px) {
+  .responsive-modal {
+    @apply w-4/5 max-w-lg;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-modal {
+    @apply w-3/4 max-w-2xl;
+  }
+}
+
+/* Estilos para formularios responsivos */
+.responsive-form {
+  @apply space-y-4;
+}
+
+.responsive-input {
+  @apply w-full px-3 py-2 text-sm;
+}
+
+@media (min-width: 640px) {
+  .responsive-input {
+    @apply px-4 py-2 text-base;
+  }
+}
+
+/* Estilos para tablas responsivas */
+.responsive-table {
+  @apply w-full overflow-x-auto;
+}
+
+.responsive-table table {
+  @apply min-w-full;
+}
+
+@media (max-width: 639px) {
+  .responsive-table {
+    @apply text-xs;
+  }
+  
+  .responsive-table th,
+  .responsive-table td {
+    @apply px-2 py-1;
+  }
+}
+
+/* Estilos para imágenes responsivas */
+.responsive-image {
+  @apply w-full h-auto;
+  max-width: 100%;
+}
+
+/* Estilos para iconos responsivos */
+.responsive-icon {
+  @apply w-5 h-5;
+}
+
+@media (min-width: 640px) {
+  .responsive-icon {
+    @apply w-6 h-6;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-icon {
+    @apply w-8 h-8;
+  }
+}
+
+/* Estilos para espaciado responsivo */
+.responsive-spacing {
+  @apply space-y-4;
+}
+
+@media (min-width: 640px) {
+  .responsive-spacing {
+    @apply space-y-6;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-spacing {
+    @apply space-y-8;
+  }
+}
+
+/* Estilos para márgenes responsivos */
+.responsive-margin {
+  @apply my-4;
+}
+
+@media (min-width: 640px) {
+  .responsive-margin {
+    @apply my-6;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-margin {
+    @apply my-8;
+  }
+}
+
+/* Estilos para padding responsivo */
+.responsive-padding {
+  @apply p-4;
+}
+
+@media (min-width: 640px) {
+  .responsive-padding {
+    @apply p-6;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-padding {
+    @apply p-8;
+  }
 }
 
 /* Estilos para impresión de facturas */
@@ -98,101 +440,4 @@ body {
 
 .invoice-content .additional-info {
   margin: 6px 0 !important;
-  padding: 6px !important;
-}
-
-.invoice-content .items-section {
-  margin-bottom: 8px !important;
-}
-
-.invoice-content .totals-section {
-  margin-bottom: 8px !important;
-}
-
-/* Asegurar que el QR integrado y el campo de firma sean visibles */
-.invoice-content .qr-integrated {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.invoice-content .qr-integrated .firma-text {
-  flex: 1 !important;
-  text-align: center !important;
-  color: #bbb !important;
-  font-size: 1rem !important;
-}
-
-.invoice-content .qr-integrated .qr-section {
-  margin-left: 20px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-}
-
-.invoice-content .qr-integrated .qr-section img {
-  width: 60px !important;
-  height: 60px !important;
-  margin-bottom: 4px !important;
-}
-
-.invoice-content .qr-integrated .qr-legend {
-  font-size: 6px !important;
-  color: #666 !important;
-  background: #f3f4f6 !important;
-  padding: 2px 4px !important;
-  border-radius: 4px !important;
-  font-family: monospace !important;
-  word-break: break-all !important;
-  text-align: center !important;
-  max-width: 60px !important;
-}
-
-.invoice-content .footer {
-  position: absolute !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  width: 100% !important;
-  z-index: 5 !important;
-}
-
-.invoice-content .firma-block {
-  margin-top: 16px !important;
-  height: 3cm !important;
-  border: 1px dashed #bbb !important;
-  border-radius: 8px !important;
-  background: #f8fafc !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  color: #bbb !important;
-  font-size: 1rem !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-/* Asegurar que el contenedor de la factura tenga altura suficiente */
-.invoice-content .invoice-container {
-  min-height: auto !important;
-  padding-bottom: 60px !important;
-  position: relative !important;
-}
-
-/* Mejorar la visualización en pantallas pequeñas */
-@media (max-width: 768px) {
-  .invoice-content .qr-integrated .qr-section img {
-    width: 50px !important;
-    height: 50px !important;
-  }
-  
-  .invoice-content .qr-integrated .qr-legend {
-    font-size: 5px !important;
-    max-width: 50px !important;
-  }
-  
-  .invoice-content .qr-integrated .qr-section {
-    margin-left: 15px !important;
-  }
 } 

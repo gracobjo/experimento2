@@ -130,3 +130,342 @@ input[type="datetime-local"]::-ms-expand {
 .modal-content .p-6 {
   padding-bottom: 80px !important; /* Espacio para botones sticky */
 } 
+
+/* Estilos para modales responsivos */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-height: 90vh;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 500px;
+  position: relative;
+}
+
+/* Responsividad para modales */
+@media (max-width: 639px) {
+  .modal-overlay {
+    padding: 0.5rem;
+  }
+  
+  .modal-content {
+    max-width: 100%;
+    margin: 0 0.5rem;
+    max-height: 95vh;
+  }
+  
+  .modal-header {
+    padding: 1rem;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+  
+  .modal-footer {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .modal-footer button {
+    width: 100%;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .modal-content {
+    max-width: 90%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .modal-content {
+    max-width: 600px;
+  }
+}
+
+/* Estilos para scroll en modales móviles */
+.modal-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 2px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Estilos para formularios en modales */
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.modal-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modal-form label {
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.modal-form input,
+.modal-form textarea,
+.modal-form select {
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.modal-form input:focus,
+.modal-form textarea:focus,
+.modal-form select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Responsividad para formularios */
+@media (max-width: 639px) {
+  .modal-form {
+    gap: 0.75rem;
+  }
+  
+  .modal-form input,
+  .modal-form textarea,
+  .modal-form select {
+    padding: 0.625rem;
+    font-size: 1rem; /* Evitar zoom en iOS */
+  }
+}
+
+/* Estilos para botones en modales */
+.modal-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.modal-button-primary {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.modal-button-primary:hover {
+  background-color: #2563eb;
+}
+
+.modal-button-secondary {
+  background-color: #6b7280;
+  color: white;
+}
+
+.modal-button-secondary:hover {
+  background-color: #4b5563;
+}
+
+.modal-button-danger {
+  background-color: #ef4444;
+  color: white;
+}
+
+.modal-button-danger:hover {
+  background-color: #dc2626;
+}
+
+/* Responsividad para botones */
+@media (max-width: 639px) {
+  .modal-button {
+    padding: 0.875rem 1rem;
+    font-size: 1rem;
+    width: 100%;
+  }
+}
+
+/* Estilos para mensajes de error y éxito */
+.modal-message {
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.modal-message.error {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.modal-message.success {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+}
+
+.modal-message.info {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #2563eb;
+}
+
+/* Estilos para iconos en modales */
+.modal-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 639px) {
+  .modal-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+/* Estilos para títulos de modales */
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 639px) {
+  .modal-title {
+    font-size: 1.125rem;
+  }
+}
+
+/* Estilos para descripciones de modales */
+.modal-description {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0.5rem 0 0 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 639px) {
+  .modal-description {
+    font-size: 0.8125rem;
+  }
+}
+
+/* Estilos para cerrar modales */
+.modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  color: #6b7280;
+  transition: all 0.15s ease-in-out;
+}
+
+.modal-close:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+@media (max-width: 639px) {
+  .modal-close {
+    top: 0.75rem;
+    right: 0.75rem;
+    padding: 0.375rem;
+  }
+}
+
+/* Estilos para modales de confirmación */
+.modal-confirmation {
+  text-align: center;
+}
+
+.modal-confirmation .modal-icon {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 1rem;
+  color: #3b82f6;
+}
+
+@media (max-width: 639px) {
+  .modal-confirmation .modal-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-bottom: 0.75rem;
+  }
+}
+
+/* Estilos para modales de carga */
+.modal-loading {
+  text-align: center;
+  padding: 2rem;
+}
+
+.modal-loading .spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 639px) {
+  .modal-loading {
+    padding: 1.5rem;
+  }
+  
+  .modal-loading .spinner {
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+} 

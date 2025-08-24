@@ -133,23 +133,25 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-2 md:gap-4">
+    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 md:gap-4">
       {/* Botones para Clientes */}
       {user?.role === 'CLIENTE' && (
         <>
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="responsive-button bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
             onClick={() => setModal('cita')}
             aria-label="Programar cita con el abogado"
           >
-            Programar Cita
+            <span className="hidden sm:inline">Programar Cita</span>
+            <span className="sm:hidden">Cita</span>
           </button>
           <button
-            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+            className="responsive-button bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
             onClick={() => setModal('mensaje')}
             aria-label="Enviar mensaje al abogado"
           >
-            Enviar Mensaje
+            <span className="hidden sm:inline">Enviar Mensaje</span>
+            <span className="sm:hidden">Mensaje</span>
           </button>
         </>
       )}
@@ -158,25 +160,28 @@ const QuickActions: React.FC<QuickActionsProps> = ({ expedienteId, expedienteDat
       {(user?.role === 'ABOGADO' || user?.role === 'ADMIN') && (
         <>
           <button
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            className="responsive-button bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
             onClick={() => setModal('nota')}
             aria-label="Agregar nota interna al expediente"
           >
-            Agregar Nota
+            <span className="hidden sm:inline">Agregar Nota</span>
+            <span className="sm:hidden">Nota</span>
           </button>
           <button
-            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+            className="responsive-button bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
             onClick={() => setModal('mensaje')}
             aria-label="Enviar mensaje al cliente"
           >
-            Enviar Mensaje
+            <span className="hidden sm:inline">Enviar Mensaje</span>
+            <span className="sm:hidden">Mensaje</span>
           </button>
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="responsive-button bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
             onClick={() => setModal('cita')}
             aria-label="Programar cita con el cliente"
           >
-            Programar Cita
+            <span className="hidden sm:inline">Programar Cita</span>
+            <span className="sm:hidden">Cita</span>
           </button>
         </>
       )}

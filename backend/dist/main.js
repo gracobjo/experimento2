@@ -7149,10 +7149,6 @@ let DocumentsController = class DocumentsController {
             }
             console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
             console.log(`🔗 URL del archivo: ${document.fileUrl}`);
-            if (document.fileUrl && document.fileUrl.includes('cloudinary.com')) {
-                console.log(`☁️ Archivo en Cloudinary, redirigiendo a URL directa`);
-                return res.redirect(document.fileUrl);
-            }
             let fileStream;
             let fileMetadata;
             try {
@@ -7163,10 +7159,6 @@ let DocumentsController = class DocumentsController {
             }
             catch (streamError) {
                 console.error(`❌ Error al crear stream del archivo:`, streamError);
-                if (document.fileUrl && document.fileUrl.startsWith('http')) {
-                    console.log(`🔄 Intentando redirección a URL directa: ${document.fileUrl}`);
-                    return res.redirect(document.fileUrl);
-                }
                 return res.status(404).json({
                     message: 'Archivo no encontrado en el almacenamiento',
                     error: 'File Not Found',
