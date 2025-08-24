@@ -516,32 +516,28 @@ export class DocumentsController {
   @Get('file/:id')
   @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
   @ApiOperation({ 
-    summary: 'Obtener URL del documento',
-    description: 'Devuelve la URL directa de Cloudinary para un documento específico. Los clientes solo pueden acceder a documentos de sus expedientes.'
+    summary: 'Ver documento',
+    description: 'Sirve un documento específico para visualización. Los clientes solo pueden ver documentos de sus expedientes.'
   })
   @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
   @ApiResponse({ 
     status: 200, 
-    description: 'URL del documento',
+    description: 'Archivo servido',
     schema: {
-      type: 'object',
-      properties: {
-        url: { type: 'string', description: 'URL directa de Cloudinary' },
-        filename: { type: 'string', description: 'Nombre original del archivo' },
-        mimeType: { type: 'string', description: 'Tipo MIME del archivo' },
-        fileSize: { type: 'number', description: 'Tamaño del archivo en bytes' }
-      }
+      type: 'string',
+      format: 'binary'
     }
   })
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Acceso prohibido' })
   @ApiResponse({ status: 404, description: 'Documento no encontrado' })
-  async getDocumentUrl(
+  async serveFile(
     @Param('id') id: string,
     @Request() req,
+    @Res() res: Response,
   ) {
     try {
-      console.log(`📁 Intentando obtener URL del documento ID: ${id}`);
+      console.log(`📁 Intentando servir archivo ID: ${id}`);
       console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
 
       // Buscar el documento por ID
@@ -553,30 +549,114 @@ export class DocumentsController {
 
       if (!document) {
         console.log(`❌ Documento no encontrado: ${id}`);
-        throw new NotFoundException('Documento no encontrado');
+        return res.status(404).json({
+          message: 'Documento no encontrado',
+          error: 'Not Found',
+          statusCode: 404,
+          documentId: id
+        });
       }
 
       console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
       console.log(`🔗 URL del archivo: ${document.fileUrl}`);
 
-      // Devolver la URL directa de Cloudinary
-      return {
-        url: document.fileUrl,
-        filename: document.originalName,
-        mimeType: document.mimeType,
-        fileSize: document.fileSize,
-        message: 'URL del documento obtenida exitosamente'
-      };
+      // Intentar obtener el stream del archivo desde Cloudinary
+      let fileStream;
+      let fileMetadata;
+      
+      try {
+        console.log(`🔄 Obteniendo stream desde Cloudinary...`);
+        const downloadResult = await this.cloudinaryService.getFileStream(document.filename);
+        fileStream = downloadResult.stream;
+        fileMetadata = downloadResult.metadata;
+        console.log(`✅ Stream del archivo creado exitosamente`);
+      } catch (streamError) {
+        console.error(`❌ Error al crear stream del archivo:`, streamError);
+        throw new Error('No se pudo acceder al archivo en Cloudinary');
+      }
+
+      // Configurar headers de respuesta
+      let contentType = fileMetadata?.contentType || document.mimeType || 'application/octet-stream';
+      
+      // Mejorar detección de MIME types para archivos comunes
+      if (!fileMetadata?.contentType) {
+        const fileExtension = document.originalName.toLowerCase().split('.').pop();
+        contentType = this.getContentTypeFromExtension(fileExtension);
+      }
+      
+      res.setHeader('Content-Type', contentType);
+      
+      // Para imágenes y PDFs, permitir visualización inline
+      if (contentType.startsWith('image/') || contentType === 'application/pdf') {
+        res.setHeader('Content-Disposition', 'inline');
+      } else {
+        // Para otros tipos de archivo, forzar descarga con extensión correcta
+        res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
+      }
+
+      // Agregar headers adicionales si están disponibles
+      if (fileMetadata?.contentLength) {
+        res.setHeader('Content-Length', fileMetadata.contentLength);
+      }
+      if (fileMetadata?.lastModified) {
+        res.setHeader('Last-Modified', fileMetadata.lastModified.toUTCString());
+      }
+
+      // Headers para cache y CORS
+      res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache por 1 hora
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+      console.log(`🚀 Sirviendo archivo: ${document.originalName} (${contentType})`);
+
+      // Enviar el archivo como stream
+      fileStream.pipe(res);
+
+      // Manejar errores del stream
+      fileStream.on('error', (error) => {
+        console.error(`❌ Error en el stream del archivo:`, error);
+        if (!res.headersSent) {
+          res.status(500).json({
+            message: 'Error al leer el archivo',
+            error: 'Stream Error',
+            statusCode: 500,
+            errorDetails: error instanceof Error ? error.message : String(error)
+          });
+        }
+      });
+
+      fileStream.on('end', () => {
+        console.log(`✅ Archivo servido exitosamente: ${document.originalName}`);
+      });
 
     } catch (error) {
-      console.error(`❌ Error en getDocumentUrl:`, error);
+      console.error(`❌ Error en serveFile:`, error);
       
-      if (error instanceof NotFoundException) {
-        throw error;
-      } else if (error instanceof ForbiddenException) {
-        throw error;
-      } else {
-        throw new BadRequestException('Error al obtener la URL del documento');
+      if (!res.headersSent) {
+        if (error instanceof NotFoundException) {
+          return res.status(404).json({
+            message: error.message,
+            error: 'Not Found',
+            statusCode: 404,
+            documentId: id
+          });
+        } else if (error instanceof ForbiddenException) {
+          return res.status(403).json({
+            message: error.message,
+            error: 'Forbidden',
+            statusCode: 403,
+            documentId: id
+          });
+        } else {
+          return res.status(500).json({
+            message: 'Error interno del servidor',
+            error: 'Internal Server Error',
+            statusCode: 500,
+            documentId: id,
+            errorDetails: error instanceof Error ? error.message : String(error)
+          });
+        }
       }
     }
   }
