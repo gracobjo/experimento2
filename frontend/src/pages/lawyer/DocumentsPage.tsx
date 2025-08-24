@@ -240,7 +240,7 @@ const DocumentsPage = () => {
     return '📎';
   };
 
-  // Función para visualizar documento usando URLs directas de Cloudinary
+  // Función para visualizar documento con streaming desde el backend
   const handleViewDocument = async (documentId: string, originalName: string) => {
     try {
       const token = localStorage.getItem('token');
@@ -251,7 +251,7 @@ const DocumentsPage = () => {
 
       console.log(`🔍 Intentando visualizar documento: ${originalName} (ID: ${documentId})`);
 
-      // Obtener la URL del documento desde el backend
+      // Hacer petición autenticada al endpoint usando el ID del documento
       const response = await fetch(`${getBackendUrl()}/api/documents/file/${documentId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -270,13 +270,12 @@ const DocumentsPage = () => {
         }
       }
 
-      // Obtener la URL de Cloudinary desde la respuesta JSON
-      const documentData = await response.json();
-      const cloudinaryUrl = documentData.url;
-      
-      console.log(`✅ URL de Cloudinary obtenida: ${cloudinaryUrl}`);
-      console.log(`📁 Tipo de archivo: ${documentData.mimeType}`);
+      console.log(`✅ Documento cargado exitosamente: ${originalName}`);
 
+      // Obtener el blob y determinar cómo manejarlo
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
       // Determinar el tipo de archivo para decidir cómo manejarlo
       const fileExtension = originalName.toLowerCase().split('.').pop() || '';
       const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(fileExtension);
@@ -289,36 +288,34 @@ const DocumentsPage = () => {
       
       console.log(`📁 Tipo de archivo detectado: ${fileExtension} (Imagen: ${isImage}, PDF: ${isPdf}, Texto: ${isText}, Código: ${isCode}, Documento: ${isDocument})`);
       
-      // Estrategia de visualización basada en el tipo de archivo usando URL directa de Cloudinary
+      // Estrategia de visualización basada en el tipo de archivo
       if (isImage || isPdf) {
         // Para imágenes y PDFs, abrir en nueva pestaña para visualización
-        console.log(`🖼️ Abriendo ${isImage ? 'imagen' : 'PDF'} en nueva pestaña desde Cloudinary`);
-        window.open(cloudinaryUrl, '_blank');
+        console.log(`🖼️ Abriendo ${isImage ? 'imagen' : 'PDF'} en nueva pestaña`);
+        window.open(url, '_blank');
       } else if (isText || isCode) {
-        // Para archivos de texto y código, intentar leer desde Cloudinary
-        console.log(`📝 Intentando leer archivo de texto/código desde Cloudinary`);
+        // Para archivos de texto y código, mostrar contenido inline
+        console.log(`📝 Mostrando archivo de texto/código inline`);
         try {
-          const textResponse = await fetch(cloudinaryUrl);
-          if (textResponse.ok) {
-            const textContent = await textResponse.text();
-            showTextPreview(originalName, textContent, fileExtension);
-          } else {
-            throw new Error('No se pudo leer el archivo de texto');
-          }
+          const textContent = await blob.text();
+          showTextPreview(originalName, textContent, fileExtension);
         } catch (error) {
           console.warn('No se pudo leer como texto, descargando...', error);
-          downloadFile(cloudinaryUrl, originalName);
+          downloadFile(url, originalName);
         }
       } else if (isDocument || isSpreadsheet || isPresentation) {
-        // Para documentos de Office, usar Google Docs Viewer con URL de Cloudinary
-        console.log(`📊 Abriendo documento de Office con Google Docs Viewer desde Cloudinary`);
-        const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(cloudinaryUrl)}&embedded=true`;
+        // Para documentos de Office, intentar usar Google Docs Viewer
+        console.log(`📊 Abriendo documento de Office con Google Docs Viewer`);
+        const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(window.location.origin + '/api/documents/file/' + documentId)}&embedded=true`;
         window.open(googleDocsUrl, '_blank');
       } else {
-        // Para otros tipos, descargar directamente desde Cloudinary
-        console.log(`📥 Descargando archivo de tipo desconocido desde Cloudinary`);
-        downloadFile(cloudinaryUrl, originalName);
+        // Para otros tipos, descargar directamente
+        console.log(`📥 Descargando archivo de tipo desconocido`);
+        downloadFile(url, originalName);
       }
+      
+      // Limpiar URL después de un tiempo
+      setTimeout(() => window.URL.revokeObjectURL(url), 5000);
 
     } catch (error: any) {
       console.error('❌ Error viewing document:', error);
