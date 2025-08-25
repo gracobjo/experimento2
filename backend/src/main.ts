@@ -19,11 +19,13 @@ async function bootstrap() {
   console.log('STORAGE_TYPE:', process.env.STORAGE_TYPE);
   console.log('================================');
 
-  // Configurar trust proxy para Railway
+  // Configurar trust proxy para Railway y express-rate-limit
+  app.set('trust proxy', true);
+  
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   
-  // Configurar trust proxy para express-rate-limit
+  // Configurar timeouts
   app.use((req, res, next) => {
     req.setTimeout(30000);
     res.setTimeout(30000);
