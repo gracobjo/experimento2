@@ -124,91 +124,205 @@ export class DocumentsService {
 
   // Métodos simples para reemplazar Cloudinary
   async findMyDocuments(userId: string, userRole: string) {
-    if (userRole === 'CLIENTE') {
-      const client = await this.prisma.client.findUnique({
-        where: { userId }
-      });
+    try {
+      console.log(`🔍 DocumentsService.findMyDocuments - userId: ${userId}, userRole: ${userRole}`);
       
-      if (!client) {
-        return [];
-      }
+      if (userRole === 'CLIENTE') {
+        const client = await this.prisma.client.findUnique({
+          where: { userId }
+        });
+        
+        if (!client) {
+          return [];
+        }
 
-      return this.prisma.document.findMany({
-        where: {
-          expediente: {
-            clientId: client.id
-          }
-        },
-        include: {
-          expediente: {
-            select: {
-              id: true,
-              title: true,
-              status: true
+        // Obtener documentos básicos primero
+        const documents = await this.prisma.document.findMany({
+          where: {
+            expediente: {
+              clientId: client.id
             }
+          },
+          select: {
+            id: true,
+            filename: true,
+            originalName: true,
+            fileSize: true,
+            mimeType: true,
+            description: true,
+            expedienteId: true,
+            uploadedBy: true,
+            uploadedAt: true,
+          },
+          orderBy: {
+            uploadedAt: 'desc'
           }
-        },
-        orderBy: {
-          uploadedAt: 'desc'
-        }
-      });
-    } else if (userRole === 'ABOGADO') {
-      return this.prisma.document.findMany({
-        where: {
-          expediente: {
-            lawyerId: userId
-          }
-        },
-        include: {
-          expediente: {
-            select: {
-              id: true,
-              title: true,
-              status: true
+        });
+
+        // Obtener información del expediente
+        const documentsWithExpediente = await Promise.all(
+          documents.map(async (doc) => {
+            try {
+              let expedienteInfo = null;
+              if (doc.expedienteId) {
+                const expediente = await this.prisma.expediente.findUnique({
+                  where: { id: doc.expedienteId },
+                  select: {
+                    id: true,
+                    title: true,
+                    status: true
+                  }
+                });
+                expedienteInfo = expediente;
+              }
+
+              return {
+                ...doc,
+                expediente: expedienteInfo
+              };
+            } catch (error: any) {
+              console.log(`⚠️ Error procesando documento ${doc.id}:`, error?.message || 'Error desconocido');
+              return {
+                ...doc,
+                expediente: null
+              };
             }
-          }
-        },
-        orderBy: {
-          uploadedAt: 'desc'
-        }
-      });
-    } else {
-      // ADMIN puede ver todos
-      return this.prisma.document.findMany({
-        include: {
-          expediente: {
-            select: {
-              id: true,
-              title: true,
-              status: true
+          })
+        );
+
+        return documentsWithExpediente;
+        
+      } else if (userRole === 'ABOGADO') {
+        // Obtener documentos básicos primero
+        const documents = await this.prisma.document.findMany({
+          where: {
+            expediente: {
+              lawyerId: userId
             }
+          },
+          select: {
+            id: true,
+            filename: true,
+            originalName: true,
+            fileSize: true,
+            mimeType: true,
+            description: true,
+            expedienteId: true,
+            uploadedBy: true,
+            uploadedAt: true,
+          },
+          orderBy: {
+            uploadedAt: 'desc'
           }
-        },
-        orderBy: {
-          uploadedAt: 'desc'
-        }
-      });
+        });
+
+        // Obtener información del expediente
+        const documentsWithExpediente = await Promise.all(
+          documents.map(async (doc) => {
+            try {
+              let expedienteInfo = null;
+              if (doc.expedienteId) {
+                const expediente = await this.prisma.expediente.findUnique({
+                  where: { id: doc.expedienteId },
+                  select: {
+                    id: true,
+                    title: true,
+                    status: true
+                  }
+                });
+                expedienteInfo = expediente;
+              }
+
+              return {
+                ...doc,
+                expediente: expedienteInfo
+              };
+            } catch (error: any) {
+              console.log(`⚠️ Error procesando documento ${doc.id}:`, error?.message || 'Error desconocido');
+              return {
+                ...doc,
+                expediente: null
+              };
+            }
+          })
+        );
+
+        return documentsWithExpediente;
+        
+      } else {
+        // ADMIN puede ver todos (usar el método findAll)
+        return this.findAll(userId, userRole);
+      }
+    } catch (error: any) {
+      console.error(`❌ Error en DocumentsService.findMyDocuments:`, error);
+      throw new BadRequestException('Error interno del servidor al obtener mis documentos');
     }
   }
 
   async findAll(userId: string, userRole: string) {
-    if (userRole === 'ADMIN') {
-      return this.prisma.document.findMany({
-        include: {
-          expediente: {
-            select: {
-              id: true,
-              title: true,
-              status: true
-            }
+    try {
+      console.log(`🔍 DocumentsService.findAll - userId: ${userId}, userRole: ${userRole}`);
+      
+      if (userRole === 'ADMIN') {
+        // Para admin, obtener todos los documentos básicos primero
+        const documents = await this.prisma.document.findMany({
+          select: {
+            id: true,
+            filename: true,
+            originalName: true,
+            fileSize: true,
+            mimeType: true,
+            description: true,
+            expedienteId: true,
+            uploadedBy: true,
+            uploadedAt: true,
+          },
+          orderBy: {
+            uploadedAt: 'desc'
           }
-        },
-        orderBy: {
-          uploadedAt: 'desc'
-        }
-      });
-    } else {
-      return this.findMyDocuments(userId, userRole);
+        });
+
+        console.log(`📊 Documentos básicos encontrados: ${documents.length}`);
+
+        // Obtener información del expediente para cada documento
+        const documentsWithExpediente = await Promise.all(
+          documents.map(async (doc) => {
+            try {
+              let expedienteInfo = null;
+              if (doc.expedienteId) {
+                const expediente = await this.prisma.expediente.findUnique({
+                  where: { id: doc.expedienteId },
+                  select: {
+                    id: true,
+                    title: true,
+                    status: true
+                  }
+                });
+                expedienteInfo = expediente;
+              }
+
+              return {
+                ...doc,
+                expediente: expedienteInfo
+              };
+            } catch (error: any) {
+              console.log(`⚠️ Error procesando documento ${doc.id}:`, error?.message || 'Error desconocido');
+              return {
+                ...doc,
+                expediente: null
+              };
+            }
+          })
+        );
+
+        console.log(`📊 Documentos procesados exitosamente: ${documentsWithExpediente.length}`);
+        return documentsWithExpediente;
+      } else {
+        return this.findMyDocuments(userId, userRole);
+      }
+    } catch (error) {
+      console.error(`❌ Error en DocumentsService.findAll:`, error);
+      throw new BadRequestException('Error interno del servidor al obtener documentos');
     }
   }
 
