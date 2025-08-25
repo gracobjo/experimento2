@@ -4276,6 +4276,28 @@ let CasesService = class CasesService {
         await this.prisma.expediente.delete({ where: { id: caseId } });
         return { message: 'Caso eliminado exitosamente' };
     }
+    async testDatabaseConnection() {
+        try {
+            console.log('🧪 Probando conexión a la base de datos...');
+            await this.prisma.$connect();
+            console.log('✅ Conexión exitosa');
+            const count = await this.prisma.expediente.count();
+            console.log(`📊 Total de expedientes: ${count}`);
+            const usersCount = await this.prisma.user.count();
+            const clientsCount = await this.prisma.client.count();
+            console.log(`👥 Usuarios: ${usersCount}, Clientes: ${clientsCount}`);
+            return {
+                expedientes: count,
+                usuarios: usersCount,
+                clientes: clientsCount,
+                status: 'connected'
+            };
+        }
+        catch (error) {
+            console.error('❌ Error en conexión a BD:', error);
+            throw error;
+        }
+    }
 };
 exports.CasesService = CasesService;
 exports.CasesService = CasesService = __decorate([
@@ -4398,6 +4420,61 @@ let CasesController = class CasesController {
     }
     deleteCaseForClient(clientId, caseId, req) {
         return this.casesService.deleteForClient(clientId, caseId, req.user.id);
+    }
+    async testSimple() {
+        try {
+            console.log('🧪 Test simple de casos ejecutándose...');
+            const expedientesCount = await this.casesService.testDatabaseConnection();
+            return {
+                success: true,
+                message: 'Test simple exitoso',
+                expedientesCount,
+                timestamp: new Date().toISOString(),
+                environment: process.env.NODE_ENV || 'development'
+            };
+        }
+        catch (error) {
+            console.error('❌ Error en test simple:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+            const errorStack = error instanceof Error ? error.stack : 'Stack no disponible';
+            return {
+                success: false,
+                message: 'Test simple falló',
+                error: errorMessage,
+                stack: errorStack,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+    async testWithAuth(req) {
+        try {
+            console.log('🧪 Test con auth ejecutándose...');
+            console.log('👤 Usuario:', req.user);
+            const expedientes = await this.casesService.findAll(req.user.id, req.user.role);
+            return {
+                success: true,
+                message: 'Test con auth exitoso',
+                expedientesCount: expedientes.length,
+                user: {
+                    id: req.user.id,
+                    role: req.user.role
+                },
+                timestamp: new Date().toISOString()
+            };
+        }
+        catch (error) {
+            console.error('❌ Error en test con auth:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+            const errorStack = error instanceof Error ? error.stack : 'Stack no disponible';
+            return {
+                success: false,
+                message: 'Test con auth falló',
+                error: errorMessage,
+                stack: errorStack,
+                user: req.user,
+                timestamp: new Date().toISOString()
+            };
+        }
     }
 };
 exports.CasesController = CasesController;
@@ -4990,6 +5067,31 @@ __decorate([
     __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", void 0)
 ], CasesController.prototype, "deleteCaseForClient", null);
+__decorate([
+    (0, common_1.Get)('test-simple'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Test simple de casos',
+        description: 'Endpoint de prueba sin autenticación para diagnosticar problemas'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Test exitoso' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], CasesController.prototype, "testSimple", null);
+__decorate([
+    (0, common_1.Get)('test-with-auth'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Test de casos con autenticación',
+        description: 'Endpoint de prueba CON autenticación para diagnosticar problemas'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Test con auth exitoso' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CasesController.prototype, "testWithAuth", null);
 exports.CasesController = CasesController = __decorate([
     (0, swagger_1.ApiTags)('cases'),
     (0, common_1.Controller)('cases'),

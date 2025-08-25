@@ -800,4 +800,34 @@ export class CasesService {
     await this.prisma.expediente.delete({ where: { id: caseId } });
     return { message: 'Caso eliminado exitosamente' };
   }
+
+  async testDatabaseConnection() {
+    try {
+      console.log('🧪 Probando conexión a la base de datos...');
+      
+      // Probar conexión básica
+      await this.prisma.$connect();
+      console.log('✅ Conexión exitosa');
+      
+      // Contar expedientes
+      const count = await this.prisma.expediente.count();
+      console.log(`📊 Total de expedientes: ${count}`);
+      
+      // Verificar que existen las tablas relacionadas
+      const usersCount = await this.prisma.user.count();
+      const clientsCount = await this.prisma.client.count();
+      
+      console.log(`👥 Usuarios: ${usersCount}, Clientes: ${clientsCount}`);
+      
+      return {
+        expedientes: count,
+        usuarios: usersCount,
+        clientes: clientsCount,
+        status: 'connected'
+      };
+    } catch (error) {
+      console.error('❌ Error en conexión a BD:', error);
+      throw error;
+    }
+  }
 } 

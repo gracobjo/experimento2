@@ -604,4 +604,81 @@ export class CasesController {
   deleteCaseForClient(@Param('clientId') clientId: string, @Param('caseId') caseId: string, @Request() req) {
     return this.casesService.deleteForClient(clientId, caseId, req.user.id);
   }
+
+  @Get('test-simple')
+  @ApiOperation({ 
+    summary: 'Test simple de casos',
+    description: 'Endpoint de prueba sin autenticación para diagnosticar problemas'
+  })
+  @ApiResponse({ status: 200, description: 'Test exitoso' })
+  async testSimple() {
+    try {
+      console.log('🧪 Test simple de casos ejecutándose...');
+      
+      // Verificar conexión básica a la base de datos
+      const expedientesCount = await this.casesService.testDatabaseConnection();
+      
+      return {
+        success: true,
+        message: 'Test simple exitoso',
+        expedientesCount,
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development'
+      };
+    } catch (error) {
+      console.error('❌ Error en test simple:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      const errorStack = error instanceof Error ? error.stack : 'Stack no disponible';
+      
+      return {
+        success: false,
+        message: 'Test simple falló',
+        error: errorMessage,
+        stack: errorStack,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  @Get('test-with-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ 
+    summary: 'Test de casos con autenticación',
+    description: 'Endpoint de prueba CON autenticación para diagnosticar problemas'
+  })
+  @ApiResponse({ status: 200, description: 'Test con auth exitoso' })
+  async testWithAuth(@Request() req) {
+    try {
+      console.log('🧪 Test con auth ejecutándose...');
+      console.log('👤 Usuario:', req.user);
+      
+      // Probar la consulta que falla
+      const expedientes = await this.casesService.findAll(req.user.id, req.user.role);
+      
+      return {
+        success: true,
+        message: 'Test con auth exitoso',
+        expedientesCount: expedientes.length,
+        user: {
+          id: req.user.id,
+          role: req.user.role
+        },
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('❌ Error en test con auth:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      const errorStack = error instanceof Error ? error.stack : 'Stack no disponible';
+      
+      return {
+        success: false,
+        message: 'Test con auth falló',
+        error: errorMessage,
+        stack: errorStack,
+        user: req.user,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
 } 
