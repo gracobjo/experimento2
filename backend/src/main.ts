@@ -20,7 +20,7 @@ async function bootstrap() {
   console.log('================================');
 
   // Configurar trust proxy para Railway y express-rate-limit
-  app.set('trust proxy', true);
+  app.getHttpAdapter().getInstance().set('trust proxy', true);
   
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
