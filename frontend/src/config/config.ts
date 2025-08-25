@@ -41,3 +41,4 @@ export const getBackendUrl = (): string => {
 export const buildApiUrl = (endpoint: string): string => {
   return `${config.backendUrl}${endpoint}`;
 };
+
