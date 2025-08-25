@@ -153,80 +153,156 @@ export class CasesService {
   async findAll(currentUserId: string, userRole: string) {
     console.log(`🔍 CasesService.findAll - currentUserId: ${currentUserId}, userRole: ${userRole}`);
     
-    let whereClause = {};
+    try {
+      let whereClause = {};
 
-    // Filtrar por rol del usuario
-    if (userRole === 'CLIENTE') {
-      console.log(`👤 Buscando perfil de cliente para userId: ${currentUserId}`);
-      
-      // Clientes solo ven sus propios expedientes
-      const client = await this.prisma.client.findUnique({
-        where: { userId: currentUserId }
+      // Filtrar por rol del usuario
+      if (userRole === 'CLIENTE') {
+        console.log(`👤 Buscando perfil de cliente para userId: ${currentUserId}`);
+        
+        // Clientes solo ven sus propios expedientes
+        const client = await this.prisma.client.findUnique({
+          where: { userId: currentUserId }
+        });
+
+        console.log(`📋 Perfil de cliente encontrado:`, client);
+
+        if (!client) {
+          console.log(`❌ No se encontró perfil de cliente para userId: ${currentUserId}`);
+          throw new NotFoundException('Cliente no encontrado');
+        }
+
+        whereClause = { clientId: client.id };
+        console.log(`🔍 Filtro aplicado: clientId = ${client.id}`);
+        
+      } else if (userRole === 'ABOGADO') {
+        // Abogados ven expedientes asignados a ellos
+        whereClause = { lawyerId: currentUserId };
+        console.log(`🔍 Filtro aplicado: lawyerId = ${currentUserId}`);
+      }
+      // Los admins ven todos los expedientes (whereClause vacío)
+
+      console.log(`🔍 Where clause final:`, whereClause);
+
+      // Primero obtener expedientes básicos sin includes complejos
+      const expedientes = await this.prisma.expediente.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          status: true,
+          clientId: true,
+          lawyerId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
       });
 
-      console.log(`📋 Perfil de cliente encontrado:`, client);
+      console.log(`📊 Expedientes básicos encontrados: ${expedientes.length}`);
 
-      if (!client) {
-        console.log(`❌ No se encontró perfil de cliente para userId: ${currentUserId}`);
-        throw new NotFoundException('Cliente no encontrado');
+      // Si no hay expedientes, retornar array vacío
+      if (expedientes.length === 0) {
+        return [];
       }
 
-      whereClause = { clientId: client.id };
-      console.log(`🔍 Filtro aplicado: clientId = ${client.id}`);
-      
-      // Verificar que existen expedientes con ese clientId
-      const expedientesCount = await this.prisma.expediente.count({
-        where: { clientId: client.id }
-      });
-      console.log(`🔍 Total de expedientes con clientId ${client.id}: ${expedientesCount}`);
-      
-    } else if (userRole === 'ABOGADO') {
-      // Abogados ven expedientes asignados a ellos
-      whereClause = { lawyerId: currentUserId };
-      console.log(`🔍 Filtro aplicado: lawyerId = ${currentUserId}`);
-    }
-    // Los admins ven todos los expedientes (whereClause vacío)
-
-    console.log(`🔍 Where clause final:`, whereClause);
-
-    const expedientes = await this.prisma.expediente.findMany({
-      where: whereClause,
-      include: {
-        client: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              }
+      // Ahora obtener información adicional de manera segura
+      const expedientesConDetalles = await Promise.all(
+        expedientes.map(async (expediente) => {
+          try {
+            // Obtener información del cliente
+            let clientInfo = null;
+            if (expediente.clientId) {
+              const client = await this.prisma.client.findUnique({
+                where: { id: expediente.clientId },
+                select: {
+                  id: true,
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                    }
+                  }
+                }
+              });
+              clientInfo = client;
             }
-          }
-        },
-        lawyer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          }
-        },
-        documents: {
-          orderBy: {
-            uploadedAt: 'desc'
-          }
-        },
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-    });
 
-    // Log solo en desarrollo
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`📊 Expedientes encontrados: ${expedientes.length}`);
+            // Obtener información del abogado
+            let lawyerInfo = null;
+            if (expediente.lawyerId) {
+              const lawyer = await this.prisma.user.findUnique({
+                where: { id: expediente.lawyerId },
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                }
+              });
+              lawyerInfo = lawyer;
+            }
+
+            // Obtener documentos (opcional, solo si es necesario)
+            let documents = [];
+            try {
+              documents = await this.prisma.document.findMany({
+                where: { expedienteId: expediente.id },
+                select: {
+                  id: true,
+                  filename: true,
+                  uploadedAt: true,
+                },
+                orderBy: {
+                  uploadedAt: 'desc'
+                },
+                take: 5, // Solo los últimos 5 documentos
+              });
+            } catch (docError) {
+              console.log(`⚠️ Error obteniendo documentos para expediente ${expediente.id}:`, docError.message);
+              // Continuar sin documentos
+            }
+
+            return {
+              ...expediente,
+              client: clientInfo,
+              lawyer: lawyerInfo,
+              documents: documents,
+            };
+          } catch (error) {
+            console.log(`⚠️ Error procesando expediente ${expediente.id}:`, error.message);
+            // Retornar expediente básico si hay error
+            return {
+              ...expediente,
+              client: null,
+              lawyer: null,
+              documents: [],
+            };
+          }
+        })
+      );
+
+      console.log(`📊 Expedientes procesados exitosamente: ${expedientesConDetalles.length}`);
+      return expedientesConDetalles;
+
+    } catch (error) {
+      console.error(`❌ Error en CasesService.findAll:`, error);
+      
+      // Si hay un error específico de Prisma, manejarlo
+      if (error.code === 'P2002') {
+        throw new BadRequestException('Error de duplicación en la base de datos');
+      } else if (error.code === 'P2025') {
+        throw new NotFoundException('Registro no encontrado');
+      } else if (error.code === 'P2003') {
+        throw new BadRequestException('Error de referencia en la base de datos');
+      }
+      
+      // Para otros errores, lanzar un error genérico
+      throw new BadRequestException('Error interno del servidor al obtener expedientes');
     }
-
-    return expedientes;
   }
 
 

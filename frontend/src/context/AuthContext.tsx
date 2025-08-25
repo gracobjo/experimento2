@@ -1,13 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import api from '../api/axios';
-import { useNavigate } from 'react-router-dom'; // Añade este import
+import { useNavigate } from 'react-router-dom';
+import { 
+  isTokenValid, 
+  getUserFromToken, 
+  clearAuthData, 
+  saveAuthData, 
+  getValidToken,
+  isAuthenticated,
+  getAuthenticatedUser,
+  UserData 
+} from '../utils/authUtils';
 
-interface User {
-  id: string;
-  email: string;
-  role: 'ADMIN' | 'ABOGADO' | 'CLIENTE';
-  name: string;
-}
+interface User extends UserData {}
 
 interface AuthContextType {
   user: User | null;
@@ -15,6 +20,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   register: (userData: { email: string; password: string; name: string; role: string }) => Promise<void>;
+  refreshAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -64,47 +70,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const savedUser = localStorage.getItem('user');
+      console.log('🔍 Verificando autenticación...');
       
-      if (token && savedUser) {
-        try {
-          // Intentar cargar usuario desde localStorage primero
-          const userData = JSON.parse(savedUser);
-          if (userData && userData.role) {
-            setUser(userData);
-            setLoading(false);
-            return;
-          }
-        } catch (parseError) {
-          console.warn('Error parseando usuario guardado:', parseError);
-        }
+      // Verificar si hay un token válido
+      const token = getValidToken();
+      if (!token) {
+        console.log('🔑 No hay token válido');
+        setLoading(false);
+        return;
       }
       
-      if (token) {
-        const response = await api.get('/auth/me', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+      // Intentar obtener usuario del token primero
+      const userFromToken = getUserFromToken(token);
+      if (userFromToken) {
+        console.log('🔑 Usuario obtenido del token:', userFromToken);
+        setUser(userFromToken);
+        setLoading(false);
+        return;
+      }
+      
+      // Si no se puede obtener del token, intentar con la API
+      console.log('🔑 Verificando token con la API...');
+      const response = await api.get('/auth/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data && response.data.role) {
+        const userData = {
+          id: response.data.id,
+          email: response.data.email,
+          name: response.data.name,
+          role: response.data.role
+        };
         
-        // Verifica la estructura del usuario
-        if (response.data && response.data.role) {
-          const userData = {
-            id: response.data.id,
-            email: response.data.email,
-            name: response.data.name,
-            role: response.data.role
-          };
-          
-          // Guardar en localStorage y estado
-          localStorage.setItem('user', JSON.stringify(userData));
-          setUser(userData);
-        } else {
-          throw new Error('Datos de usuario incompletos');
-        }
+        console.log('🔑 Usuario verificado por API:', userData);
+        saveAuthData(token, userData);
+        setUser(userData);
+      } else {
+        throw new Error('Datos de usuario incompletos');
       }
+      
     } catch (error) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      console.error('🔑 Error en checkAuth:', error);
+      clearAuthData();
     } finally {
       setLoading(false);
     }
@@ -112,46 +120,83 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('🔑 Iniciando sesión...');
       const response = await api.post('/auth/login', { email, password });
       const { token, user } = response.data;
       
-      localStorage.setItem('token', token);
+      // Verificar que el token sea válido
+      if (!isTokenValid(token)) {
+        throw new Error('Token inválido recibido del servidor');
+      }
       
-      // Guarda TODOS los datos del usuario incluyendo el role
+      // Crear objeto de usuario
       const userData = {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role // Asegúrate que esto viene del backend
+        role: user.role
       };
       
-      // Guardar usuario en localStorage para persistencia
-      localStorage.setItem('user', JSON.stringify(userData));
+      console.log('🔑 Usuario autenticado:', userData);
+      
+      // Guardar datos de autenticación
+      saveAuthData(token, userData);
       
       // Actualizar estado de React
       setUser(userData);
       
-      // No redirigir aquí, dejar que el componente Login maneje la redirección
-      // El componente Login ya tiene la lógica de redirección basada en el rol
     } catch (error: unknown) {
+      console.error('🔑 Error en login:', error);
       throw new Error((error as any)?.response?.data?.message || 'Error en el inicio de sesión');
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    console.log('🔑 Cerrando sesión...');
+    clearAuthData();
     setUser(null);
-    window.location.href = '/login'; // Redirige al login tras logout
+    window.location.href = '/login';
+  };
+
+  const refreshAuth = async () => {
+    try {
+      console.log('🔑 Refrescando autenticación...');
+      await checkAuth();
+    } catch (error) {
+      console.error('🔑 Error refrescando autenticación:', error);
+      logout();
+    }
   };
 
   const register = async (userData: { email: string; password: string; name: string; role: string }) => {
     try {
+      console.log('🔑 Registrando usuario...');
       const response = await api.post('/auth/register', userData);
       const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
+      
+      // Verificar que el token sea válido
+      if (!isTokenValid(token)) {
+        throw new Error('Token inválido recibido del servidor');
+      }
+      
+      // Crear objeto de usuario
+      const userDataObj = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role
+      };
+      
+      console.log('🔑 Usuario registrado:', userDataObj);
+      
+      // Guardar datos de autenticación
+      saveAuthData(token, userDataObj);
+      
+      // Actualizar estado de React
+      setUser(userDataObj);
+      
     } catch (error) {
+      console.error('🔑 Error en registro:', error);
       throw new Error('Error en el registro');
     }
   };
@@ -169,8 +214,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loading,
     login: memoizedLogin,
     logout: memoizedLogout,
-    register: memoizedRegister
-  }), [memoizedUser, loading, memoizedLogin, memoizedLogout, memoizedRegister]);
+    register: memoizedRegister,
+    refreshAuth
+  }), [memoizedUser, loading, memoizedLogin, memoizedLogout, memoizedRegister, refreshAuth]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }; 

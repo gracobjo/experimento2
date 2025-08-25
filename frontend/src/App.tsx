@@ -70,6 +70,7 @@ import CookiesPage from './pages/public/CookiesPage';
 import ClientTeleassistancePage from './pages/client/TeleassistancePage';
 import TeleassistanceRequestPage from './pages/client/TeleassistanceRequestPage';
 import ProfilePage from './pages/client/ProfilePage';
+import AuthDebug from './components/AuthDebug';
 
 function App() {
   return (
@@ -161,6 +162,7 @@ function App() {
           </Route>
         </Routes>
       </Router>
+      <AuthDebug />
     </AuthProvider>
   );
 }
