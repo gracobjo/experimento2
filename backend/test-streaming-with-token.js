@@ -138,3 +138,4 @@ async function testStreamingWithToken() {
 }
 
 testStreamingWithToken();
+

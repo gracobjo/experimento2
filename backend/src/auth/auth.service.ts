@@ -20,11 +20,27 @@ export class AuthService {
   ) { }
 
   async validateUser(email: string, password: string): Promise<any> {
+    console.log('🔍 DEBUG: validateUser llamado con email:', email);
+    
     const user = await this.prisma.user.findUnique({ where: { email } });
-    if (user && (await bcrypt.compare(password, user.password))) {
-      const { password: _, ...result } = user;
-      return result;
+    console.log('🔍 DEBUG: Usuario encontrado:', user ? 'SÍ' : 'NO');
+    
+    if (user) {
+      console.log('🔍 DEBUG: Usuario ID:', user.id);
+      console.log('🔍 DEBUG: Usuario email:', user.email);
+      console.log('🔍 DEBUG: Usuario password hash:', user.password.substring(0, 20) + '...');
+      
+      const passwordMatch = await bcrypt.compare(password, user.password);
+      console.log('🔍 DEBUG: Contraseña coincide:', passwordMatch ? 'SÍ' : 'NO');
+      
+      if (passwordMatch) {
+        const { password: _, ...result } = user;
+        console.log('🔍 DEBUG: Usuario validado exitosamente');
+        return result;
+      }
     }
+    
+    console.log('🔍 DEBUG: Usuario no validado, retornando null');
     return null;
   }
 

@@ -193,3 +193,4 @@ Frontend → Backend → Cloudinary (archivos) + PostgreSQL (metadatos)
 
 
 
+

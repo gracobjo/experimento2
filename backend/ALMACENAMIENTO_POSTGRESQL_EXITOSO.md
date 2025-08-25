@@ -93,3 +93,4 @@
 ## 🎉 **CONCLUSIÓN: MIGRACIÓN A POSTGRESQL COMPLETADA EXITOSAMENTE**
 
 **El sistema ahora almacena documentos directamente en PostgreSQL, eliminando completamente la dependencia de Cloudinary. Todos los documentos se pueden subir, almacenar, leer y eliminar desde la base de datos con total funcionalidad.**
+
