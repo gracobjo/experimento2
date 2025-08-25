@@ -605,6 +605,36 @@ export class CasesController {
     return this.casesService.deleteForClient(clientId, caseId, req.user.id);
   }
 
+  @Get('test-public')
+  @ApiOperation({ 
+    summary: 'Test público de casos',
+    description: 'Endpoint completamente público para diagnosticar problemas'
+  })
+  @ApiResponse({ status: 200, description: 'Test público exitoso' })
+  async testPublic() {
+    try {
+      console.log('🧪 Test público de casos ejecutándose...');
+      
+      return {
+        success: true,
+        message: 'Test público exitoso',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        railway: 'Endpoint público funcionando'
+      };
+    } catch (error) {
+      console.error('❌ Error en test público:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      
+      return {
+        success: false,
+        message: 'Test público falló',
+        error: errorMessage,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
   @Get('test-simple')
   @ApiOperation({ 
     summary: 'Test simple de casos',
@@ -677,6 +707,48 @@ export class CasesController {
         error: errorMessage,
         stack: errorStack,
         user: req.user,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  @Get('debug/public')
+  @ApiOperation({ 
+    summary: 'Debug público',
+    description: 'Endpoint de debug completamente público'
+  })
+  @ApiResponse({ status: 200, description: 'Debug público' })
+  async debugPublic() {
+    return {
+      status: 'ok',
+      message: 'Debug público funcionando',
+      timestamp: new Date().toISOString(),
+      endpoint: '/api/cases/debug/public',
+      public: true
+    };
+  }
+
+  @Get('debug/db')
+  @ApiOperation({ 
+    summary: 'Debug de base de datos',
+    description: 'Test de conexión a base de datos sin autenticación'
+  })
+  @ApiResponse({ status: 200, description: 'Debug de BD' })
+  async debugDatabase() {
+    try {
+      const result = await this.casesService.testDatabaseConnection();
+      return {
+        status: 'ok',
+        message: 'Conexión a BD exitosa',
+        data: result,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      return {
+        status: 'error',
+        message: 'Error en conexión a BD',
+        error: errorMessage,
         timestamp: new Date().toISOString()
       };
     }

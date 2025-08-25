@@ -4421,6 +4421,28 @@ let CasesController = class CasesController {
     deleteCaseForClient(clientId, caseId, req) {
         return this.casesService.deleteForClient(clientId, caseId, req.user.id);
     }
+    async testPublic() {
+        try {
+            console.log('🧪 Test público de casos ejecutándose...');
+            return {
+                success: true,
+                message: 'Test público exitoso',
+                timestamp: new Date().toISOString(),
+                environment: process.env.NODE_ENV || 'development',
+                railway: 'Endpoint público funcionando'
+            };
+        }
+        catch (error) {
+            console.error('❌ Error en test público:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+            return {
+                success: false,
+                message: 'Test público falló',
+                error: errorMessage,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
     async testSimple() {
         try {
             console.log('🧪 Test simple de casos ejecutándose...');
@@ -4472,6 +4494,35 @@ let CasesController = class CasesController {
                 error: errorMessage,
                 stack: errorStack,
                 user: req.user,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+    async debugPublic() {
+        return {
+            status: 'ok',
+            message: 'Debug público funcionando',
+            timestamp: new Date().toISOString(),
+            endpoint: '/api/cases/debug/public',
+            public: true
+        };
+    }
+    async debugDatabase() {
+        try {
+            const result = await this.casesService.testDatabaseConnection();
+            return {
+                status: 'ok',
+                message: 'Conexión a BD exitosa',
+                data: result,
+                timestamp: new Date().toISOString()
+            };
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+            return {
+                status: 'error',
+                message: 'Error en conexión a BD',
+                error: errorMessage,
                 timestamp: new Date().toISOString()
             };
         }
@@ -5068,6 +5119,17 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], CasesController.prototype, "deleteCaseForClient", null);
 __decorate([
+    (0, common_1.Get)('test-public'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Test público de casos',
+        description: 'Endpoint completamente público para diagnosticar problemas'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Test público exitoso' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], CasesController.prototype, "testPublic", null);
+__decorate([
     (0, common_1.Get)('test-simple'),
     (0, swagger_1.ApiOperation)({
         summary: 'Test simple de casos',
@@ -5092,6 +5154,28 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], CasesController.prototype, "testWithAuth", null);
+__decorate([
+    (0, common_1.Get)('debug/public'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Debug público',
+        description: 'Endpoint de debug completamente público'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Debug público' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], CasesController.prototype, "debugPublic", null);
+__decorate([
+    (0, common_1.Get)('debug/db'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Debug de base de datos',
+        description: 'Test de conexión a base de datos sin autenticación'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Debug de BD' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], CasesController.prototype, "debugDatabase", null);
 exports.CasesController = CasesController = __decorate([
     (0, swagger_1.ApiTags)('cases'),
     (0, common_1.Controller)('cases'),
