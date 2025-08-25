@@ -1,0 +1,46 @@
+{
+  "timestamp": "2025-08-25T23:38:19.883Z",
+  "totalDocuments": 4,
+  "documents": [
+    {
+      "id": "doc-c1-002",
+      "filename": "experimento2/expedientes/9c6df72e-969d-43e8-8f9e-42a33b514027/1756038965478-33i41c.pdf",
+      "originalName": "documentoB.pdf",
+      "cloudinaryUrl": "https://res.cloudinary.com/dplymffxp/image/upload/v1756038965/experimento2/expedientes/9c6df72e-969d-43e8-8f9e-42a33b514027/1756038965478-33i41c.pdf",
+      "description": "Documento B para Cliente Uno",
+      "expedienteId": "exp-c1-002",
+      "mimeType": "application/pdf",
+      "fileSize": 654321
+    },
+    {
+      "id": "doc-001",
+      "filename": "experimento2/expedientes/9c6df72e-969d-43e8-8f9e-42a33b514027/1756038965478-33i41c.pdf",
+      "originalName": "contrato_compraventa.pdf",
+      "cloudinaryUrl": "https://res.cloudinary.com/dplymffxp/image/upload/v1756038965/experimento2/expedientes/9c6df72e-969d-43e8-8f9e-42a33b514027/1756038965478-33i41c.pdf",
+      "description": "Contrato de compraventa",
+      "expedienteId": "exp-001",
+      "mimeType": "application/pdf",
+      "fileSize": 123456
+    },
+    {
+      "id": "doc-002",
+      "filename": "experimento2/expedientes/9c6df72e-969d-43e8-8f9e-42a33b514027/1756038965478-33i41c.pdf",
+      "originalName": "demanda_laboral.pdf",
+      "cloudinaryUrl": "https://res.cloudinary.com/dplymffxp/image/upload/v1756038965/experimento2/expedientes/9c6df72e-969d-43e8-8f9e-42a33b514027/1756038965478-33i41c.pdf",
+      "description": "Demanda laboral",
+      "expedienteId": "exp-002",
+      "mimeType": "application/pdf",
+      "fileSize": 234567
+    },
+    {
+      "id": "doc-c1-001",
+      "filename": "experimento2/expedientes/9c6df72e-969d-43e8-8f9e-42a33b514027/1756038965478-33i41c.pdf",
+      "originalName": "documentoA.pdf",
+      "cloudinaryUrl": "https://res.cloudinary.com/dplymffxp/image/upload/v1756038965/experimento2/expedientes/9c6df72e-969d-43e8-8f9e-42a33b514027/1756038965478-33i41c.pdf",
+      "description": "Documento A para Cliente Uno",
+      "expedienteId": "exp-c1-001",
+      "mimeType": "application/pdf",
+      "fileSize": 123456
+    }
+  ]
+}

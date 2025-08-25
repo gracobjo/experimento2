@@ -20,7 +20,6 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody, ApiParam, ApiConsumes } from '@nestjs/swagger';
-import { PostgresStorageService } from '../storage/postgres-storage.service';
 import { DocumentsService } from './documents.service';
 import { UploadDocumentDto } from './dto/upload-document.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -29,6 +28,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
+import { STORAGE_CONFIG, getUploadPath, generateFilePath, sanitizeFilename, ensureDirectoryExists } from '../config/storage.config';
 
 @ApiTags('documents')
 @Controller('documents')
@@ -36,8 +36,7 @@ import * as path from 'path';
 @ApiBearerAuth('JWT-auth')
 export class DocumentsController {
   constructor(
-    private readonly documentsService: DocumentsService,
-    private readonly postgresStorageService: PostgresStorageService
+    private readonly documentsService: DocumentsService
   ) {}
 
   @Post('upload')
@@ -45,7 +44,7 @@ export class DocumentsController {
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ 
     summary: 'Subir documento',
-    description: 'Sube un documento al sistema (PDF, TXT, CSV, DOC, DOCX, JPG, JPEG, PNG, GIF, WEBP - máximo 5MB)'
+    description: 'Sube un documento al sistema (PDF, TXT, CSV, DOC, DOCX, JPG, JPEG, PNG, GIF, WEBP - máximo 10MB)'
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -55,7 +54,7 @@ export class DocumentsController {
         file: {
           type: 'string',
           format: 'binary',
-          description: 'Archivo a subir (máximo 5MB)'
+          description: 'Archivo a subir (máximo 10MB)'
         },
         title: {
           type: 'string',
@@ -65,7 +64,7 @@ export class DocumentsController {
           type: 'string',
           description: 'Descripción del documento'
         },
-        caseId: {
+        expedienteId: {
           type: 'string',
           description: 'ID del expediente asociado (opcional)'
         }
@@ -86,7 +85,7 @@ export class DocumentsController {
         mimeType: { type: 'string' },
         size: { type: 'number' },
         uploadedBy: { type: 'string' },
-        caseId: { type: 'string' },
+        expedienteId: { type: 'string' },
         createdAt: { type: 'string', format: 'date-time' }
       }
     }
@@ -98,7 +97,7 @@ export class DocumentsController {
     @UploadedFile(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+          new MaxFileSizeValidator({ maxSize: STORAGE_CONFIG.maxFileSize }),
           new FileTypeValidator({ fileType: '.(pdf|txt|csv|doc|docx|jpg|jpeg|png|gif|webp)' }),
         ],
       }),
@@ -107,15 +106,75 @@ export class DocumentsController {
     @Body() uploadDocumentDto: UploadDocumentDto,
     @Request() req,
   ) {
-    return this.postgresStorageService.storeFile(
-      file.buffer,
-      file.filename,
-      file.originalname,
-      file.mimetype,
-      uploadDocumentDto.expedienteId,
-      req.user.id,
-      uploadDocumentDto.description,
-    );
+    try {
+      console.log(`📤 Iniciando upload de archivo: ${file.originalname}`);
+      console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
+
+      // Validar tipo de archivo
+      if (!STORAGE_CONFIG.allowedMimeTypes.includes(file.mimetype)) {
+        throw new BadRequestException(`Tipo de archivo no permitido: ${file.mimetype}`);
+      }
+
+      // Validar tamaño de archivo
+      if (file.size > STORAGE_CONFIG.maxFileSize) {
+        throw new BadRequestException(`Archivo demasiado grande: ${file.size} bytes (máximo: ${STORAGE_CONFIG.maxFileSize} bytes)`);
+      }
+
+      // Sanitizar nombre de archivo
+      const sanitizedFilename = sanitizeFilename(file.originalname);
+      const timestamp = Date.now();
+      const fileExtension = path.extname(file.originalname);
+      const uniqueFilename = `${timestamp}_${sanitizedFilename}`;
+
+      // Generar ruta del archivo
+      const expedienteId = uploadDocumentDto.expedienteId || 'general';
+      const relativePath = generateFilePath(expedienteId, uniqueFilename);
+      const fullPath = getUploadPath(relativePath);
+
+      // Crear directorios si no existen
+      await ensureDirectoryExists(path.dirname(fullPath));
+
+      // Guardar archivo localmente
+      fs.writeFileSync(fullPath, file.buffer);
+      console.log(`✅ Archivo guardado localmente: ${fullPath}`);
+
+      // Crear registro en la base de datos
+      const documentData = {
+        filename: uniqueFilename,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        fileUrl: `/uploads/${relativePath}`,
+        description: uploadDocumentDto.description,
+        expedienteId: expedienteId,
+        uploadedBy: req.user.id,
+        metadata: {
+          localPath: fullPath,
+          uploadTimestamp: new Date().toISOString(),
+          sanitizedFilename: sanitizedFilename
+        }
+      };
+
+      const savedDocument = await this.documentsService.create(documentData);
+      console.log(`✅ Documento guardado en BD: ${savedDocument.id}`);
+
+      return {
+        id: savedDocument.id,
+        filename: savedDocument.filename,
+        originalName: savedDocument.originalName,
+        mimeType: savedDocument.mimeType,
+        size: savedDocument.size,
+        fileUrl: savedDocument.fileUrl,
+        description: savedDocument.description,
+        expedienteId: savedDocument.expedienteId,
+        uploadedBy: savedDocument.uploadedBy,
+        createdAt: savedDocument.uploadedAt
+      };
+
+    } catch (error) {
+      console.error(`❌ Error en uploadDocument:`, error);
+      throw error;
+    }
   }
 
   @Get()
@@ -132,19 +191,24 @@ export class DocumentsController {
         type: 'object',
         properties: {
           id: { type: 'string' },
-          title: { type: 'string' },
-          description: { type: 'string' },
           filename: { type: 'string' },
           originalName: { type: 'string' },
+          fileUrl: { type: 'string' },
+          fileSize: { type: 'number' },
           mimeType: { type: 'string' },
-          size: { type: 'number' },
+          description: { type: 'string' },
+          expedienteId: { type: 'string' },
           uploadedBy: { type: 'string' },
-          caseId: { type: 'string' },
-          createdAt: { type: 'string', format: 'date-time' }
+          uploadedAt: { type: 'string', format: 'date-time' }
         }
       }
     }
   })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  findAll(@Request() req) {
+    return this.documentsService.findAll(req.user.id, req.user.role);
+  }
+
   @Get('my')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ 
@@ -185,11 +249,6 @@ export class DocumentsController {
   @ApiResponse({ status: 403, description: 'Rol insuficiente' })
   findMyDocuments(@Request() req) {
     return this.documentsService.findMyDocuments(req.user.id, req.user.role);
-  }
-
-  @ApiResponse({ status: 401, description: 'No autorizado' })
-  findAll(@Request() req) {
-    return this.documentsService.findAll(req.user.id, req.user.role);
   }
 
   @Get('stats')
@@ -238,15 +297,15 @@ export class DocumentsController {
         type: 'object',
         properties: {
           id: { type: 'string' },
-          title: { type: 'string' },
-          description: { type: 'string' },
           filename: { type: 'string' },
           originalName: { type: 'string' },
+          fileUrl: { type: 'string' },
+          fileSize: { type: 'number' },
           mimeType: { type: 'string' },
-          size: { type: 'number' },
+          description: { type: 'string' },
+          expedienteId: { type: 'string' },
           uploadedBy: { type: 'string' },
-          caseId: { type: 'string' },
-          createdAt: { type: 'string', format: 'date-time' }
+          uploadedAt: { type: 'string', format: 'date-time' }
         }
       }
     }
@@ -278,15 +337,15 @@ export class DocumentsController {
       type: 'object',
       properties: {
         id: { type: 'string' },
-        title: { type: 'string' },
-        description: { type: 'string' },
         filename: { type: 'string' },
         originalName: { type: 'string' },
+        fileUrl: { type: 'string' },
+        fileSize: { type: 'number' },
         mimeType: { type: 'string' },
-        size: { type: 'number' },
+        description: { type: 'string' },
+        expedienteId: { type: 'string' },
         uploadedBy: { type: 'string' },
-        caseId: { type: 'string' },
-        createdAt: { type: 'string', format: 'date-time' }
+        uploadedAt: { type: 'string', format: 'date-time' }
       }
     }
   })
@@ -295,200 +354,6 @@ export class DocumentsController {
   @ApiResponse({ status: 404, description: 'Documento no encontrado' })
   findOne(@Param('id') id: string, @Request() req) {
     return this.documentsService.findOne(id, req.user.id, req.user.role);
-  }
-
-  @Get('debug/document/:id')
-  @Roles(Role.ADMIN, Role.ABOGADO)
-  @ApiOperation({ 
-    summary: 'Diagnóstico de documento específico',
-    description: 'Endpoint para diagnosticar problemas con un documento específico por ID (solo ADMIN y ABOGADO)'
-  })
-  @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Información completa del documento',
-    schema: {
-      type: 'object',
-      properties: {
-        documentId: { type: 'string' },
-        exists: { type: 'boolean' },
-        documentInfo: { type: 'object' },
-        cloudinaryStatus: { type: 'string' },
-        cloudinaryError: { type: 'string' },
-        endpointTest: { type: 'object' }
-      }
-    }
-  })
-  async debugDocument(
-    @Param('id') id: string,
-    @Request() req,
-  ) {
-    try {
-      console.log(`🔍 Diagnóstico completo para documento ID: ${id}`);
-      
-      const result: any = {
-        documentId: id,
-        exists: false,
-        documentInfo: null,
-        cloudinaryStatus: 'unknown',
-        cloudinaryError: null,
-        endpointTest: {}
-      };
-
-      // 1. Verificar si existe en la base de datos
-      try {
-        const document = await this.documentsService.findOne(
-          id,
-          req.user.id,
-          req.user.role,
-        );
-
-        if (document) {
-          result.exists = true;
-          result.documentInfo = {
-            id: document.id,
-            filename: document.filename,
-            originalName: document.originalName,
-            mimeType: document.mimeType,
-            fileUrl: document.fileUrl,
-            metadata: document.metadata,
-            expedienteId: document.expedienteId,
-            uploadedBy: document.uploadedBy
-          };
-
-          console.log(`📄 Documento encontrado en BD: ${document.filename}`);
-
-          // 2. Verificar estado en Cloudinary
-          try {
-            const downloadResult = await this.documentsService.getFileStream(document.filename);
-            result.cloudinaryStatus = 'available';
-            result.endpointTest = {
-              hasStream: !!downloadResult.stream,
-              hasMetadata: !!downloadResult.metadata,
-              streamType: typeof downloadResult.stream,
-              metadataKeys: downloadResult.metadata ? Object.keys(downloadResult.metadata) : []
-            };
-            console.log(`✅ Archivo accesible en Cloudinary`);
-          } catch (cloudinaryErr) {
-            result.cloudinaryStatus = 'error';
-            result.cloudinaryError = cloudinaryErr instanceof Error ? cloudinaryErr.message : String(cloudinaryErr);
-            console.error(`❌ Error de Cloudinary:`, cloudinaryErr);
-          }
-
-        } else {
-          console.log(`❌ Documento no encontrado en BD: ${id}`);
-        }
-
-      } catch (dbError) {
-        console.error(`❌ Error consultando BD:`, dbError);
-        result.cloudinaryError = `Error BD: ${dbError instanceof Error ? dbError.message : String(dbError)}`;
-      }
-
-      // 3. Probar endpoint file/:id
-      try {
-        const testUrl = `/api/documents/file/${id}`;
-        console.log(`🧪 Probando endpoint: ${testUrl}`);
-        result.endpointTest.fileEndpoint = testUrl;
-      } catch (endpointError) {
-        console.error(`❌ Error probando endpoint:`, endpointError);
-      }
-
-      console.log(`🔍 Diagnóstico completado para documento ${id}`);
-      return result;
-
-    } catch (error) {
-      console.error(`❌ Error en debugDocument:`, error);
-      return {
-        documentId: id,
-        error: error instanceof Error ? error.message : String(error),
-        status: 'error'
-      };
-    }
-  }
-
-  @Get('debug/cloudinary-status/:id')
-  @Roles(Role.ADMIN, Role.ABOGADO)
-  @ApiOperation({ 
-    summary: 'Diagnóstico de Cloudinary',
-    description: 'Endpoint para diagnosticar problemas con archivos en Cloudinary (solo ADMIN y ABOGADO)'
-  })
-  @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Estado del archivo en Cloudinary',
-    schema: {
-      type: 'object',
-      properties: {
-        documentId: { type: 'string' },
-        filename: { type: 'string' },
-        cloudinaryStatus: { type: 'string' },
-        cloudinaryError: { type: 'string' },
-        metadata: { type: 'object' }
-      }
-    }
-  })
-  async debugCloudinaryStatus(
-    @Param('id') id: string,
-    @Request() req,
-  ) {
-    try {
-      console.log(`🔍 Diagnóstico Cloudinary para documento ID: ${id}`);
-      
-      // Buscar el documento
-      const document = await this.documentsService.findOne(
-        id,
-        req.user.id,
-        req.user.role,
-      );
-
-      if (!document) {
-        return {
-          documentId: id,
-          error: 'Documento no encontrado en la base de datos',
-          status: 'not_found'
-        };
-      }
-
-      console.log(`📄 Documento encontrado: ${document.filename}`);
-
-      // Intentar acceder a Cloudinary
-      let cloudinaryStatus = 'unknown';
-      let cloudinaryError = null;
-      let metadata = null;
-
-      try {
-        const downloadResult = await this.documentsService.getFileStream(document.filename);
-        cloudinaryStatus = 'available';
-        metadata = {
-          hasStream: !!downloadResult.stream,
-          hasMetadata: !!downloadResult.metadata,
-          streamType: typeof downloadResult.stream
-        };
-      } catch (cloudinaryErr) {
-        cloudinaryStatus = 'error';
-        cloudinaryError = cloudinaryErr instanceof Error ? cloudinaryErr.message : String(cloudinaryErr);
-        console.error(`❌ Error de Cloudinary:`, cloudinaryErr);
-      }
-
-      return {
-        documentId: id,
-        filename: document.filename,
-        originalName: document.originalName,
-        cloudinaryStatus,
-        cloudinaryError,
-        metadata,
-        documentMetadata: document.metadata,
-        fileUrl: document.fileUrl
-      };
-
-    } catch (error) {
-      console.error(`❌ Error en debugCloudinaryStatus:`, error);
-      return {
-        documentId: id,
-        error: error instanceof Error ? error.message : String(error),
-        status: 'error'
-      };
-    }
   }
 
   @Get('test-simple')
@@ -563,31 +428,38 @@ export class DocumentsController {
       console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
       console.log(`🔗 URL del archivo: ${document.fileUrl}`);
 
-      // Intentar obtener el stream del archivo desde Cloudinary
-      let fileStream;
-      let fileMetadata;
+      // Construir ruta completa del archivo local
+      const localPath = path.join(STORAGE_CONFIG.uploadPath, document.fileUrl.replace('/uploads/', ''));
       
-      try {
-        console.log(`🔄 Obteniendo stream desde Cloudinary...`);
-        const downloadResult = await this.documentsService.getFileStream(document.filename);
-        fileStream = downloadResult.stream;
-        fileMetadata = downloadResult.metadata;
-        console.log(`✅ Stream del archivo creado exitosamente`);
-      } catch (streamError) {
-        console.error(`❌ Error al crear stream del archivo:`, streamError);
-        throw new Error('No se pudo acceder al archivo en Cloudinary');
+      console.log(`📂 Ruta local del archivo: ${localPath}`);
+
+      // Verificar si el archivo existe localmente
+      if (!fs.existsSync(localPath)) {
+        console.log(`❌ Archivo no encontrado localmente: ${localPath}`);
+        return res.status(404).json({
+          message: 'Archivo no encontrado en el servidor',
+          error: 'File Not Found',
+          statusCode: 404,
+          documentId: id,
+          localPath: localPath
+        });
       }
 
+      // Obtener información del archivo
+      const fileStats = fs.statSync(localPath);
+      const fileSize = fileStats.size;
+
       // Configurar headers de respuesta
-      let contentType = fileMetadata?.contentType || document.mimeType || 'application/octet-stream';
+      let contentType = document.mimeType || 'application/octet-stream';
       
       // Mejorar detección de MIME types para archivos comunes
-      if (!fileMetadata?.contentType) {
+      if (!document.mimeType) {
         const fileExtension = document.originalName.toLowerCase().split('.').pop();
         contentType = this.getContentTypeFromExtension(fileExtension);
       }
       
       res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Length', fileSize);
       
       // Para imágenes y PDFs, permitir visualización inline
       if (contentType.startsWith('image/') || contentType === 'application/pdf') {
@@ -597,21 +469,16 @@ export class DocumentsController {
         res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
       }
 
-      // Agregar headers adicionales si están disponibles
-      if (fileMetadata?.contentLength) {
-        res.setHeader('Content-Length', fileMetadata.contentLength);
-      }
-      if (fileMetadata?.lastModified) {
-        res.setHeader('Last-Modified', fileMetadata.lastModified.toUTCString());
-      }
-
       // Headers para cache y CORS
       res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache por 1 hora
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-      console.log(`🚀 Sirviendo archivo: ${document.originalName} (${contentType})`);
+      console.log(`🚀 Sirviendo archivo: ${document.originalName} (${contentType}) - Tamaño: ${fileSize} bytes`);
+
+      // Crear stream de lectura del archivo
+      const fileStream = fs.createReadStream(localPath);
 
       // Enviar el archivo como stream
       fileStream.pipe(res);
@@ -713,293 +580,11 @@ export class DocumentsController {
     }
   }
 
-  @Get(':id/download')
-  @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
-  @ApiOperation({ 
-    summary: 'Descargar documento',
-    description: 'Descarga un documento específico. Los clientes solo pueden descargar documentos de sus expedientes.'
-  })
-  @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Archivo descargado',
-    schema: {
-      type: 'string',
-      format: 'binary'
-    }
-  })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'Acceso prohibido' })
-  @ApiResponse({ status: 404, description: 'Documento no encontrado' })
-  async downloadDocument(
-    @Param('id') id: string,
-    @Request() req,
-    @Res() res: Response,
-  ) {
-    try {
-      console.log(`📥 Intentando descargar documento ID: ${id}`);
-      console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
-
-      // Buscar el documento
-      const document = await this.documentsService.findOne(
-        id,
-        req.user.id,
-        req.user.role,
-      );
-
-      if (!document) {
-        console.log(`❌ Documento no encontrado: ${id}`);
-        return res.status(404).json({
-          message: 'Documento no encontrado',
-          error: 'Not Found',
-          statusCode: 404,
-          documentId: id
-        });
-      }
-
-      console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
-
-      // Obtener el stream del archivo usando el servicio de Cloudinary
-      let fileStream;
-      let fileMetadata;
-      
-      try {
-        const downloadResult = await this.documentsService.getFileStream(document.filename);
-        fileStream = downloadResult.stream;
-        fileMetadata = downloadResult.metadata;
-        console.log(`✅ Stream del archivo creado exitosamente desde Cloudinary`);
-      } catch (streamError) {
-        console.error(`❌ Error al crear stream del archivo:`, streamError);
-        return res.status(404).json({
-          message: 'Archivo no encontrado en el almacenamiento',
-          error: 'File Not Found',
-          statusCode: 404,
-          documentId: id,
-          filename: document.filename,
-          errorDetails: streamError instanceof Error ? streamError.message : String(streamError)
-        });
-      }
-
-      // Configurar headers de respuesta
-      const contentType = fileMetadata?.contentType || document.mimeType || 'application/octet-stream';
-      res.setHeader('Content-Type', contentType);
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="${document.originalName}"`,
-      );
-
-      // Agregar headers adicionales si están disponibles
-      if (fileMetadata?.contentLength) {
-        res.setHeader('Content-Length', fileMetadata.contentLength);
-      }
-      if (fileMetadata?.lastModified) {
-        res.setHeader('Last-Modified', fileMetadata.lastModified.toUTCString());
-      }
-
-      console.log(`🚀 Iniciando descarga del archivo: ${document.originalName} (${contentType})`);
-
-      // Enviar el archivo
-      fileStream.pipe(res);
-
-      // Manejar errores del stream
-      fileStream.on('error', (error) => {
-        console.error(`❌ Error en el stream del archivo:`, error);
-        if (!res.headersSent) {
-          res.status(500).json({
-            message: 'Error al leer el archivo',
-            error: 'Stream Error',
-            statusCode: 500,
-            errorDetails: error instanceof Error ? error.message : String(error)
-          });
-        }
-      });
-
-      fileStream.on('end', () => {
-        console.log(`✅ Descarga completada: ${document.originalName}`);
-      });
-
-    } catch (error) {
-      console.error(`❌ Error en downloadDocument:`, error);
-      
-      if (!res.headersSent) {
-        if (error instanceof NotFoundException) {
-          return res.status(404).json({
-            message: error.message,
-            error: 'Not Found',
-            statusCode: 404,
-            documentId: id
-          });
-        } else if (error instanceof ForbiddenException) {
-          return res.status(403).json({
-            message: error.message,
-            error: 'Forbidden',
-            statusCode: 403,
-            documentId: id
-          });
-        } else {
-          return res.status(500).json({
-            message: 'Error interno del servidor al descargar el documento',
-            error: 'Internal Server Error',
-            statusCode: 500,
-            documentId: id,
-            errorDetails: error instanceof Error ? error.message : String(error)
-          });
-        }
-      }
-    }
-  }
-
-  @Get('test-endpoint')
-  @ApiOperation({ 
-    summary: 'Endpoint de prueba',
-    description: 'Endpoint simple para verificar que el controlador esté funcionando'
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Endpoint funcionando',
-    schema: {
-      type: 'object',
-      properties: {
-        message: { type: 'string' },
-        timestamp: { type: 'string' },
-        controller: { type: 'string' }
-      }
-    }
-  })
-  async testEndpoint() {
-    return {
-      message: 'Documents controller funcionando correctamente',
-      timestamp: new Date().toISOString(),
-      controller: 'DocumentsController'
-    };
-  }
-
-
-
-  @Get('debug/upload-status')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ 
-    summary: 'Estado del directorio de uploads',
-    description: 'Endpoint de diagnóstico para verificar el estado del directorio de uploads (solo ADMIN)'
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Estado del directorio de uploads',
-    schema: {
-      type: 'object',
-      properties: {
-        uploadDir: { type: 'string' },
-        exists: { type: 'boolean' },
-        files: { type: 'array', items: { type: 'string' } },
-        totalFiles: { type: 'number' },
-        totalSize: { type: 'number' }
-      }
-    }
-  })
-  async getUploadStatus() {
-    try {
-      const uploadDir = path.join(process.cwd(), 'uploads');
-      const exists = fs.existsSync(uploadDir);
-      
-      let files = [];
-      let totalSize = 0;
-      
-      if (exists) {
-        try {
-          files = fs.readdirSync(uploadDir);
-          for (const file of files) {
-            const filePath = path.join(uploadDir, file);
-            const stats = fs.statSync(filePath);
-            if (stats.isFile()) {
-              totalSize += stats.size;
-            }
-          }
-        } catch (error) {
-          console.error('Error reading upload directory:', error);
-        }
-      }
-      
-      return {
-        uploadDir,
-        exists,
-        files,
-        totalFiles: files.length,
-        totalSize,
-        currentWorkingDir: process.cwd(),
-        nodeEnv: process.env.NODE_ENV
-      };
-    } catch (error) {
-      console.error('Error getting upload status:', error);
-      return {
-        error: error instanceof Error ? error.message : String(error),
-        uploadDir: path.join(process.cwd(), 'uploads'),
-        exists: false
-      };
-    }
-  }
-
-  @Post('debug/ensure-upload-dir')
-  @Roles(Role.ADMIN)
-  @ApiOperation({ 
-    summary: 'Crear directorio de uploads',
-    description: 'Crea el directorio de uploads si no existe (solo ADMIN)'
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Directorio de uploads creado o verificado',
-    schema: {
-      type: 'object',
-      properties: {
-        message: { type: 'string' },
-        uploadDir: { type: 'string' },
-        created: { type: 'boolean' },
-        exists: { type: 'boolean' }
-      }
-    }
-  })
-  async ensureUploadDirectory() {
-    try {
-      const uploadDir = path.join(process.cwd(), 'uploads');
-      const exists = fs.existsSync(uploadDir);
-      
-      if (!exists) {
-        console.log(`📁 Creando directorio de uploads: ${uploadDir}`);
-        fs.mkdirSync(uploadDir, { recursive: true });
-        console.log(`✅ Directorio de uploads creado exitosamente`);
-        
-        return {
-          message: 'Directorio de uploads creado exitosamente',
-          uploadDir,
-          created: true,
-          exists: true
-        };
-      } else {
-        console.log(`✅ Directorio de uploads ya existe: ${uploadDir}`);
-        
-        return {
-          message: 'Directorio de uploads ya existe',
-          uploadDir,
-          created: false,
-          exists: true
-        };
-      }
-    } catch (error) {
-      console.error('Error creating upload directory:', error);
-      return {
-        message: 'Error al crear el directorio de uploads',
-        error: error instanceof Error ? error.message : String(error),
-        uploadDir: path.join(process.cwd(), 'uploads'),
-        created: false,
-        exists: false
-      };
-    }
-  }
-
   @Delete(':id')
-  @Roles(Role.ADMIN, Role.ABOGADO, Role.CLIENTE)
+  @Roles(Role.ADMIN, Role.ABOGADO)
   @ApiOperation({ 
     summary: 'Eliminar documento',
-    description: 'Elimina un documento del sistema (ADMIN, ABOGADO y CLIENTE pueden eliminar sus propios documentos)'
+    description: 'Elimina un documento específico. Solo ADMIN y ABOGADO pueden eliminar documentos.'
   })
   @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
   @ApiResponse({ 
@@ -1008,55 +593,24 @@ export class DocumentsController {
     schema: {
       type: 'object',
       properties: {
-        message: { type: 'string', example: 'Documento eliminado exitosamente' }
-      }
-    }
-  })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'Rol insuficiente' })
-  @ApiResponse({ status: 404, description: 'Documento no encontrado' })
-  remove(@Param('id') id: string, @Request() req) {
-    return this.documentsService.remove(id, req.user.id, req.user.role);
-  }
-
-  @Get('debug/file-access/:id')
-  @Roles(Role.ADMIN, Role.ABOGADO)
-  @ApiOperation({ 
-    summary: 'Diagnóstico de acceso a archivos',
-    description: 'Endpoint para diagnosticar problemas de acceso a archivos (solo ADMIN y ABOGADO)'
-  })
-  @ApiParam({ name: 'id', description: 'ID del documento', type: 'string' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Diagnóstico del archivo',
-    schema: {
-      type: 'object',
-      properties: {
+        message: { type: 'string' },
         documentId: { type: 'string' },
-        filename: { type: 'string' },
-        originalName: { type: 'string' },
-        fileUrl: { type: 'string' },
-        mimeType: { type: 'string' },
-        fileSize: { type: 'number' },
-        cloudinaryStatus: { type: 'string' },
-        cloudinaryError: { type: 'string' },
-        accessTest: { type: 'object' },
-        recommendations: { type: 'array', items: { type: 'string' } }
+        deletedAt: { type: 'string', format: 'date-time' }
       }
     }
   })
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Acceso prohibido' })
   @ApiResponse({ status: 404, description: 'Documento no encontrado' })
-  async debugFileAccess(
+  async remove(
     @Param('id') id: string,
     @Request() req,
   ) {
     try {
-      console.log(`🔍 Diagnóstico de acceso a archivo ID: ${id}`);
+      console.log(`🗑️  Intentando eliminar documento ID: ${id}`);
       console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
 
-      // Buscar el documento
+      // Buscar el documento por ID
       const document = await this.documentsService.findOne(
         id,
         req.user.id,
@@ -1064,98 +618,86 @@ export class DocumentsController {
       );
 
       if (!document) {
-        throw new NotFoundException('Documento no encontrado');
+        throw new NotFoundException(`Documento no encontrado: ${id}`);
       }
 
       console.log(`📄 Documento encontrado: ${document.filename}`);
 
-      // Información básica del documento
-      const result = {
-        documentId: document.id,
-        filename: document.filename,
-        originalName: document.originalName,
-        fileUrl: document.fileUrl,
-        mimeType: document.mimeType,
-        fileSize: document.fileSize,
-        cloudinaryStatus: 'unknown',
-        cloudinaryError: null,
-        accessTest: {} as any,
-        recommendations: [] as string[]
+      // Eliminar archivo local si existe
+      if (document.fileUrl) {
+        const localPath = path.join(STORAGE_CONFIG.uploadPath, document.fileUrl.replace('/uploads/', ''));
+        
+        if (fs.existsSync(localPath)) {
+          try {
+            fs.unlinkSync(localPath);
+            console.log(`✅ Archivo local eliminado: ${localPath}`);
+          } catch (fileError) {
+            console.warn(`⚠️  No se pudo eliminar archivo local: ${fileError.message}`);
+          }
+        } else {
+          console.log(`ℹ️  Archivo local no encontrado: ${localPath}`);
+        }
+      }
+
+      // Eliminar registro de la base de datos
+      const deletedDocument = await this.documentsService.remove(id, req.user.id, req.user.role);
+      
+      console.log(`✅ Documento eliminado de BD: ${id}`);
+
+      return {
+        message: 'Documento eliminado exitosamente',
+        documentId: id,
+        deletedAt: new Date().toISOString(),
+        filename: document.filename
       };
 
-      // Verificar si es una URL de Cloudinary
-      if (document.fileUrl && document.fileUrl.includes('cloudinary.com')) {
-        result.cloudinaryStatus = 'cloudinary_url';
-        result.recommendations.push('Archivo detectado en Cloudinary');
-        
-        // Verificar si la URL es accesible
-        try {
-          const urlResponse = await fetch(document.fileUrl, { method: 'HEAD' });
-          result.accessTest.urlAccess = {
-            status: urlResponse.status,
-            statusText: urlResponse.statusText,
-            accessible: urlResponse.ok
-          };
-          
-          if (urlResponse.ok) {
-            result.recommendations.push('URL de Cloudinary accesible directamente');
-          } else {
-            result.recommendations.push('URL de Cloudinary no accesible - verificar permisos');
-          }
-        } catch (urlError) {
-          result.accessTest.urlAccess = {
-            error: urlError instanceof Error ? urlError.message : String(urlError),
-            accessible: false
-          };
-          result.recommendations.push('Error al verificar URL de Cloudinary');
-        }
-      } else {
-        result.cloudinaryStatus = 'local_or_other';
-        result.recommendations.push('Archivo no detectado en Cloudinary');
-      }
-
-      // Intentar acceder al archivo a través del servicio
-      try {
-        const downloadResult = await this.documentsService.getFileStream(document.filename);
-        result.cloudinaryStatus = 'accessible';
-        result.accessTest.serviceAccess = {
-          status: 'success',
-          streamCreated: true,
-          metadata: downloadResult.metadata
-        };
-        result.recommendations.push('Archivo accesible a través del servicio');
-      } catch (serviceError) {
-        result.cloudinaryStatus = 'error';
-        result.cloudinaryError = serviceError instanceof Error ? serviceError.message : String(serviceError);
-        result.accessTest.serviceAccess = {
-          status: 'error',
-          error: result.cloudinaryError
-        };
-        result.recommendations.push('Error al acceder al archivo a través del servicio');
-      }
-
-      // Recomendaciones adicionales
-      if (result.mimeType === 'application/pdf') {
-        result.recommendations.push('Archivo PDF detectado - verificar visor del navegador');
-      }
-      
-      if (result.fileSize > 5 * 1024 * 1024) {
-        result.recommendations.push('Archivo grande (>5MB) - puede causar problemas de timeout');
-      }
-
-      console.log(`✅ Diagnóstico completado para documento ${id}`);
-      return result;
-
     } catch (error) {
-      console.error(`❌ Error en debugFileAccess:`, error);
-      
-      if (error instanceof NotFoundException) {
-        throw error;
-      } else if (error instanceof ForbiddenException) {
-        throw error;
-      } else {
-        throw new Error(`Error interno: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`❌ Error en remove:`, error);
+      throw error;
+    }
+  }
+
+  @Get('health/storage')
+  @ApiOperation({ 
+    summary: 'Estado del almacenamiento',
+    description: 'Verifica el estado del sistema de almacenamiento local'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Estado del almacenamiento',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string' },
+        storageType: { type: 'string' },
+        uploadPath: { type: 'string' },
+        maxFileSize: { type: 'number' },
+        allowedMimeTypes: { type: 'array', items: { type: 'string' } },
+        directories: { type: 'object' }
       }
+    }
+  })
+  async getStorageHealth() {
+    try {
+      const uploadPath = STORAGE_CONFIG.uploadPath;
+      const uploadPathExists = fs.existsSync(uploadPath);
+      
+      return {
+        status: uploadPathExists ? 'healthy' : 'unhealthy',
+        storageType: STORAGE_CONFIG.type,
+        uploadPath: uploadPath,
+        uploadPathExists: uploadPathExists,
+        maxFileSize: STORAGE_CONFIG.maxFileSize,
+        allowedMimeTypes: STORAGE_CONFIG.allowedMimeTypes,
+        directories: STORAGE_CONFIG.directories,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      return {
+        status: 'error',
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      };
     }
   }
 } 
