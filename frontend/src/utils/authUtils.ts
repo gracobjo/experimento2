@@ -1,4 +1,5 @@
 import { jwtDecode } from 'jwt-decode';
+import { logIfEnabled, logTokenValidation } from '../config/logging.config';
 
 export interface DecodedToken {
   email: string;
@@ -25,20 +26,22 @@ export const isTokenValid = (token: string): boolean => {
     
     // Verificar que el token no haya expirado
     if (decoded.exp < currentTime) {
-      console.log('🔑 Token expirado:', new Date(decoded.exp * 1000).toLocaleString());
+      logIfEnabled('warn', '🔑 Token expirado:', new Date(decoded.exp * 1000).toLocaleString());
       return false;
     }
     
     // Verificar que tenga los campos necesarios
     if (!decoded.sub || !decoded.role || !decoded.email) {
-      console.log('🔑 Token inválido: campos faltantes');
+      logIfEnabled('warn', '🔑 Token inválido: campos faltantes');
       return false;
     }
     
-    console.log('🔑 Token válido, expira:', new Date(decoded.exp * 1000).toLocaleString());
+    // Usar logging optimizado para tokens válidos
+    const expiresAt = new Date(decoded.exp * 1000);
+    logTokenValidation(token, expiresAt, 'Validación de token');
     return true;
   } catch (error) {
-    console.error('🔑 Error decodificando token:', error);
+    logIfEnabled('error', '🔑 Error decodificando token:', error);
     return false;
   }
 };
@@ -106,7 +109,7 @@ export const getValidToken = (): string | null => {
   if (isTokenValid(token)) {
     return token;
   } else {
-    console.log('🔑 Token inválido, limpiando datos de autenticación');
+    logIfEnabled('warn', '🔑 Token inválido, limpiando datos de autenticación');
     clearAuthData();
     return null;
   }

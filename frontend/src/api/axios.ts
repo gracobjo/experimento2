@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { getBackendUrl, logEndpointsConfig } from '../config/endpoints';
 import { isTokenValid, clearAuthData } from '../utils/authUtils';
+import { logIfEnabled, logApiRequest } from '../config/logging.config';
 
 const api = axios.create({
   baseURL: `${getBackendUrl()}/api`,
@@ -16,9 +17,9 @@ api.interceptors.request.use((config) => {
   // Verificar que el token sea válido antes de enviarlo
   if (token && isTokenValid(token)) {
     config.headers.Authorization = `Bearer ${token}`;
-    console.log('🔑 Token válido enviado en request');
+    logIfEnabled('debug', '🔑 Token válido enviado en request');
   } else if (token) {
-    console.log('🔑 Token inválido detectado, limpiando datos de autenticación');
+    logIfEnabled('warn', '🔑 Token inválido detectado, limpiando datos de autenticación');
     clearAuthData();
     // No incluir el token en el request
   }
@@ -31,15 +32,15 @@ api.interceptors.response.use(
   (error) => {
     if (error.response) {
       if (error.response.status === 401) {
-        console.log('🔑 Error 401: Token no autorizado');
+        logIfEnabled('warn', '🔑 Error 401: Token no autorizado');
         clearAuthData();
         window.location.href = '/login';
         alert('Sesión expirada o no autorizada. Por favor, inicia sesión de nuevo.');
       } else if (error.response.status === 429) {
-        console.log('🔑 Error 429: Demasiados intentos');
+        logIfEnabled('warn', '🔑 Error 429: Demasiados intentos');
         alert('Demasiados intentos de autenticación. Espera unos minutos antes de volver a intentarlo.');
       } else if (error.response.status === 500) {
-        console.log('🔑 Error 500: Error interno del servidor');
+        logIfEnabled('error', '🔑 Error 500: Error interno del servidor');
         // Para errores 500, verificar si es un problema de autenticación
         if (error.response.data?.message?.includes('Unauthorized') || 
             error.response.data?.message?.includes('invalid token')) {
