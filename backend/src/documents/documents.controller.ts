@@ -631,6 +631,18 @@ export class DocumentsController {
 
       fileStream.on('end', () => {
         console.log(`✅ Archivo servido exitosamente: ${document.originalName}`);
+        // Asegurar que la respuesta se complete
+        if (!res.headersSent) {
+          res.end();
+        }
+      });
+
+      // Manejar cierre de la conexión
+      req.on('close', () => {
+        console.log(`🔌 Conexión cerrada por el cliente para documento: ${document.originalName}`);
+        if (fileStream && !fileStream.destroyed) {
+          fileStream.destroy();
+        }
       });
 
     } catch (error) {
