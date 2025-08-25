@@ -195,7 +195,6 @@ export class CasesService {
           clientId: true,
           lawyerId: true,
           createdAt: true,
-          updatedAt: true,
         },
         orderBy: {
           createdAt: 'desc'
@@ -261,8 +260,8 @@ export class CasesService {
                 },
                 take: 5, // Solo los últimos 5 documentos
               });
-            } catch (docError) {
-              console.log(`⚠️ Error obteniendo documentos para expediente ${expediente.id}:`, docError.message);
+            } catch (docError: any) {
+              console.log(`⚠️ Error obteniendo documentos para expediente ${expediente.id}:`, docError?.message || 'Error desconocido');
               // Continuar sin documentos
             }
 
@@ -272,8 +271,8 @@ export class CasesService {
               lawyer: lawyerInfo,
               documents: documents,
             };
-          } catch (error) {
-            console.log(`⚠️ Error procesando expediente ${expediente.id}:`, error.message);
+          } catch (error: any) {
+            console.log(`⚠️ Error procesando expediente ${expediente.id}:`, error?.message || 'Error desconocido');
             // Retornar expediente básico si hay error
             return {
               ...expediente,
@@ -292,11 +291,11 @@ export class CasesService {
       console.error(`❌ Error en CasesService.findAll:`, error);
       
       // Si hay un error específico de Prisma, manejarlo
-      if (error.code === 'P2002') {
+      if ((error as any).code === 'P2002') {
         throw new BadRequestException('Error de duplicación en la base de datos');
-      } else if (error.code === 'P2025') {
+      } else if ((error as any).code === 'P2025') {
         throw new NotFoundException('Registro no encontrado');
-      } else if (error.code === 'P2003') {
+      } else if ((error as any).code === 'P2003') {
         throw new BadRequestException('Error de referencia en la base de datos');
       }
       
