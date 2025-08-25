@@ -549,36 +549,80 @@ export class DocumentsService {
 
   // Método para obtener archivo como stream desde PostgreSQL
   async getFileStream(documentId: string) {
-    const document = await this.prisma.document.findUnique({
-      where: { id: documentId },
-      select: {
-        fileData: true,
-        mimeType: true,
-        originalName: true,
-        fileSize: true,
-        uploadedAt: true,
+    try {
+      const document = await this.prisma.document.findUnique({
+        where: { id: documentId },
+        select: {
+          fileUrl: true,
+          mimeType: true,
+          originalName: true,
+          fileSize: true,
+          uploadedAt: true,
+          filename: true,
+        }
+      });
+
+      if (!document) {
+        throw new NotFoundException('Documento no encontrado');
       }
-    });
 
-    if (!document || !document.fileData) {
-      throw new NotFoundException('Archivo no encontrado o sin datos');
+      // Si tenemos fileUrl, usar esa ruta
+      if (document.fileUrl) {
+        const filePath = this.getFilePath(document.filename);
+        
+        // Verificar si el archivo existe localmente
+        if (fs.existsSync(filePath)) {
+          const { createReadStream } = require('fs');
+          const stream = createReadStream(filePath);
+          
+          return {
+            stream,
+            metadata: {
+              contentType: document.mimeType,
+              contentLength: document.fileSize,
+              lastModified: document.uploadedAt,
+            }
+          };
+        } else {
+          throw new NotFoundException('Archivo físico no encontrado');
+        }
+      } else {
+        // Fallback: intentar usar fileData si existe (para cuando se aplique la migración)
+        try {
+          const documentWithData = await this.prisma.document.findUnique({
+            where: { id: documentId },
+            select: {
+              fileData: true,
+              mimeType: true,
+              originalName: true,
+              fileSize: true,
+              uploadedAt: true,
+            }
+          });
+
+          if (documentWithData && documentWithData.fileData) {
+            const { Readable } = require('stream');
+            const stream = Readable.from(documentWithData.fileData);
+
+            return {
+              stream,
+              metadata: {
+                contentType: documentWithData.mimeType,
+                contentLength: documentWithData.fileSize,
+                lastModified: documentWithData.uploadedAt,
+              }
+            };
+          }
+        } catch (fileDataError) {
+          console.log('⚠️ fileData no disponible, usando solo fileUrl');
+        }
+
+        throw new NotFoundException('Archivo no disponible para visualización');
+      }
+    } catch (error) {
+      console.error('Error en getFileStream:', error);
+      throw new NotFoundException('Error al obtener el archivo');
     }
-
-    // Crear un stream desde el buffer
-    const { Readable } = require('stream');
-    const stream = Readable.from(document.fileData);
-
-    // Agregar metadatos al stream
-    stream.metadata = {
-      contentType: document.mimeType,
-      contentLength: document.fileSize,
-      lastModified: document.uploadedAt,
-    };
-
-    return {
-      stream,
-      metadata: stream.metadata
-    };
   }
 
 
