@@ -163,7 +163,7 @@ export class DocumentsController {
         filename: savedDocument.filename,
         originalName: savedDocument.originalName,
         mimeType: savedDocument.mimeType,
-        size: savedDocument.size,
+        size: savedDocument.fileSize,
         fileUrl: savedDocument.fileUrl,
         description: savedDocument.description,
         expedienteId: savedDocument.expedienteId,
@@ -632,7 +632,8 @@ export class DocumentsController {
             fs.unlinkSync(localPath);
             console.log(`✅ Archivo local eliminado: ${localPath}`);
           } catch (fileError) {
-            console.warn(`⚠️  No se pudo eliminar archivo local: ${fileError.message}`);
+            const errorMessage = fileError instanceof Error ? fileError.message : 'Error desconocido';
+            console.warn(`⚠️  No se pudo eliminar archivo local: ${errorMessage}`);
           }
         } else {
           console.log(`ℹ️  Archivo local no encontrado: ${localPath}`);
