@@ -5472,6 +5472,7 @@ const documents_controller_1 = __webpack_require__(52);
 const prisma_module_1 = __webpack_require__(37);
 const cloudinary_storage_service_1 = __webpack_require__(45);
 const postgres_storage_service_1 = __webpack_require__(55);
+const file_storage_service_1 = __webpack_require__(56);
 const config_1 = __webpack_require__(5);
 let DocumentsModule = class DocumentsModule {
 };
@@ -5484,7 +5485,8 @@ exports.DocumentsModule = DocumentsModule = __decorate([
             cloudinary_documents_service_1.CloudinaryDocumentsService,
             documents_service_1.DocumentsService,
             cloudinary_storage_service_1.CloudinaryStorageService,
-            postgres_storage_service_1.PostgresStorageService
+            postgres_storage_service_1.PostgresStorageService,
+            file_storage_service_1.FileStorageService
         ],
         exports: [cloudinary_documents_service_1.CloudinaryDocumentsService, documents_service_1.DocumentsService],
     })

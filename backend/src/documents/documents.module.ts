@@ -5,6 +5,7 @@ import { DocumentsController } from './documents.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { CloudinaryStorageService } from '../storage/cloudinary-storage.service';
 import { PostgresStorageService } from '../storage/postgres-storage.service';
+import { FileStorageService } from './file-storage.service';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
@@ -14,7 +15,8 @@ import { ConfigModule } from '@nestjs/config';
     CloudinaryDocumentsService, 
     DocumentsService, 
     CloudinaryStorageService,
-    PostgresStorageService
+    PostgresStorageService,
+    FileStorageService
   ],
   exports: [CloudinaryDocumentsService, DocumentsService],
 })
