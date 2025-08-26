@@ -55,8 +55,9 @@ export class FileStorageService {
       };
 
     } catch (error) {
-      this.logger.error(`❌ Error almacenando archivo: ${error.message}`);
-      throw new Error(`Error al almacenar archivo: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`❌ Error almacenando archivo: ${errorMessage}`);
+      throw new Error(`Error al almacenar archivo: ${errorMessage}`);
     }
   }
 
@@ -97,8 +98,9 @@ export class FileStorageService {
       };
 
     } catch (error) {
-      this.logger.error(`❌ Error leyendo archivo: ${error.message}`);
-      throw new Error(`Error al leer archivo: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`❌ Error leyendo archivo: ${errorMessage}`);
+      throw new Error(`Error al leer archivo: ${errorMessage}`);
     }
   }
 
@@ -118,8 +120,9 @@ export class FileStorageService {
 
       return false;
     } catch (error) {
-      this.logger.error(`❌ Error eliminando archivo: ${error.message}`);
-      throw new Error(`Error al eliminar archivo: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`❌ Error eliminando archivo: ${errorMessage}`);
+      throw new Error(`Error al eliminar archivo: ${errorMessage}`);
     }
   }
 
@@ -165,7 +168,8 @@ export class FileStorageService {
       };
 
     } catch (error) {
-      this.logger.error(`❌ Error obteniendo información del archivo: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`❌ Error obteniendo información del archivo: ${errorMessage}`);
       return { exists: false };
     }
   }
@@ -189,7 +193,8 @@ export class FileStorageService {
       });
 
     } catch (error) {
-      this.logger.error(`❌ Error listando archivos: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`❌ Error listando archivos: ${errorMessage}`);
       return [];
     }
   }

@@ -516,7 +516,8 @@ export class DocumentsService {
           contentLength: fileInfo.contentLength
         };
       } catch (error) {
-        throw new Error(`Error al acceder al archivo externo: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        throw new Error(`Error al acceder al archivo externo: ${errorMessage}`);
       }
     } else {
       // Archivo local
