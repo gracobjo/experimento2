@@ -306,3 +306,4 @@ node scripts/check-railway-status.js
 
 **💡 Consejo**: Siempre ejecuta primero el script de diagnóstico para identificar exactamente cuál es el problema antes de aplicar soluciones.
 
+
