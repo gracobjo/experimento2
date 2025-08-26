@@ -7310,6 +7310,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var DocumentsController_1;
 var _a, _b, _c, _d, _e, _f;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DocumentsController = void 0;
@@ -7328,11 +7329,12 @@ const client_1 = __webpack_require__(9);
 const fs = __importStar(__webpack_require__(57));
 const path = __importStar(__webpack_require__(58));
 const storage_config_1 = __webpack_require__(59);
-let DocumentsController = class DocumentsController {
+let DocumentsController = DocumentsController_1 = class DocumentsController {
     constructor(documentsService, postgresStorageService, fileStorageService) {
         this.documentsService = documentsService;
         this.postgresStorageService = postgresStorageService;
         this.fileStorageService = fileStorageService;
+        this.logger = new common_1.Logger(DocumentsController_1.name);
     }
     async uploadDocument(file, uploadDocumentDto, req) {
         return this.postgresStorageService.storeFile(file.buffer, file.filename, file.originalname, file.mimetype, uploadDocumentDto.expedienteId, req.user.id, uploadDocumentDto.description);
@@ -7820,6 +7822,109 @@ let DocumentsController = class DocumentsController {
     }
     remove(id, req) {
         return this.documentsService.remove(id, req.user.id, req.user.role);
+    }
+    async migrateDocuments() {
+        try {
+            this.logger.log('🚀 Iniciando migración de documentos a almacenamiento local...');
+            const sampleDocuments = [
+                {
+                    id: 'doc-001',
+                    expedienteId: 'exp-001',
+                    filename: 'contrato_compraventa.pdf',
+                    content: 'Contrato de compraventa de inmueble - Documento legal válido'
+                },
+                {
+                    id: 'doc-002',
+                    expedienteId: 'exp-002',
+                    filename: 'demanda_laboral.pdf',
+                    content: 'Demanda laboral por despido injustificado - Caso laboral'
+                },
+                {
+                    id: 'doc-c1-001',
+                    expedienteId: 'exp-c1-001',
+                    filename: 'documentoA.pdf',
+                    content: 'Documento legal tipo A - Expediente C1-001'
+                }
+            ];
+            const results = [];
+            for (const doc of sampleDocuments) {
+                try {
+                    const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <title>${doc.filename}</title>
+              <style>
+                body { font-family: Arial, sans-serif; margin: 40px; }
+                .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; }
+                .content { margin-top: 30px; line-height: 1.6; }
+                .footer { margin-top: 50px; text-align: center; color: #666; }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h1>${doc.filename.replace('.pdf', '')}</h1>
+                <p>ID: ${doc.id} | Expediente: ${doc.expedienteId}</p>
+              </div>
+              <div>content">
+                <h2>Contenido del Documento</h2>
+                <p>${doc.content}</p>
+                <p>Este es un documento de ejemplo generado automáticamente para la migración a almacenamiento local.</p>
+                <p>Fecha de generación: ${new Date().toLocaleString('es-ES')}</p>
+              </div>
+              <div class="footer">
+                <p>Sistema de Gestión Legal - Documento Migrado</p>
+              </div>
+            </body>
+            </html>
+          `;
+                    const buffer = Buffer.from(htmlContent, 'utf8');
+                    const fileInfo = await this.fileStorageService.storeFile(buffer, doc.filename, doc.expedienteId);
+                    const { PrismaClient } = __webpack_require__(9);
+                    const prisma = new PrismaClient();
+                    await prisma.document.update({
+                        where: { id: doc.id },
+                        data: {
+                            fileUrl: fileInfo.fileUrl,
+                            filename: fileInfo.filename,
+                            fileSize: fileInfo.fileSize,
+                            mimeType: fileInfo.mimeType,
+                            metadata: {
+                                migrated: true,
+                                migratedAt: new Date().toISOString(),
+                                originalUrl: `https://example.com/documents/${doc.filename}`
+                            }
+                        }
+                    });
+                    await prisma.$disconnect();
+                    results.push({
+                        id: doc.id,
+                        status: 'success',
+                        newFileUrl: fileInfo.fileUrl,
+                        fileSize: fileInfo.fileSize
+                    });
+                    this.logger.log(`✅ Documento ${doc.id} migrado exitosamente`);
+                }
+                catch (error) {
+                    results.push({
+                        id: doc.id,
+                        status: 'error',
+                        error: error instanceof Error ? error.message : String(error)
+                    });
+                    this.logger.error(`❌ Error migrando documento ${doc.id}:`, error);
+                }
+            }
+            return {
+                message: 'Migración de documentos completada',
+                timestamp: new Date().toISOString(),
+                totalDocuments: sampleDocuments.length,
+                results: results
+            };
+        }
+        catch (error) {
+            this.logger.error('❌ Error en migración de documentos:', error);
+            throw new Error(`Error en migración: ${error instanceof Error ? error.message : String(error)}`);
+        }
     }
     async debugFileAccess(id, req) {
         try {
@@ -8422,6 +8527,42 @@ __decorate([
             }
         }
     }),
+    (0, common_1.Post)('admin/migrate-documents'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Migrar documentos a almacenamiento local',
+        description: 'Migra documentos de URLs ficticias a archivos locales en el servidor'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Migración completada exitosamente',
+        schema: {
+            type: 'object',
+            properties: {
+                message: { type: 'string' },
+                timestamp: { type: 'string' },
+                totalDocuments: { type: 'number' },
+                results: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            status: { type: 'string' },
+                            newFileUrl: { type: 'string' },
+                            fileSize: { type: 'number' },
+                            error: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], DocumentsController.prototype, "migrateDocuments", null);
+__decorate([
     (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
     (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Documento no encontrado' }),
@@ -8431,7 +8572,7 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], DocumentsController.prototype, "debugFileAccess", null);
-exports.DocumentsController = DocumentsController = __decorate([
+exports.DocumentsController = DocumentsController = DocumentsController_1 = __decorate([
     (0, swagger_1.ApiTags)('documents'),
     (0, common_1.Controller)('documents'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

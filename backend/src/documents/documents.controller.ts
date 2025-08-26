@@ -16,6 +16,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -37,6 +38,8 @@ import { STORAGE_CONFIG } from '../config/storage.config';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth('JWT-auth')
 export class DocumentsController {
+  private readonly logger = new Logger(DocumentsController.name);
+
   constructor(
     private readonly documentsService: DocumentsService,
     private readonly postgresStorageService: PostgresStorageService,
@@ -1087,6 +1090,159 @@ export class DocumentsController {
       }
     }
   })
+  @Post('admin/migrate-documents')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ 
+    summary: 'Migrar documentos a almacenamiento local',
+    description: 'Migra documentos de URLs ficticias a archivos locales en el servidor'
+  })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Migración completada exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        timestamp: { type: 'string' },
+        totalDocuments: { type: 'number' },
+        results: { 
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              status: { type: 'string' },
+              newFileUrl: { type: 'string' },
+              fileSize: { type: 'number' },
+              error: { type: 'string' }
+            }
+          }
+        }
+      }
+    }
+  })
+  async migrateDocuments() {
+    try {
+      this.logger.log('🚀 Iniciando migración de documentos a almacenamiento local...');
+      
+      // 1. Crear archivos de ejemplo
+      const sampleDocuments = [
+        {
+          id: 'doc-001',
+          expedienteId: 'exp-001',
+          filename: 'contrato_compraventa.pdf',
+          content: 'Contrato de compraventa de inmueble - Documento legal válido'
+        },
+        {
+          id: 'doc-002',
+          expedienteId: 'exp-002',
+          filename: 'demanda_laboral.pdf',
+          content: 'Demanda laboral por despido injustificado - Caso laboral'
+        },
+        {
+          id: 'doc-c1-001',
+          expedienteId: 'exp-c1-001',
+          filename: 'documentoA.pdf',
+          content: 'Documento legal tipo A - Expediente C1-001'
+        }
+      ];
+
+      const results = [];
+      
+      for (const doc of sampleDocuments) {
+        try {
+          // Crear contenido del PDF (simulado como HTML)
+          const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <title>${doc.filename}</title>
+              <style>
+                body { font-family: Arial, sans-serif; margin: 40px; }
+                .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; }
+                .content { margin-top: 30px; line-height: 1.6; }
+                .footer { margin-top: 50px; text-align: center; color: #666; }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h1>${doc.filename.replace('.pdf', '')}</h1>
+                <p>ID: ${doc.id} | Expediente: ${doc.expedienteId}</p>
+              </div>
+              <div>content">
+                <h2>Contenido del Documento</h2>
+                <p>${doc.content}</p>
+                <p>Este es un documento de ejemplo generado automáticamente para la migración a almacenamiento local.</p>
+                <p>Fecha de generación: ${new Date().toLocaleString('es-ES')}</p>
+              </div>
+              <div class="footer">
+                <p>Sistema de Gestión Legal - Documento Migrado</p>
+              </div>
+            </body>
+            </html>
+          `;
+
+          const buffer = Buffer.from(htmlContent, 'utf8');
+          
+          // Almacenar archivo localmente
+          const fileInfo = await this.fileStorageService.storeFile(
+            buffer,
+            doc.filename,
+            doc.expedienteId
+          );
+
+          // Actualizar la base de datos usando Prisma directamente
+          const { PrismaClient } = require('@prisma/client');
+          const prisma = new PrismaClient();
+          
+          await prisma.document.update({
+            where: { id: doc.id },
+            data: {
+              fileUrl: fileInfo.fileUrl,
+              filename: fileInfo.filename,
+              fileSize: fileInfo.fileSize,
+              mimeType: fileInfo.mimeType,
+              metadata: {
+                migrated: true,
+                migratedAt: new Date().toISOString(),
+                originalUrl: `https://example.com/documents/${doc.filename}`
+              }
+            }
+          });
+          
+          await prisma.$disconnect();
+
+          results.push({
+            id: doc.id,
+            status: 'success',
+            newFileUrl: fileInfo.fileUrl,
+            fileSize: fileInfo.fileSize
+          });
+
+          this.logger.log(`✅ Documento ${doc.id} migrado exitosamente`);
+        } catch (error) {
+          results.push({
+            id: doc.id,
+            status: 'error',
+            error: error instanceof Error ? error.message : String(error)
+          });
+          this.logger.error(`❌ Error migrando documento ${doc.id}:`, error);
+        }
+      }
+
+      return {
+        message: 'Migración de documentos completada',
+        timestamp: new Date().toISOString(),
+        totalDocuments: sampleDocuments.length,
+        results: results
+      };
+
+    } catch (error) {
+      this.logger.error('❌ Error en migración de documentos:', error);
+      throw new Error(`Error en migración: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Acceso prohibido' })
   @ApiResponse({ status: 404, description: 'Documento no encontrado' })
