@@ -63,9 +63,9 @@ backend/uploads/
 
 | Documento | URL Anterior | URL Nueva |
 |-----------|--------------|-----------|
-| contrato_compraventa.pdf | `https://example.com/documents/...` | `/uploads/exp-001/contrato_compraventa.pdf` |
-| demanda_laboral.pdf | `https://example.com/documents/...` | `/uploads/exp-002/demanda_laboral.pdf` |
-| documentoA.pdf | `https://example.com/documents/...` | `/uploads/exp-003/documentoA.pdf` |
+| contrato_compraventa.pdf | `https://experimento2-production-54c0.up.railway.app/uploads/exp-001/contrato_compraventa.pdf` | `/uploads/exp-001/contrato_compraventa.pdf` |
+| demanda_laboral.pdf | `https://experimento2-production-54c0.up.railway.app/uploads/exp-002/demanda_laboral.pdf` | `/uploads/exp-002/demanda_laboral.pdf` |
+| documentoA.pdf | `https://experimento2-production-54c0.up.railway.app/uploads/exp-c1-001/documentoA.pdf` | `/uploads/exp-c1-001/documentoA.pdf` |
 
 ## 🎯 **Beneficios de esta Solución**
 

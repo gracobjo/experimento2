@@ -46,11 +46,11 @@ const core_1 = __webpack_require__(1);
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
 const app_module_1 = __webpack_require__(4);
-const express = __importStar(__webpack_require__(54));
-const path = __importStar(__webpack_require__(58));
-const helmet_1 = __importDefault(__webpack_require__(148));
-const express_rate_limit_1 = __importDefault(__webpack_require__(149));
-const compression_1 = __importDefault(__webpack_require__(150));
+const express = __importStar(__webpack_require__(47));
+const path = __importStar(__webpack_require__(50));
+const helmet_1 = __importDefault(__webpack_require__(137));
+const express_rate_limit_1 = __importDefault(__webpack_require__(138));
+const compression_1 = __importDefault(__webpack_require__(139));
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     console.log('🔍 === VARIABLES DE ENTORNO ===');
@@ -308,19 +308,19 @@ const auth_module_1 = __webpack_require__(12);
 const users_module_1 = __webpack_require__(30);
 const cases_module_1 = __webpack_require__(38);
 const documents_module_1 = __webpack_require__(43);
-const appointments_module_1 = __webpack_require__(62);
-const tasks_module_1 = __webpack_require__(71);
-const reports_module_1 = __webpack_require__(76);
-const admin_module_1 = __webpack_require__(79);
-const chat_module_1 = __webpack_require__(92);
-const chatbot_module_1 = __webpack_require__(99);
+const appointments_module_1 = __webpack_require__(51);
+const tasks_module_1 = __webpack_require__(60);
+const reports_module_1 = __webpack_require__(65);
+const admin_module_1 = __webpack_require__(68);
+const chat_module_1 = __webpack_require__(81);
+const chatbot_module_1 = __webpack_require__(88);
 const prisma_module_1 = __webpack_require__(37);
-const parametros_module_1 = __webpack_require__(102);
-const invoices_module_1 = __webpack_require__(105);
-const provision_fondos_module_1 = __webpack_require__(130);
-const contact_module_1 = __webpack_require__(134);
-const teleassistance_module_1 = __webpack_require__(137);
-const notes_module_1 = __webpack_require__(142);
+const parametros_module_1 = __webpack_require__(91);
+const invoices_module_1 = __webpack_require__(94);
+const provision_fondos_module_1 = __webpack_require__(119);
+const contact_module_1 = __webpack_require__(123);
+const teleassistance_module_1 = __webpack_require__(126);
+const notes_module_1 = __webpack_require__(131);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -5466,29 +5466,18 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DocumentsModule = void 0;
 const common_1 = __webpack_require__(2);
-const cloudinary_documents_service_1 = __webpack_require__(44);
-const documents_service_1 = __webpack_require__(48);
-const documents_controller_1 = __webpack_require__(52);
+const documents_service_1 = __webpack_require__(44);
+const documents_controller_1 = __webpack_require__(45);
 const prisma_module_1 = __webpack_require__(37);
-const cloudinary_storage_service_1 = __webpack_require__(45);
-const postgres_storage_service_1 = __webpack_require__(55);
-const file_storage_service_1 = __webpack_require__(56);
-const config_1 = __webpack_require__(5);
 let DocumentsModule = class DocumentsModule {
 };
 exports.DocumentsModule = DocumentsModule;
 exports.DocumentsModule = DocumentsModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, config_1.ConfigModule],
+        imports: [prisma_module_1.PrismaModule],
         controllers: [documents_controller_1.DocumentsController],
-        providers: [
-            cloudinary_documents_service_1.CloudinaryDocumentsService,
-            documents_service_1.DocumentsService,
-            cloudinary_storage_service_1.CloudinaryStorageService,
-            postgres_storage_service_1.PostgresStorageService,
-            file_storage_service_1.FileStorageService
-        ],
-        exports: [cloudinary_documents_service_1.CloudinaryDocumentsService, documents_service_1.DocumentsService],
+        providers: [documents_service_1.DocumentsService],
+        exports: [documents_service_1.DocumentsService],
     })
 ], DocumentsModule);
 
@@ -5507,323 +5496,36 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var CloudinaryDocumentsService_1;
-var _a, _b, _c;
+var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CloudinaryDocumentsService = void 0;
+exports.DocumentsService = void 0;
 const common_1 = __webpack_require__(2);
 const prisma_service_1 = __webpack_require__(8);
-const cloudinary_storage_service_1 = __webpack_require__(45);
-const config_1 = __webpack_require__(5);
-let CloudinaryDocumentsService = CloudinaryDocumentsService_1 = class CloudinaryDocumentsService {
-    constructor(prisma, cloudinaryStorage, configService) {
+const client_1 = __webpack_require__(9);
+let DocumentsService = class DocumentsService {
+    constructor(prisma) {
         this.prisma = prisma;
-        this.cloudinaryStorage = cloudinaryStorage;
-        this.configService = configService;
-        this.logger = new common_1.Logger(CloudinaryDocumentsService_1.name);
-        this.ALLOWED_MIME_TYPES = [
-            'application/pdf',
-            'text/plain',
-            'text/csv',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'image/jpeg',
-            'image/png',
-            'image/gif',
-            'image/webp'
-        ];
-        this.MAX_FILE_SIZE = 10 * 1024 * 1024;
-        this.MAX_FILES_PER_CASE = 5;
     }
-    async uploadDocument(file, uploadDocumentDto, currentUserId, userRole) {
-        this.logger.log(`Iniciando upload de documento: ${file.originalname}`);
-        const expediente = await this.prisma.expediente.findUnique({
-            where: { id: uploadDocumentDto.expedienteId },
-            include: {
-                client: true,
-                lawyer: true,
-                documents: true,
-            }
+    async create(documentData) {
+        return this.prisma.document.create({
+            data: documentData
         });
-        if (!expediente) {
-            throw new common_1.NotFoundException('Expediente no encontrado');
-        }
-        if (userRole === 'CLIENTE') {
-            const client = await this.prisma.client.findUnique({
-                where: { userId: currentUserId }
-            });
-            if (!client || expediente.clientId !== client.id) {
-                throw new common_1.ForbiddenException('No tienes permisos para subir documentos a este expediente');
-            }
-        }
-        else if (userRole === 'ABOGADO') {
-            if (expediente.lawyerId !== currentUserId) {
-                throw new common_1.ForbiddenException('No tienes permisos para subir documentos a este expediente');
-            }
-        }
-        if (expediente.documents.length >= this.MAX_FILES_PER_CASE) {
-            throw new common_1.BadRequestException(`No se pueden subir más de ${this.MAX_FILES_PER_CASE} archivos por expediente`);
-        }
-        this.validateFile(file);
-        try {
-            const uploadResult = await this.cloudinaryStorage.uploadFile(file, `experimento2/expedientes/${expediente.id}`, {
-                expedienteId: expediente.id,
-                uploadedBy: currentUserId,
-                userRole: userRole,
-                originalName: file.originalname,
-                description: uploadDocumentDto.description
-            });
-            this.logger.log(`Archivo subido exitosamente a Cloudinary: ${uploadResult.publicId}`);
-            const document = await this.prisma.document.create({
-                data: {
-                    filename: `${uploadResult.publicId}.${file.originalname.split('.').pop()}`,
-                    originalName: file.originalname,
-                    fileUrl: uploadResult.url,
-                    fileSize: file.size,
-                    mimeType: file.mimetype,
-                    description: uploadDocumentDto.description,
-                    expedienteId: uploadDocumentDto.expedienteId,
-                    uploadedBy: currentUserId,
-                    metadata: {
-                        cloudinaryPublicId: uploadResult.publicId,
-                        storageType: 'cloudinary',
-                        cloudinaryUrl: uploadResult.url
-                    }
-                },
-                include: {
-                    expediente: {
-                        include: {
-                            client: {
-                                include: {
-                                    user: {
-                                        select: {
-                                            id: true,
-                                            name: true,
-                                            email: true,
-                                        }
-                                    }
-                                }
-                            },
-                            lawyer: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    email: true,
-                                }
-                            },
-                        }
-                    },
-                    uploadedByUser: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                        }
-                    },
-                }
-            });
-            this.logger.log(`Documento guardado en base de datos: ${document.id}`);
-            return document;
-        }
-        catch (error) {
-            this.logger.error(`Error subiendo documento a Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
-            throw new common_1.BadRequestException(`Error subiendo documento: ${error instanceof Error ? error.message : String(error)}`);
-        }
     }
-    async downloadDocument(documentId, currentUserId, userRole) {
-        this.logger.log(`Iniciando descarga de documento: ${documentId}`);
-        const document = await this.prisma.document.findUnique({
-            where: { id: documentId },
-            include: {
-                expediente: {
-                    include: {
-                        client: true,
-                        lawyer: true,
-                    }
-                }
-            }
-        });
-        if (!document) {
-            throw new common_1.NotFoundException('Documento no encontrado');
-        }
-        if (userRole === 'CLIENTE') {
-            const client = await this.prisma.client.findUnique({
-                where: { userId: currentUserId }
-            });
-            if (!client || document.expediente.clientId !== client.id) {
-                throw new common_1.ForbiddenException('No tienes permisos para descargar este documento');
-            }
-        }
-        else if (userRole === 'ABOGADO') {
-            if (document.expediente.lawyerId !== currentUserId) {
-                throw new common_1.ForbiddenException('No tienes permisos para descargar este documento');
-            }
-        }
-        try {
-            let cloudinaryPublicId = document.metadata?.cloudinaryPublicId;
-            if (!cloudinaryPublicId) {
-                this.logger.log(`Documento ${documentId} no tiene metadatos de Cloudinary, intentando migración...`);
-                cloudinaryPublicId = await this.migrateDocumentToCloudinary(document);
-            }
-            const downloadResult = await this.cloudinaryStorage.downloadFile(cloudinaryPublicId);
-            this.logger.log(`Documento descargado exitosamente de Cloudinary: ${cloudinaryPublicId}`);
-            return {
-                stream: downloadResult.stream,
-                metadata: {
-                    ...downloadResult.metadata,
-                    originalName: document.originalName,
-                    description: document.description,
-                    expedienteId: document.expedienteId,
-                    uploadedAt: document.uploadedAt,
-                }
-            };
-        }
-        catch (error) {
-            this.logger.error(`Error descargando documento de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
-            throw new common_1.NotFoundException(`Error descargando documento: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    }
-    async getDocumentInfo(documentId, currentUserId, userRole) {
-        const document = await this.prisma.document.findUnique({
-            where: { id: documentId },
-            include: {
-                expediente: {
-                    include: {
-                        client: true,
-                        lawyer: true,
-                    }
-                }
-            }
-        });
-        if (!document) {
-            throw new common_1.NotFoundException('Documento no encontrado');
-        }
-        if (userRole === 'CLIENTE') {
-            const client = await this.prisma.client.findUnique({
-                where: { userId: currentUserId }
-            });
-            if (!client || document.expediente.clientId !== client.id) {
-                throw new common_1.ForbiddenException('No tienes permisos para ver este documento');
-            }
-        }
-        else if (userRole === 'ABOGADO') {
-            if (document.expediente.lawyerId !== currentUserId) {
-                throw new common_1.ForbiddenException('No tienes permisos para ver este documento');
-            }
-        }
-        try {
-            let cloudinaryPublicId = document.metadata?.cloudinaryPublicId;
-            if (!cloudinaryPublicId) {
-                this.logger.log(`Documento ${documentId} no tiene metadatos de Cloudinary, intentando migración...`);
-                cloudinaryPublicId = await this.migrateDocumentToCloudinary(document);
-            }
-            const cloudinaryInfo = await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
-            return {
-                ...document,
-                cloudinaryInfo: {
-                    publicId: cloudinaryInfo.publicId,
-                    resourceType: cloudinaryInfo.resourceType,
-                    format: cloudinaryInfo.format,
-                    size: cloudinaryInfo.size,
-                    createdAt: cloudinaryInfo.createdAt,
-                    url: cloudinaryInfo.url
-                }
-            };
-        }
-        catch (error) {
-            this.logger.warn(`No se pudieron obtener metadatos de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
-            return document;
-        }
-    }
-    async deleteDocument(documentId, currentUserId, userRole) {
-        this.logger.log(`Iniciando eliminación de documento: ${documentId}`);
-        const document = await this.prisma.document.findUnique({
-            where: { id: documentId },
-            include: {
-                expediente: {
-                    include: {
-                        client: true,
-                        lawyer: true,
-                    }
-                }
-            }
-        });
-        if (!document) {
-            throw new common_1.NotFoundException('Documento no encontrado');
-        }
-        if (userRole === 'CLIENTE') {
-            const client = await this.prisma.client.findUnique({
-                where: { userId: currentUserId }
-            });
-            if (!client || document.expediente.clientId !== client.id) {
-                throw new common_1.ForbiddenException('No tienes permisos para eliminar este documento');
-            }
-        }
-        else if (userRole === 'ABOGADO') {
-            if (document.expediente.lawyerId !== currentUserId) {
-                throw new common_1.ForbiddenException('No tienes permisos para eliminar este documento');
-            }
-        }
-        try {
-            let cloudinaryPublicId = document.metadata?.cloudinaryPublicId;
-            if (!cloudinaryPublicId) {
-                this.logger.log(`Documento ${documentId} no tiene metadatos de Cloudinary, intentando migración...`);
-                cloudinaryPublicId = await this.migrateDocumentToCloudinary(document);
-            }
-            try {
-                await this.cloudinaryStorage.deleteFile(cloudinaryPublicId);
-                this.logger.log(`Archivo eliminado de Cloudinary: ${cloudinaryPublicId}`);
-            }
-            catch (cloudinaryError) {
-                if (cloudinaryError instanceof Error && cloudinaryError.message.includes('not found')) {
-                    this.logger.warn(`Archivo no encontrado en Cloudinary: ${cloudinaryPublicId} - continuando con eliminación de BD`);
-                }
-                else {
-                    this.logger.warn(`Error eliminando archivo de Cloudinary: ${cloudinaryError instanceof Error ? cloudinaryError.message : String(cloudinaryError)} - continuando con eliminación de BD`);
-                }
-            }
-            await this.prisma.document.delete({
-                where: { id: documentId }
-            });
-            this.logger.log(`Documento eliminado de base de datos: ${documentId}`);
-            return { message: 'Documento eliminado exitosamente' };
-        }
-        catch (error) {
-            this.logger.error(`Error eliminando documento: ${error instanceof Error ? error.message : String(error)}`);
-            throw new common_1.BadRequestException(`Error eliminando documento: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    }
-    async findMyDocuments(currentUserId, userRole) {
-        if (userRole === 'ADMIN') {
+    async findAll(userId, userRole) {
+        if (userRole === client_1.Role.ADMIN) {
             return this.prisma.document.findMany({
                 include: {
                     expediente: {
-                        include: {
-                            client: {
-                                include: {
-                                    user: {
-                                        select: {
-                                            id: true,
-                                            name: true,
-                                            email: true,
-                                        }
-                                    }
-                                }
-                            },
-                            lawyer: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    email: true,
-                                }
-                            }
+                        select: {
+                            id: true,
+                            title: true
                         }
                     },
                     uploadedByUser: {
                         select: {
                             id: true,
                             name: true,
-                            email: true,
+                            email: true
                         }
                     }
                 },
@@ -5831,157 +5533,23 @@ let CloudinaryDocumentsService = CloudinaryDocumentsService_1 = class Cloudinary
                     uploadedAt: 'desc'
                 }
             });
-        }
-        else if (userRole === 'ABOGADO') {
-            return this.prisma.document.findMany({
-                where: {
-                    expediente: {
-                        lawyerId: currentUserId
-                    }
-                },
-                include: {
-                    expediente: {
-                        include: {
-                            client: {
-                                include: {
-                                    user: {
-                                        select: {
-                                            id: true,
-                                            name: true,
-                                            email: true,
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    uploadedByUser: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                        }
-                    }
-                },
-                orderBy: {
-                    uploadedAt: 'desc'
-                }
-            });
-        }
-        else if (userRole === 'CLIENTE') {
-            const client = await this.prisma.client.findUnique({
-                where: { userId: currentUserId }
-            });
-            if (!client) {
-                throw new common_1.ForbiddenException('Cliente no encontrado');
-            }
-            return this.prisma.document.findMany({
-                where: {
-                    expediente: {
-                        clientId: client.id
-                    }
-                },
-                include: {
-                    expediente: {
-                        include: {
-                            client: true,
-                            lawyer: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    email: true,
-                                }
-                            }
-                        }
-                    },
-                    uploadedByUser: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                        }
-                    }
-                },
-                orderBy: {
-                    uploadedAt: 'desc'
-                }
-            });
-        }
-        throw new common_1.ForbiddenException('Rol de usuario no válido');
-    }
-    async findAll(currentUserId, userRole) {
-        return this.findMyDocuments(currentUserId, userRole);
-    }
-    async getDocumentsStats(currentUserId, userRole) {
-        const documents = await this.findMyDocuments(currentUserId, userRole);
-        const totalDocuments = documents.length;
-        const totalSize = documents.reduce((sum, doc) => sum + doc.fileSize, 0);
-        const documentsByType = documents.reduce((acc, doc) => {
-            const type = doc.mimeType.split('/')[0];
-            acc[type] = (acc[type] || 0) + 1;
-            return acc;
-        }, {});
-        return {
-            totalDocuments,
-            totalSize,
-            documentsByType,
-            averageSize: totalDocuments > 0 ? totalSize / totalDocuments : 0
-        };
-    }
-    async findByExpediente(expedienteId, currentUserId, userRole) {
-        const expediente = await this.prisma.expediente.findUnique({
-            where: { id: expedienteId },
-            include: {
-                client: true,
-                lawyer: true,
-            }
-        });
-        if (!expediente) {
-            throw new common_1.NotFoundException('Expediente no encontrado');
-        }
-        if (userRole === 'CLIENTE') {
-            const client = await this.prisma.client.findUnique({
-                where: { userId: currentUserId }
-            });
-            if (!client || expediente.clientId !== client.id) {
-                throw new common_1.ForbiddenException('No tienes permisos para ver documentos de este expediente');
-            }
-        }
-        else if (userRole === 'ABOGADO') {
-            if (expediente.lawyerId !== currentUserId) {
-                throw new common_1.ForbiddenException('No tienes permisos para ver documentos de este expediente');
-            }
         }
         return this.prisma.document.findMany({
-            where: { expedienteId },
+            where: {
+                uploadedBy: userId
+            },
             include: {
                 expediente: {
-                    include: {
-                        client: {
-                            include: {
-                                user: {
-                                    select: {
-                                        id: true,
-                                        name: true,
-                                        email: true,
-                                    }
-                                }
-                            }
-                        },
-                        lawyer: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                            }
-                        }
+                    select: {
+                        id: true,
+                        title: true
                     }
                 },
                 uploadedByUser: {
                     select: {
                         id: true,
                         name: true,
-                        email: true,
+                        email: true
                     }
                 }
             },
@@ -5990,14 +5558,21 @@ let CloudinaryDocumentsService = CloudinaryDocumentsService_1 = class Cloudinary
             }
         });
     }
-    async findOne(id, currentUserId, userRole) {
+    async findOne(id, userId, userRole) {
         const document = await this.prisma.document.findUnique({
             where: { id },
             include: {
                 expediente: {
-                    include: {
-                        client: true,
-                        lawyer: true,
+                    select: {
+                        id: true,
+                        title: true
+                    }
+                },
+                uploadedByUser: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
                     }
                 }
             }
@@ -6005,1054 +5580,43 @@ let CloudinaryDocumentsService = CloudinaryDocumentsService_1 = class Cloudinary
         if (!document) {
             throw new common_1.NotFoundException('Documento no encontrado');
         }
-        if (userRole === 'CLIENTE') {
-            const client = await this.prisma.client.findUnique({
-                where: { userId: currentUserId }
-            });
-            if (!client || document.expediente.clientId !== client.id) {
-                throw new common_1.ForbiddenException('No tienes permisos para ver este documento');
-            }
-        }
-        else if (userRole === 'ABOGADO') {
-            if (document.expediente.lawyerId !== currentUserId) {
-                throw new common_1.ForbiddenException('No tienes permisos para ver este documento');
-            }
+        if (userRole !== client_1.Role.ADMIN && document.uploadedBy !== userId) {
+            throw new common_1.ForbiddenException('No tienes permisos para acceder a este documento');
         }
         return document;
     }
-    async remove(id, currentUserId, userRole) {
-        return this.deleteDocument(id, currentUserId, userRole);
-    }
-    getFilePath(filename) {
-        return `/api/documents/file/${filename}`;
-    }
-    async getFileStream(filename) {
-        const document = await this.prisma.document.findFirst({
-            where: { filename },
-            include: {
-                expediente: {
-                    include: {
-                        client: true,
-                        lawyer: true,
-                    }
-                }
-            }
-        });
-        if (!document) {
-            throw new common_1.NotFoundException('Documento no encontrado');
-        }
-        let cloudinaryPublicId = document.metadata?.cloudinaryPublicId;
-        if (!cloudinaryPublicId) {
-            if (document.fileUrl && document.fileUrl.includes('cloudinary.com')) {
-                try {
-                    const url = new URL(document.fileUrl);
-                    const pathParts = url.pathname.split('/');
-                    const uploadIndex = pathParts.findIndex(part => part === 'upload');
-                    if (uploadIndex !== -1 && uploadIndex + 2 < pathParts.length) {
-                        const filePath = pathParts.slice(uploadIndex + 2).join('/');
-                        const filePathWithoutExt = filePath.replace(/\.[^/.]+$/, '');
-                        cloudinaryPublicId = filePathWithoutExt;
-                        this.logger.log(`PublicId extraído de la URL: ${document.fileUrl} -> ${cloudinaryPublicId}`);
-                    }
-                }
-                catch (urlError) {
-                    this.logger.warn(`Error parseando URL de Cloudinary: ${urlError}`);
-                }
-            }
-            if (!cloudinaryPublicId) {
-                const filenameParts = filename.split('.');
-                if (filenameParts.length > 1) {
-                    cloudinaryPublicId = filenameParts.slice(0, -1).join('.');
-                }
-                else {
-                    cloudinaryPublicId = filename;
-                }
-                this.logger.log(`PublicId extraído del filename como fallback: ${filename} -> ${cloudinaryPublicId}`);
-            }
-        }
-        try {
-            await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
-            await this.prisma.document.update({
-                where: { id: document.id },
-                data: {
-                    metadata: {
-                        cloudinaryPublicId: cloudinaryPublicId,
-                        storageType: 'cloudinary',
-                        cloudinaryUrl: document.fileUrl,
-                        updatedAt: new Date().toISOString()
-                    }
-                }
-            });
-            this.logger.log(`Metadatos de Cloudinary actualizados para documento ${document.id}`);
-        }
-        catch (cloudinaryError) {
-            this.logger.error(`Error verificando archivo en Cloudinary: ${cloudinaryError instanceof Error ? cloudinaryError.message : String(cloudinaryError)}`);
-            try {
-                const alternativePublicId = filename;
-                await this.cloudinaryStorage.getFileMetadata(alternativePublicId);
-                this.logger.log(`Archivo encontrado con filename alternativo: ${alternativePublicId}`);
-                await this.prisma.document.update({
-                    where: { id: document.id },
-                    data: {
-                        metadata: {
-                            cloudinaryPublicId: alternativePublicId,
-                            storageType: 'cloudinary',
-                            cloudinaryUrl: document.fileUrl,
-                            updatedAt: new Date().toISOString()
-                        }
-                    }
-                });
-                cloudinaryPublicId = alternativePublicId;
-            }
-            catch (alternativeError) {
-                this.logger.error(`Error con filename alternativo: ${alternativeError instanceof Error ? alternativeError.message : String(alternativeError)}`);
-                throw new common_1.NotFoundException('El archivo no existe en Cloudinary');
-            }
-        }
-        return this.cloudinaryStorage.downloadFile(cloudinaryPublicId);
-    }
-    async checkFileAccess(filename, currentUserId, userRole) {
-        const document = await this.prisma.document.findFirst({
-            where: { filename },
-            include: {
-                expediente: {
-                    include: {
-                        client: true,
-                        lawyer: true,
-                    }
-                }
-            }
-        });
-        if (!document) {
-            return false;
-        }
-        if (userRole === 'CLIENTE') {
-            const client = await this.prisma.client.findUnique({
-                where: { userId: currentUserId }
-            });
-            return client && document.expediente.clientId === client.id;
-        }
-        else if (userRole === 'ABOGADO') {
-            return document.expediente.lawyerId === currentUserId;
-        }
-        else if (userRole === 'ADMIN') {
-            return true;
-        }
-        return false;
-    }
-    async findDocumentByFilename(filename) {
-        return this.prisma.document.findFirst({
-            where: { filename },
-            include: {
-                expediente: {
-                    include: {
-                        client: true,
-                        lawyer: true,
-                    }
-                }
-            }
-        });
-    }
-    async findDocumentById(id) {
-        return this.prisma.document.findUnique({
-            where: { id },
-            include: {
-                expediente: {
-                    include: {
-                        client: true,
-                        lawyer: true,
-                    }
-                }
-            }
-        });
-    }
-    async checkDocumentAccess(documentId, currentUserId, userRole) {
-        const document = await this.prisma.document.findUnique({
-            where: { id: documentId },
-            include: {
-                expediente: {
-                    include: {
-                        client: true,
-                        lawyer: true,
-                    }
-                }
-            }
-        });
-        if (!document) {
-            return false;
-        }
-        if (userRole === 'CLIENTE') {
-            const client = await this.prisma.client.findUnique({
-                where: { userId: currentUserId }
-            });
-            return client && document.expediente.clientId === client.id;
-        }
-        else if (userRole === 'ABOGADO') {
-            return document.expediente.lawyerId === currentUserId;
-        }
-        else if (userRole === 'ADMIN') {
-            return true;
-        }
-        return false;
-    }
-    async getDocumentStream(documentId) {
-        const document = await this.prisma.document.findUnique({
-            where: { id: documentId },
-            include: {
-                expediente: {
-                    include: {
-                        client: true,
-                        lawyer: true,
-                    }
-                }
-            }
-        });
-        if (!document) {
-            throw new common_1.NotFoundException('Documento no encontrado');
-        }
-        let cloudinaryPublicId = document.metadata?.cloudinaryPublicId;
-        if (!cloudinaryPublicId) {
-            cloudinaryPublicId = document.filename;
-            try {
-                await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
-                await this.prisma.document.update({
-                    where: { id: document.id },
-                    data: {
-                        metadata: {
-                            cloudinaryPublicId: cloudinaryPublicId,
-                            storageType: 'cloudinary',
-                            cloudinaryUrl: document.fileUrl,
-                            updatedAt: new Date().toISOString()
-                        }
-                    }
-                });
-                this.logger.log(`Metadatos de Cloudinary actualizados para documento ${document.id}`);
-            }
-            catch (cloudinaryError) {
-                this.logger.error(`Error verificando archivo en Cloudinary: ${cloudinaryError instanceof Error ? cloudinaryError.message : String(cloudinaryError)}`);
-                throw new common_1.NotFoundException('El archivo no existe en Cloudinary');
-            }
-        }
-        return this.cloudinaryStorage.downloadFile(cloudinaryPublicId);
-    }
-    async getStorageStats() {
-        try {
-            const cloudinaryStats = await this.cloudinaryStorage.getUsageStats();
-            const freePlanInfo = this.cloudinaryStorage.getFreePlanInfo();
-            return {
-                cloudinary: {
-                    available: this.cloudinaryStorage.isAvailable(),
-                    stats: cloudinaryStats,
-                    freePlan: freePlanInfo
-                },
-                database: {
-                    totalDocuments: await this.prisma.document.count(),
-                    totalSize: await this.getTotalDatabaseSize()
-                }
-            };
-        }
-        catch (error) {
-            this.logger.error(`Error obteniendo estadísticas: ${error instanceof Error ? error.message : String(error)}`);
-            return {
-                error: 'No se pudieron obtener estadísticas',
-                cloudinary: {
-                    available: this.cloudinaryStorage.isAvailable()
-                }
-            };
-        }
-    }
-    async getTotalDatabaseSize() {
-        const result = await this.prisma.document.aggregate({
-            _sum: {
-                fileSize: true
-            }
-        });
-        return result._sum.fileSize || 0;
-    }
-    validateFile(file) {
-        if (!file) {
-            throw new common_1.BadRequestException('No se proporcionó ningún archivo');
-        }
-        if (!this.ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-            throw new common_1.BadRequestException(`Tipo de archivo no permitido: ${file.mimetype}`);
-        }
-        if (file.size > this.MAX_FILE_SIZE) {
-            throw new common_1.BadRequestException(`El archivo es demasiado grande. Tamaño máximo: ${this.MAX_FILE_SIZE / (1024 * 1024)}MB`);
-        }
-    }
-    async migrateDocumentToCloudinary(document) {
-        try {
-            this.logger.log(`Migrando documento ${document.id} a metadatos de Cloudinary`);
-            if (document.filename && !document.filename.startsWith('/uploads/') && !document.filename.startsWith('uploads/')) {
-                const cloudinaryPublicId = document.filename;
-                try {
-                    await this.cloudinaryStorage.getFileMetadata(cloudinaryPublicId);
-                    await this.prisma.document.update({
-                        where: { id: document.id },
-                        data: {
-                            metadata: {
-                                cloudinaryPublicId: cloudinaryPublicId,
-                                storageType: 'cloudinary',
-                                cloudinaryUrl: document.fileUrl,
-                                migratedAt: new Date().toISOString()
-                            }
-                        }
-                    });
-                    this.logger.log(`Documento ${document.id} migrado exitosamente a Cloudinary`);
-                    return cloudinaryPublicId;
-                }
-                catch (cloudinaryError) {
-                    this.logger.error(`Error verificando archivo en Cloudinary: ${cloudinaryError instanceof Error ? cloudinaryError.message : String(cloudinaryError)}`);
-                    throw new common_1.NotFoundException('El archivo no existe en Cloudinary');
-                }
-            }
-            else {
-                throw new common_1.NotFoundException('El archivo local ya no está disponible');
-            }
-        }
-        catch (error) {
-            this.logger.error(`Error migrando documento: ${error instanceof Error ? error.message : String(error)}`);
-            throw error;
-        }
-    }
-};
-exports.CloudinaryDocumentsService = CloudinaryDocumentsService;
-exports.CloudinaryDocumentsService = CloudinaryDocumentsService = CloudinaryDocumentsService_1 = __decorate([
-    (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof cloudinary_storage_service_1.CloudinaryStorageService !== "undefined" && cloudinary_storage_service_1.CloudinaryStorageService) === "function" ? _b : Object, typeof (_c = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _c : Object])
-], CloudinaryDocumentsService);
-
-
-/***/ }),
-/* 45 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-var CloudinaryStorageService_1;
-var _a;
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CloudinaryStorageService = void 0;
-const common_1 = __webpack_require__(2);
-const config_1 = __webpack_require__(5);
-const cloudinary_1 = __webpack_require__(46);
-const stream_1 = __webpack_require__(47);
-let CloudinaryStorageService = CloudinaryStorageService_1 = class CloudinaryStorageService {
-    constructor(configService) {
-        this.configService = configService;
-        this.logger = new common_1.Logger(CloudinaryStorageService_1.name);
-        this.isConfigured = false;
-        const cloudName = this.configService.get('CLOUDINARY_CLOUD_NAME');
-        const apiKey = this.configService.get('CLOUDINARY_API_KEY');
-        const apiSecret = this.configService.get('CLOUDINARY_API_SECRET');
-        if (cloudName && apiKey && apiSecret) {
-            cloudinary_1.v2.config({
-                cloud_name: cloudName,
-                api_key: apiKey,
-                api_secret: apiSecret,
-            });
-            this.isConfigured = true;
-            this.logger.log('Cloudinary Storage inicializado correctamente');
-        }
-        else {
-            this.logger.warn('Credenciales de Cloudinary no configuradas, Cloudinary Storage deshabilitado');
-        }
-    }
-    async uploadFile(file, folder = 'experimento2', metadata) {
-        try {
-            if (!this.isConfigured) {
-                throw new Error('Cloudinary Storage no está configurado');
-            }
-            const stream = new stream_1.Readable();
-            stream.push(file.buffer);
-            stream.push(null);
-            const uploadOptions = {
-                folder,
-                resource_type: 'auto',
-                public_id: `${Date.now()}-${Math.random().toString(36).substring(7)}`,
-                overwrite: false,
-                unique_filename: true,
-            };
-            if (metadata) {
-                uploadOptions.context = metadata;
-            }
-            const result = await new Promise((resolve, reject) => {
-                const uploadStream = cloudinary_1.v2.uploader.upload_stream(uploadOptions, (error, result) => {
-                    if (error)
-                        reject(error);
-                    else
-                        resolve(result);
-                });
-                stream.pipe(uploadStream);
-            });
-            this.logger.log(`Archivo subido exitosamente a Cloudinary: ${result.public_id}`);
-            return {
-                url: result.secure_url,
-                publicId: result.public_id,
-                storageType: 'cloudinary'
-            };
-        }
-        catch (error) {
-            this.logger.error(`Error subiendo archivo a Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
-            throw error;
-        }
-    }
-    async downloadFile(publicId) {
-        try {
-            if (!this.isConfigured) {
-                throw new Error('Cloudinary Storage no está configurado');
-            }
-            this.logger.log(`Intentando descargar archivo de Cloudinary: ${publicId}`);
-            let info;
-            try {
-                info = await cloudinary_1.v2.api.resource(publicId);
-            }
-            catch (directError) {
-                this.logger.log(`Método directo falló, usando búsqueda por prefix: ${publicId}`);
-                const resourcesResult = await cloudinary_1.v2.api.resources({
-                    prefix: publicId,
-                    max_results: 1,
-                    type: 'upload'
-                });
-                if (resourcesResult.resources && resourcesResult.resources.length > 0) {
-                    info = resourcesResult.resources[0];
-                    this.logger.log(`Archivo encontrado por prefix: ${info.public_id}`);
-                }
-                else {
-                    throw new Error('No se pudo encontrar el archivo en Cloudinary');
-                }
-            }
-            if (!info) {
-                throw new Error('No se pudo obtener información del archivo desde Cloudinary');
-            }
-            this.logger.log(`Información del archivo obtenida: ${info.public_id}, formato: ${info.format}, tipo: ${info.resource_type}`);
-            const downloadUrl = cloudinary_1.v2.url(publicId, {
-                secure: true,
-                resource_type: info.resource_type
-            });
-            this.logger.log(`URL de descarga generada: ${downloadUrl}`);
-            const response = await fetch(downloadUrl);
-            if (!response.ok) {
-                throw new Error(`Error descargando archivo: ${response.status} ${response.statusText}`);
-            }
-            const arrayBuffer = await response.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-            this.logger.log(`Archivo descargado, tamaño: ${buffer.length} bytes`);
-            const stream = new stream_1.Readable();
-            stream.push(buffer);
-            stream.push(null);
-            this.logger.log(`Archivo descargado exitosamente de Cloudinary: ${publicId}`);
-            return {
-                stream,
-                metadata: {
-                    contentType: this.getMimeTypeFromPublicId(publicId, info.format),
-                    contentLength: buffer.length,
-                    lastModified: new Date(info.created_at),
-                    publicId: info.public_id,
-                    resourceType: info.resource_type,
-                    format: info.format,
-                    width: info.width,
-                    height: info.height,
-                },
-                storageType: 'cloudinary'
-            };
-        }
-        catch (error) {
-            this.logger.error(`Error descargando archivo de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
-            if (error instanceof Error && (error.message.includes('fetch') ||
-                error.message.includes('network') ||
-                error.message.includes('timeout') ||
-                error.message.includes('404') ||
-                error.message.includes('not found'))) {
-                this.logger.warn(`Error de red o archivo no encontrado detectado, sugiriendo uso de URL directa`);
-                throw new Error(`Error al descargar archivo desde Cloudinary. El archivo puede no existir o haber problemas de conectividad.`);
-            }
-            throw error;
-        }
-    }
-    async generateDownloadUrl(publicId, options = {}) {
-        try {
-            if (!this.isConfigured) {
-                throw new Error('Cloudinary Storage no está configurado');
-            }
-            const url = cloudinary_1.v2.url(publicId, {
-                secure: true,
-                ...options
-            });
-            this.logger.log(`URL de descarga generada para: ${publicId}`);
-            return url;
-        }
-        catch (error) {
-            this.logger.error(`Error generando URL de descarga: ${error instanceof Error ? error.message : String(error)}`);
-            throw error;
-        }
-    }
-    async fileExists(publicId) {
-        try {
-            if (!this.isConfigured) {
-                return false;
-            }
-            try {
-                await cloudinary_1.v2.api.resource(publicId);
-                return true;
-            }
-            catch (directError) {
-                const resourcesResult = await cloudinary_1.v2.api.resources({
-                    prefix: publicId,
-                    max_results: 1,
-                    type: 'upload'
-                });
-                return resourcesResult.resources && resourcesResult.resources.length > 0;
-            }
-        }
-        catch (error) {
-            this.logger.error(`Error verificando existencia del archivo: ${error instanceof Error ? error.message : String(error)}`);
-            return false;
-        }
-    }
-    async getFileMetadata(publicId) {
-        try {
-            if (!this.isConfigured) {
-                throw new Error('Cloudinary Storage no está configurado');
-            }
-            this.logger.log(`Obteniendo metadatos del archivo: ${publicId}`);
-            let info;
-            try {
-                info = await cloudinary_1.v2.api.resource(publicId);
-            }
-            catch (directError) {
-                this.logger.log(`Método directo falló, usando búsqueda por prefix: ${publicId}`);
-                const resourcesResult = await cloudinary_1.v2.api.resources({
-                    prefix: publicId,
-                    max_results: 1,
-                    type: 'upload'
-                });
-                if (resourcesResult.resources && resourcesResult.resources.length > 0) {
-                    info = resourcesResult.resources[0];
-                    this.logger.log(`Archivo encontrado por prefix: ${info.public_id}`);
-                }
-                else {
-                    throw new Error('No se pudo encontrar el archivo en Cloudinary');
-                }
-            }
-            if (!info) {
-                throw new Error('No se pudo obtener información del archivo desde Cloudinary');
-            }
-            this.logger.log(`Metadatos obtenidos exitosamente: ${info.public_id}`);
-            return {
-                publicId: info.public_id,
-                resourceType: info.resource_type,
-                format: info.format,
-                size: info.bytes || 0,
-                createdAt: new Date(info.created_at),
-                url: info.secure_url
-            };
-        }
-        catch (error) {
-            this.logger.error(`Error obteniendo metadatos del archivo: ${error instanceof Error ? error.message : String(error)}`);
-            throw error;
-        }
-    }
-    async deleteFile(publicId) {
-        try {
-            if (!this.isConfigured) {
-                throw new Error('Cloudinary Storage no está configurado');
-            }
-            const result = await cloudinary_1.v2.uploader.destroy(publicId);
-            if (result.result === 'ok') {
-                this.logger.log(`Archivo eliminado exitosamente de Cloudinary: ${publicId}`);
-            }
-            else {
-                throw new Error(`Error eliminando archivo: ${result.result}`);
-            }
-        }
-        catch (error) {
-            this.logger.error(`Error eliminando archivo de Cloudinary: ${error instanceof Error ? error.message : String(error)}`);
-            throw error;
-        }
-    }
-    async transformFile(publicId, transformations = {}) {
-        try {
-            if (!this.isConfigured) {
-                throw new Error('Cloudinary Storage no está configurado');
-            }
-            const url = cloudinary_1.v2.url(publicId, {
-                secure: true,
-                ...transformations
-            });
-            this.logger.log(`URL transformada generada para: ${publicId}`);
-            return url;
-        }
-        catch (error) {
-            this.logger.error(`Error transformando archivo: ${error instanceof Error ? error.message : String(error)}`);
-            throw error;
-        }
-    }
-    async getUsageStats() {
-        try {
-            if (!this.isConfigured) {
-                throw new Error('Cloudinary Storage no está configurado');
-            }
-            const usage = await cloudinary_1.v2.api.usage();
-            return {
-                storageType: 'cloudinary',
-                plan: usage.plan,
-                credits: usage.credits,
-                objects: usage.objects,
-                bandwidth: usage.bandwidth,
-                storage: usage.storage,
-                requests: usage.requests,
-                resources: usage.resources,
-                derived_resources: usage.derived_resources,
-                transformations: usage.transformations,
-                videos: usage.videos,
-                images: usage.images,
-                raw: usage.raw,
-            };
-        }
-        catch (error) {
-            this.logger.error(`Error obteniendo estadísticas de uso: ${error instanceof Error ? error.message : String(error)}`);
-            return {
-                storageType: 'cloudinary',
-                error: 'No se pudieron obtener estadísticas'
-            };
-        }
-    }
-    isAvailable() {
-        return this.isConfigured;
-    }
-    getFreePlanInfo() {
-        return {
-            storage: '25GB',
-            transfer: '25GB/mes',
-            transformations: '25,000/mes',
-            features: [
-                'CDN global',
-                'Transformaciones automáticas',
-                'Optimización de imágenes',
-                'Soporte para PDFs y documentos',
-                'URLs seguras HTTPS',
-                'API REST completa'
-            ],
-            limitations: [
-                'Máximo 10MB por archivo',
-                'Sin soporte premium',
-                'Sin backup automático'
-            ]
-        };
-    }
-    getMimeTypeFromPublicId(publicId, cloudinaryFormat) {
-        if (cloudinaryFormat) {
-            switch (cloudinaryFormat.toLowerCase()) {
-                case 'docx':
-                    return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-                case 'doc':
-                    return 'application/msword';
-                case 'pdf':
-                    return 'application/pdf';
-                case 'txt':
-                    return 'text/plain';
-                case 'csv':
-                    return 'text/csv';
-                case 'jpg':
-                case 'jpeg':
-                    return 'image/jpeg';
-                case 'png':
-                    return 'image/png';
-                case 'gif':
-                    return 'image/gif';
-                case 'webp':
-                    return 'image/webp';
-                default:
-                    return `application/${cloudinaryFormat}`;
-            }
-        }
-        const extension = publicId.includes('.') ? publicId.split('.').pop()?.toLowerCase() : '';
-        switch (extension) {
-            case 'docx':
-                return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-            case 'doc':
-                return 'application/msword';
-            case 'pdf':
-                return 'application/pdf';
-            case 'txt':
-                return 'text/plain';
-            case 'csv':
-                return 'text/csv';
-            case 'jpg':
-            case 'jpeg':
-                return 'image/jpeg';
-            case 'png':
-                return 'image/png';
-            case 'gif':
-                return 'image/gif';
-            case 'webp':
-                return 'image/webp';
-            default:
-                return 'application/octet-stream';
-        }
-    }
-};
-exports.CloudinaryStorageService = CloudinaryStorageService;
-exports.CloudinaryStorageService = CloudinaryStorageService = CloudinaryStorageService_1 = __decorate([
-    (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [typeof (_a = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _a : Object])
-], CloudinaryStorageService);
-
-
-/***/ }),
-/* 46 */
-/***/ ((module) => {
-
-module.exports = require("cloudinary");
-
-/***/ }),
-/* 47 */
-/***/ ((module) => {
-
-module.exports = require("stream");
-
-/***/ }),
-/* 48 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-var _a;
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DocumentsService = void 0;
-const common_1 = __webpack_require__(2);
-const prisma_service_1 = __webpack_require__(8);
-const client_1 = __webpack_require__(9);
-const https = __importStar(__webpack_require__(49));
-const http = __importStar(__webpack_require__(50));
-const url_1 = __webpack_require__(51);
-let DocumentsService = class DocumentsService {
-    constructor(prisma) {
-        this.prisma = prisma;
-    }
-    async create(documentData) {
-        try {
-            const document = await this.prisma.document.create({
-                data: {
-                    filename: documentData.filename,
-                    originalName: documentData.originalName,
-                    mimeType: documentData.mimeType,
-                    fileSize: documentData.size,
-                    fileUrl: documentData.fileUrl,
-                    description: documentData.description,
-                    expedienteId: documentData.expedienteId,
-                    uploadedBy: documentData.uploadedBy,
-                    metadata: documentData.metadata || {}
-                }
-            });
-            return document;
-        }
-        catch (error) {
-            console.error('Error creating document:', error);
-            throw error;
-        }
-    }
-    async findAll(userId, userRole) {
-        try {
-            if (userRole === client_1.Role.ADMIN) {
-                return await this.prisma.document.findMany({
-                    include: {
-                        expediente: true,
-                        uploadedByUser: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true
-                            }
-                        }
-                    },
-                    orderBy: {
-                        uploadedAt: 'desc'
-                    }
-                });
-            }
-            else if (userRole === client_1.Role.ABOGADO) {
-                const expedientes = await this.prisma.expediente.findMany({
-                    where: {
-                        lawyerId: userId
-                    },
-                    select: {
-                        id: true
-                    }
-                });
-                const expedienteIds = expedientes.map(exp => exp.id);
-                return await this.prisma.document.findMany({
-                    where: {
-                        expedienteId: {
-                            in: expedienteIds
-                        }
-                    },
-                    include: {
-                        expediente: true,
-                        uploadedByUser: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true
-                            }
-                        }
-                    },
-                    orderBy: {
-                        uploadedAt: 'desc'
-                    }
-                });
-            }
-            else {
-                const expedientes = await this.prisma.expediente.findMany({
-                    where: {
-                        clientId: userId
-                    },
-                    select: {
-                        id: true
-                    }
-                });
-                const expedienteIds = expedientes.map(exp => exp.id);
-                return await this.prisma.document.findMany({
-                    where: {
-                        expedienteId: {
-                            in: expedienteIds
-                        }
-                    },
-                    include: {
-                        expediente: true,
-                        uploadedByUser: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true
-                            }
-                        }
-                    },
-                    orderBy: {
-                        uploadedAt: 'desc'
-                    }
-                });
-            }
-        }
-        catch (error) {
-            console.error('Error finding all documents:', error);
-            throw error;
-        }
-    }
     async findMyDocuments(userId, userRole) {
-        try {
-            if (userRole === client_1.Role.ADMIN) {
-                return await this.prisma.document.findMany({
-                    include: {
-                        expediente: true,
-                        uploadedByUser: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true
-                            }
-                        }
-                    },
-                    orderBy: {
-                        uploadedAt: 'desc'
-                    }
-                });
-            }
-            else if (userRole === client_1.Role.ABOGADO) {
-                const expedientes = await this.prisma.expediente.findMany({
-                    where: {
-                        lawyerId: userId
-                    },
+        if (userRole === client_1.Role.ADMIN) {
+            return this.findAll(userId, userRole);
+        }
+        return this.prisma.document.findMany({
+            where: {
+                uploadedBy: userId
+            },
+            include: {
+                expediente: {
                     select: {
-                        id: true
-                    }
-                });
-                const expedienteIds = expedientes.map(exp => exp.id);
-                return await this.prisma.document.findMany({
-                    where: {
-                        expedienteId: {
-                            in: expedienteIds
-                        }
-                    },
-                    include: {
-                        expediente: true,
-                        uploadedByUser: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true
-                            }
-                        }
-                    },
-                    orderBy: {
-                        uploadedAt: 'desc'
-                    }
-                });
-            }
-            else {
-                const expedientes = await this.prisma.expediente.findMany({
-                    where: {
-                        clientId: userId
-                    },
-                    select: {
-                        id: true
-                    }
-                });
-                const expedienteIds = expedientes.map(exp => exp.id);
-                return await this.prisma.document.findMany({
-                    where: {
-                        expedienteId: {
-                            in: expedienteIds
-                        }
-                    },
-                    include: {
-                        expediente: true,
-                        uploadedByUser: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true
-                            }
-                        }
-                    },
-                    orderBy: {
-                        uploadedAt: 'desc'
-                    }
-                });
-            }
-        }
-        catch (error) {
-            console.error('Error finding my documents:', error);
-            throw error;
-        }
-    }
-    async findOne(id, userId, userRole) {
-        try {
-            const document = await this.prisma.document.findUnique({
-                where: { id },
-                include: {
-                    expediente: true,
-                    uploadedByUser: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true
-                        }
+                        id: true,
+                        title: true
                     }
                 }
-            });
-            if (!document) {
-                throw new common_1.NotFoundException(`Documento no encontrado: ${id}`);
+            },
+            orderBy: {
+                uploadedAt: 'desc'
             }
-            if (userRole === client_1.Role.ADMIN) {
-                return document;
-            }
-            else if (userRole === client_1.Role.ABOGADO) {
-                if (document.expediente && document.expediente.lawyerId === userId) {
-                    return document;
-                }
-                else {
-                    throw new common_1.ForbiddenException('No tienes acceso a este documento');
-                }
-            }
-            else {
-                if (document.expediente && document.expediente.clientId === userId) {
-                    return document;
-                }
-                else {
-                    throw new common_1.ForbiddenException('No tienes acceso a este documento');
-                }
-            }
-        }
-        catch (error) {
-            if (error instanceof common_1.NotFoundException || error instanceof common_1.ForbiddenException) {
-                throw error;
-            }
-            console.error('Error finding document:', error);
-            throw error;
-        }
+        });
     }
     async findByExpediente(expedienteId, userId, userRole) {
-        try {
-            const expediente = await this.prisma.expediente.findUnique({
-                where: { id: expedienteId },
-                select: {
-                    id: true,
-                    lawyerId: true,
-                    clientId: true
-                }
-            });
-            if (!expediente) {
-                throw new common_1.NotFoundException(`Expediente no encontrado: ${expedienteId}`);
-            }
-            if (userRole === client_1.Role.ADMIN) {
-            }
-            else if (userRole === client_1.Role.ABOGADO) {
-                if (expediente.lawyerId !== userId) {
-                    throw new common_1.ForbiddenException('No tienes acceso a este expediente');
-                }
-            }
-            else {
-                if (expediente.clientId !== userId) {
-                    throw new common_1.ForbiddenException('No tienes acceso a este expediente');
-                }
-            }
-            return await this.prisma.document.findMany({
-                where: {
-                    expedienteId: expedienteId
-                },
+        if (userRole === client_1.Role.ADMIN) {
+            return this.prisma.document.findMany({
+                where: { expedienteId },
                 include: {
-                    expediente: true,
+                    expediente: {
+                        select: {
+                            id: true,
+                            title: true
+                        }
+                    },
                     uploadedByUser: {
                         select: {
                             id: true,
@@ -7066,173 +5630,68 @@ let DocumentsService = class DocumentsService {
                 }
             });
         }
-        catch (error) {
-            if (error instanceof common_1.NotFoundException || error instanceof common_1.ForbiddenException) {
-                throw error;
-            }
-            console.error('Error finding documents by expediente:', error);
-            throw error;
-        }
-    }
-    async getDocumentsStats(userId, userRole) {
-        try {
-            let documents;
-            if (userRole === client_1.Role.ADMIN) {
-                documents = await this.prisma.document.findMany();
-            }
-            else if (userRole === client_1.Role.ABOGADO) {
-                const expedientes = await this.prisma.expediente.findMany({
-                    where: { lawyerId: userId },
-                    select: { id: true }
-                });
-                const expedienteIds = expedientes.map(exp => exp.id);
-                documents = await this.prisma.document.findMany({
-                    where: {
-                        expedienteId: { in: expedienteIds }
+        return this.prisma.document.findMany({
+            where: {
+                expedienteId,
+                uploadedBy: userId
+            },
+            include: {
+                expediente: {
+                    select: {
+                        id: true,
+                        title: true
                     }
-                });
-            }
-            else {
-                const expedientes = await this.prisma.expediente.findMany({
-                    where: { clientId: userId },
-                    select: { id: true }
-                });
-                const expedienteIds = expedientes.map(exp => exp.id);
-                documents = await this.prisma.document.findMany({
-                    where: {
-                        expedienteId: { in: expedienteIds }
-                    }
-                });
-            }
-            const totalDocuments = documents.length;
-            const totalSize = documents.reduce((sum, doc) => sum + (doc.fileSize || 0), 0);
-            const documentsByType = {
-                pdf: documents.filter(doc => doc.mimeType === 'application/pdf').length,
-                doc: documents.filter(doc => doc.mimeType === 'application/msword' ||
-                    doc.mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document').length,
-                image: documents.filter(doc => doc.mimeType && doc.mimeType.startsWith('image/')).length,
-                other: documents.filter(doc => doc.mimeType &&
-                    doc.mimeType !== 'application/pdf' &&
-                    doc.mimeType !== 'application/msword' &&
-                    doc.mimeType !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' &&
-                    !doc.mimeType.startsWith('image/')).length
-            };
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-            const recentUploads = documents.filter(doc => doc.uploadedAt && new Date(doc.uploadedAt) > sevenDaysAgo).length;
-            return {
-                totalDocuments,
-                totalSize,
-                documentsByType,
-                recentUploads
-            };
-        }
-        catch (error) {
-            console.error('Error getting documents stats:', error);
-            throw error;
-        }
-    }
-    async remove(id, userId, userRole) {
-        try {
-            if (userRole !== client_1.Role.ADMIN && userRole !== client_1.Role.ABOGADO) {
-                throw new common_1.ForbiddenException('Solo ADMIN y ABOGADO pueden eliminar documentos');
-            }
-            const document = await this.prisma.document.findUnique({
-                where: { id },
-                include: {
-                    expediente: true
                 }
-            });
-            if (!document) {
-                throw new common_1.NotFoundException(`Documento no encontrado: ${id}`);
+            },
+            orderBy: {
+                uploadedAt: 'desc'
             }
-            if (userRole === client_1.Role.ABOGADO) {
-                if (document.expediente && document.expediente.lawyerId !== userId) {
-                    throw new common_1.ForbiddenException('No puedes eliminar documentos de otros expedientes');
-                }
-            }
-            const deletedDocument = await this.prisma.document.delete({
-                where: { id }
-            });
-            return deletedDocument;
-        }
-        catch (error) {
-            if (error instanceof common_1.NotFoundException || error instanceof common_1.ForbiddenException) {
-                throw error;
-            }
-            console.error('Error removing document:', error);
-            throw error;
-        }
-    }
-    isExternalDocument(fileUrl) {
-        if (!fileUrl)
-            return false;
-        try {
-            const url = new url_1.URL(fileUrl);
-            return !fileUrl.startsWith('/uploads/') && (url.protocol === 'http:' || url.protocol === 'https:');
-        }
-        catch {
-            return false;
-        }
-    }
-    async downloadExternalFile(fileUrl) {
-        return new Promise((resolve, reject) => {
-            const url = new url_1.URL(fileUrl);
-            const protocol = url.protocol === 'https:' ? https : http;
-            const request = protocol.get(fileUrl, (response) => {
-                if (response.statusCode !== 200) {
-                    reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`));
-                    return;
-                }
-                const chunks = [];
-                let totalLength = 0;
-                response.on('data', (chunk) => {
-                    chunks.push(chunk);
-                    totalLength += chunk.length;
-                });
-                response.on('end', () => {
-                    const buffer = Buffer.concat(chunks);
-                    const contentType = response.headers['content-type'] || 'application/octet-stream';
-                    const contentLength = parseInt(response.headers['content-length'] || '0') || totalLength;
-                    resolve({ buffer, contentType, contentLength });
-                });
-            });
-            request.on('error', (error) => {
-                reject(new Error(`Error descargando archivo: ${error.message}`));
-            });
-            request.on('timeout', () => {
-                request.destroy();
-                reject(new Error('Timeout al descargar archivo'));
-            });
-            request.setTimeout(30000);
         });
     }
-    async getFileInfo(document) {
-        const isExternal = this.isExternalDocument(document.fileUrl);
-        if (isExternal) {
-            try {
-                const fileInfo = await this.downloadExternalFile(document.fileUrl);
-                return {
-                    isExternal: true,
-                    externalUrl: document.fileUrl,
-                    contentType: fileInfo.contentType,
-                    contentLength: fileInfo.contentLength
-                };
-            }
-            catch (error) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                throw new Error(`Error al acceder al archivo externo: ${errorMessage}`);
-            }
+    async remove(id, userId) {
+        const document = await this.prisma.document.findUnique({
+            where: { id }
+        });
+        if (!document) {
+            throw new common_1.NotFoundException('Documento no encontrado');
         }
-        else {
-            const localPath = document.fileUrl?.replace('/uploads/', '');
+        if (document.uploadedBy !== userId) {
+            throw new common_1.ForbiddenException('No tienes permisos para eliminar este documento');
+        }
+        return this.prisma.document.delete({
+            where: { id }
+        });
+    }
+    async getDocumentsStats(userId, userRole) {
+        if (userRole === client_1.Role.ADMIN) {
+            const total = await this.prisma.document.count();
+            const byType = await this.prisma.document.groupBy({
+                by: ['mimeType'],
+                _count: {
+                    mimeType: true
+                }
+            });
             return {
-                isExternal: false,
-                localPath,
-                contentType: document.mimeType || 'application/octet-stream',
-                contentLength: document.fileSize || 0
+                total,
+                byType,
+                userRole: 'admin'
             };
         }
+        const total = await this.prisma.document.count({
+            where: { uploadedBy: userId }
+        });
+        const byType = await this.prisma.document.groupBy({
+            by: ['mimeType'],
+            where: { uploadedBy: userId },
+            _count: {
+                mimeType: true
+            }
+        });
+        return {
+            total,
+            byType,
+            userRole: 'user'
+        };
     }
 };
 exports.DocumentsService = DocumentsService;
@@ -7243,25 +5702,7 @@ exports.DocumentsService = DocumentsService = __decorate([
 
 
 /***/ }),
-/* 49 */
-/***/ ((module) => {
-
-module.exports = require("https");
-
-/***/ }),
-/* 50 */
-/***/ ((module) => {
-
-module.exports = require("http");
-
-/***/ }),
-/* 51 */
-/***/ ((module) => {
-
-module.exports = require("url");
-
-/***/ }),
-/* 52 */
+/* 45 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7310,713 +5751,126 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var DocumentsController_1;
-var _a, _b, _c, _d, _e, _f;
+var _a, _b, _c, _d, _e;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DocumentsController = void 0;
 const common_1 = __webpack_require__(2);
-const platform_express_1 = __webpack_require__(53);
-const express_1 = __webpack_require__(54);
+const platform_express_1 = __webpack_require__(46);
+const express_1 = __webpack_require__(47);
 const swagger_1 = __webpack_require__(3);
-const postgres_storage_service_1 = __webpack_require__(55);
-const documents_service_1 = __webpack_require__(48);
-const file_storage_service_1 = __webpack_require__(56);
-const upload_document_dto_1 = __webpack_require__(61);
+const documents_service_1 = __webpack_require__(44);
+const upload_document_dto_1 = __webpack_require__(48);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
-const fs = __importStar(__webpack_require__(57));
-const path = __importStar(__webpack_require__(58));
-const storage_config_1 = __webpack_require__(59);
-let DocumentsController = DocumentsController_1 = class DocumentsController {
-    constructor(documentsService, postgresStorageService, fileStorageService) {
+const fs = __importStar(__webpack_require__(49));
+const path = __importStar(__webpack_require__(50));
+let DocumentsController = class DocumentsController {
+    constructor(documentsService) {
         this.documentsService = documentsService;
-        this.postgresStorageService = postgresStorageService;
-        this.fileStorageService = fileStorageService;
-        this.logger = new common_1.Logger(DocumentsController_1.name);
     }
-    async uploadDocument(file, uploadDocumentDto, req) {
-        return this.postgresStorageService.storeFile(file.buffer, file.filename, file.originalname, file.mimetype, uploadDocumentDto.expedienteId, req.user.id, uploadDocumentDto.description);
-    }
-    findMyDocuments(req) {
-        return this.documentsService.findMyDocuments(req.user.id, req.user.role);
-    }
-    findAll(req) {
-        return this.documentsService.findAll(req.user.id, req.user.role);
-    }
-    getStats(req) {
-        return this.documentsService.getDocumentsStats(req.user.id, req.user.role);
-    }
-    findByExpediente(expedienteId, req) {
-        return this.documentsService.findByExpediente(expedienteId, req.user.id, req.user.role);
-    }
-    findOne(id, req) {
-        return this.documentsService.findOne(id, req.user.id, req.user.role);
-    }
-    async debugDocument(id, req) {
+    async uploadDocument(file, uploadData, req) {
         try {
-            console.log(`🔍 Diagnóstico completo para documento ID: ${id}`);
-            const result = {
-                documentId: id,
-                exists: false,
-                documentInfo: null,
-                cloudinaryStatus: 'unknown',
-                cloudinaryError: null,
-                endpointTest: {}
-            };
-            try {
-                const document = await this.documentsService.findOne(id, req.user.id, req.user.role);
-                if (document) {
-                    result.exists = true;
-                    result.documentInfo = {
-                        id: document.id,
-                        filename: document.filename,
-                        originalName: document.originalName,
-                        mimeType: document.mimeType,
-                        fileUrl: document.fileUrl,
-                        metadata: document.metadata,
-                        expedienteId: document.expedienteId,
-                        uploadedBy: document.uploadedBy
-                    };
-                    console.log(`📄 Documento encontrado en BD: ${document.filename}`);
-                    try {
-                        const fileInfo = await this.documentsService.getFileInfo(document);
-                        result.fileStatus = fileInfo.isExternal ? 'external' : 'local';
-                        result.endpointTest = {
-                            isExternal: fileInfo.isExternal,
-                            contentType: fileInfo.contentType,
-                            contentLength: fileInfo.contentLength
-                        };
-                        console.log(`✅ Archivo accesible: ${fileInfo.isExternal ? 'EXTERNO' : 'LOCAL'}`);
-                    }
-                    catch (fileErr) {
-                        result.fileStatus = 'error';
-                        result.fileError = fileErr instanceof Error ? fileErr.message : String(fileErr);
-                        console.error(`❌ Error accediendo al archivo:`, fileErr);
-                    }
-                }
-                else {
-                    console.log(`❌ Documento no encontrado en BD: ${id}`);
-                }
+            if (!file) {
+                throw new common_1.BadRequestException('No se ha proporcionado ningún archivo');
             }
-            catch (dbError) {
-                console.error(`❌ Error consultando BD:`, dbError);
-                result.cloudinaryError = `Error BD: ${dbError instanceof Error ? dbError.message : String(dbError)}`;
+            const maxSize = 5 * 1024 * 1024;
+            if (file.size > maxSize) {
+                throw new common_1.BadRequestException('El archivo es demasiado grande. Máximo 5MB');
             }
-            try {
-                const testUrl = `/api/documents/file/${id}`;
-                console.log(`🧪 Probando endpoint: ${testUrl}`);
-                result.endpointTest.fileEndpoint = testUrl;
+            const uploadsDir = path.join(process.cwd(), 'uploads');
+            if (!fs.existsSync(uploadsDir)) {
+                fs.mkdirSync(uploadsDir, { recursive: true });
             }
-            catch (endpointError) {
-                console.error(`❌ Error probando endpoint:`, endpointError);
+            const expedienteDir = uploadData.expedienteId ? path.join(uploadsDir, uploadData.expedienteId) : uploadsDir;
+            if (!fs.existsSync(expedienteDir)) {
+                fs.mkdirSync(expedienteDir, { recursive: true });
             }
-            console.log(`🔍 Diagnóstico completado para documento ${id}`);
-            return result;
-        }
-        catch (error) {
-            console.error(`❌ Error en debugDocument:`, error);
+            const timestamp = Date.now();
+            const fileExtension = path.extname(file.originalname);
+            const uniqueFilename = `${timestamp}_${file.originalname}`;
+            const filePath = path.join(expedienteDir, uniqueFilename);
+            fs.writeFileSync(filePath, file.buffer);
+            const document = await this.documentsService.create({
+                filename: uniqueFilename,
+                fileSize: file.size,
+                mimeType: file.mimetype,
+                originalName: file.originalname,
+                uploadedBy: req.user.id,
+                expedienteId: uploadData.expedienteId || 'general',
+                description: uploadData.description,
+                title: uploadData.title,
+                fileUrl: `/uploads/${uploadData.expedienteId || 'general'}/${uniqueFilename}`
+            });
             return {
-                documentId: id,
-                error: error instanceof Error ? error.message : String(error),
-                status: 'error'
-            };
-        }
-    }
-    async debugCloudinaryStatus(id, req) {
-        try {
-            console.log(`🔍 Diagnóstico Cloudinary para documento ID: ${id}`);
-            const document = await this.documentsService.findOne(id, req.user.id, req.user.role);
-            if (!document) {
-                return {
-                    documentId: id,
-                    error: 'Documento no encontrado en la base de datos',
-                    status: 'not_found'
-                };
-            }
-            console.log(`📄 Documento encontrado: ${document.filename}`);
-            let cloudinaryStatus = 'unknown';
-            let cloudinaryError = null;
-            let metadata = null;
-            try {
-                const fileInfo = await this.documentsService.getFileInfo(document);
-                cloudinaryStatus = fileInfo.isExternal ? 'external' : 'local';
-                metadata = {
-                    isExternal: fileInfo.isExternal,
-                    contentType: fileInfo.contentType,
-                    contentLength: fileInfo.contentLength
-                };
-            }
-            catch (fileErr) {
-                cloudinaryStatus = 'error';
-                cloudinaryError = fileErr instanceof Error ? fileErr.message : String(fileErr);
-                console.error(`❌ Error accediendo al archivo:`, fileErr);
-            }
-            return {
-                documentId: id,
-                filename: document.filename,
-                originalName: document.originalName,
-                cloudinaryStatus,
-                cloudinaryError,
-                metadata,
-                documentMetadata: document.metadata,
-                fileUrl: document.fileUrl
+                message: 'Documento subido exitosamente',
+                document: document
             };
         }
         catch (error) {
-            console.error(`❌ Error en debugCloudinaryStatus:`, error);
-            return {
-                documentId: id,
-                error: error instanceof Error ? error.message : String(error),
-                status: 'error'
-            };
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Error al subir documento: ${errorMessage}`);
         }
     }
-    async testSimple() {
-        return {
-            message: 'Documents controller funcionando correctamente',
-            timestamp: new Date().toISOString(),
-            status: 'ok'
-        };
-    }
-    async serveFile(id, req, res) {
+    async getDocument(id, req, res) {
         try {
-            console.log(`📁 Intentando servir archivo ID: ${id}`);
-            console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
-            const document = await this.documentsService.findOne(id, req.user.id, req.user.role);
-            if (!document) {
-                console.log(`❌ Documento no encontrado: ${id}`);
-                return res.status(404).json({
-                    message: 'Documento no encontrado',
-                    error: 'Not Found',
-                    statusCode: 404,
-                    documentId: id
-                });
-            }
-            console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
-            console.log(`🔗 URL del archivo: ${document.fileUrl}`);
-            const fileInfo = await this.documentsService.getFileInfo(document);
-            console.log(`📂 Tipo de archivo: ${fileInfo.isExternal ? 'EXTERNO' : 'LOCAL'}`);
-            let contentType = fileInfo.contentType;
-            let contentLength = fileInfo.contentLength;
-            res.setHeader('Content-Type', contentType);
-            res.setHeader('Content-Length', contentLength);
-            if (contentType.startsWith('image/') || contentType === 'application/pdf') {
-                res.setHeader('Content-Disposition', 'inline');
-            }
-            else {
-                res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
-            }
-            res.setHeader('Cache-Control', 'public, max-age=3600');
-            res.setHeader('Access-Control-Allow-Origin', '*');
-            res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-            if (fileInfo.isExternal) {
-                console.log(`🌐 Descargando archivo externo desde: ${fileInfo.externalUrl}`);
-                try {
-                    const externalFile = await this.documentsService.downloadExternalFile(document.fileUrl);
-                    console.log(`✅ Archivo externo descargado: ${document.originalName} (${contentType}) - Tamaño: ${externalFile.contentLength} bytes`);
-                    res.send(externalFile.buffer);
-                }
-                catch (downloadError) {
-                    console.error(`❌ Error descargando archivo externo:`, downloadError);
-                    return res.status(500).json({
-                        message: 'Error al descargar archivo externo',
-                        error: 'Download Error',
-                        statusCode: 500,
-                        documentId: id,
-                        errorDetails: downloadError instanceof Error ? downloadError.message : String(downloadError)
-                    });
-                }
-            }
-            else {
-                const localPath = path.join(storage_config_1.STORAGE_CONFIG.uploadPath, fileInfo.localPath);
-                console.log(`📂 Ruta local del archivo: ${localPath}`);
-                if (!fs.existsSync(localPath)) {
-                    console.log(`❌ Archivo no encontrado localmente: ${localPath}`);
-                    return res.status(404).json({
-                        message: 'Archivo no encontrado en el servidor',
-                        error: 'File Not Found',
-                        statusCode: 404,
-                        documentId: id,
-                        localPath: localPath
-                    });
-                }
-                console.log(`🚀 Sirviendo archivo local: ${document.originalName} (${contentType}) - Tamaño: ${contentLength} bytes`);
-                const fileStream = fs.createReadStream(localPath);
-                fileStream.pipe(res);
-                fileStream.on('error', (error) => {
-                    console.error(`❌ Error en el stream del archivo:`, error);
-                    if (!res.headersSent) {
-                        res.status(500).json({
-                            message: 'Error al leer el archivo',
-                            error: 'Stream Error',
-                            statusCode: 500,
-                            errorDetails: error instanceof Error ? error.message : String(error)
-                        });
-                    }
-                });
-                fileStream.on('end', () => {
-                    console.log(`✅ Archivo local servido exitosamente: ${document.originalName}`);
-                    if (!res.headersSent) {
-                        res.end();
-                    }
-                });
-                req.on('close', () => {
-                    console.log(`🔌 Conexión cerrada por el cliente para documento: ${document.originalName}`);
-                    if (fileStream && !fileStream.destroyed) {
-                        fileStream.destroy();
-                    }
-                });
-            }
-        }
-        catch (error) {
-            console.error(`❌ Error en serveFile:`, error);
-            if (!res.headersSent) {
-                if (error instanceof common_1.NotFoundException) {
-                    return res.status(404).json({
-                        message: error.message,
-                        error: 'Not Found',
-                        statusCode: 404,
-                        documentId: id
-                    });
-                }
-                else if (error instanceof common_1.ForbiddenException) {
-                    return res.status(403).json({
-                        message: error.message,
-                        error: 'Forbidden',
-                        statusCode: 403,
-                        documentId: id
-                    });
-                }
-                else {
-                    return res.status(500).json({
-                        message: 'Error interno del servidor',
-                        error: 'Internal Server Error',
-                        statusCode: 500,
-                        documentId: id,
-                        errorDetails: error instanceof Error ? error.message : String(error)
-                    });
-                }
-            }
-        }
-    }
-    getContentTypeFromExtension(extension) {
-        if (!extension)
-            return 'application/octet-stream';
-        switch (extension.toLowerCase()) {
-            case 'pdf':
-                return 'application/pdf';
-            case 'doc':
-                return 'application/msword';
-            case 'docx':
-                return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-            case 'xls':
-                return 'application/vnd.ms-excel';
-            case 'xlsx':
-                return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-            case 'ppt':
-                return 'application/vnd.ms-powerpoint';
-            case 'pptx':
-                return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
-            case 'txt':
-                return 'text/plain';
-            case 'csv':
-                return 'text/csv';
-            case 'jpg':
-            case 'jpeg':
-                return 'image/jpeg';
-            case 'png':
-                return 'image/png';
-            case 'gif':
-                return 'image/gif';
-            case 'webp':
-                return 'image/webp';
-            default:
-                return 'application/octet-stream';
-        }
-    }
-    async downloadDocument(id, req, res) {
-        try {
-            console.log(`📥 Intentando descargar documento ID: ${id}`);
-            console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
-            const document = await this.documentsService.findOne(id, req.user.id, req.user.role);
-            if (!document) {
-                console.log(`❌ Documento no encontrado: ${id}`);
-                return res.status(404).json({
-                    message: 'Documento no encontrado',
-                    error: 'Not Found',
-                    statusCode: 404,
-                    documentId: id
-                });
-            }
-            console.log(`📄 Documento encontrado: ${document.filename}, Original: ${document.originalName}`);
-            const fileInfo = await this.documentsService.getFileInfo(document);
-            console.log(`📂 Tipo de archivo: ${fileInfo.isExternal ? 'EXTERNO' : 'LOCAL'}`);
-            let contentType = fileInfo.contentType;
-            let contentLength = fileInfo.contentLength;
-            res.setHeader('Content-Type', contentType);
-            res.setHeader('Content-Length', contentLength);
-            res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
-            console.log(`🚀 Iniciando descarga del archivo: ${document.originalName} (${contentType})`);
-            if (fileInfo.isExternal) {
-                try {
-                    const externalFile = await this.documentsService.downloadExternalFile(document.fileUrl);
-                    console.log(`✅ Archivo externo descargado: ${document.originalName} (${contentType}) - Tamaño: ${externalFile.contentLength} bytes`);
-                    res.send(externalFile.buffer);
-                }
-                catch (downloadError) {
-                    console.error(`❌ Error descargando archivo externo:`, downloadError);
-                    return res.status(500).json({
-                        message: 'Error al descargar archivo externo',
-                        error: 'Download Error',
-                        statusCode: 500,
-                        documentId: id,
-                        errorDetails: downloadError instanceof Error ? downloadError.message : String(downloadError)
-                    });
-                }
-            }
-            else {
-                const localPath = path.join(storage_config_1.STORAGE_CONFIG.uploadPath, fileInfo.localPath);
-                if (!fs.existsSync(localPath)) {
-                    return res.status(404).json({
-                        message: 'Archivo no encontrado en el servidor',
-                        error: 'File Not Found',
-                        statusCode: 404,
-                        documentId: id,
-                        localPath: localPath
-                    });
-                }
-                const fileStream = fs.createReadStream(localPath);
-                fileStream.pipe(res);
-                fileStream.on('error', (error) => {
-                    console.error(`❌ Error en el stream del archivo:`, error);
-                    if (!res.headersSent) {
-                        res.status(500).json({
-                            message: 'Error al leer el archivo',
-                            error: 'Stream Error',
-                            statusCode: 500,
-                            errorDetails: error instanceof Error ? error.message : String(error)
-                        });
-                    }
-                });
-                fileStream.on('end', () => {
-                    console.log(`✅ Descarga completada: ${document.originalName}`);
-                });
-            }
-        }
-        catch (error) {
-            console.error(`❌ Error en downloadDocument:`, error);
-            if (!res.headersSent) {
-                if (error instanceof common_1.NotFoundException) {
-                    return res.status(404).json({
-                        message: error.message,
-                        error: 'Not Found',
-                        statusCode: 404,
-                        documentId: id
-                    });
-                }
-                else if (error instanceof common_1.ForbiddenException) {
-                    return res.status(403).json({
-                        message: error.message,
-                        error: 'Forbidden',
-                        statusCode: 403,
-                        documentId: id
-                    });
-                }
-                else {
-                    return res.status(500).json({
-                        message: 'Error interno del servidor al descargar el documento',
-                        error: 'Internal Server Error',
-                        statusCode: 500,
-                        documentId: id,
-                        errorDetails: error instanceof Error ? error.message : String(error)
-                    });
-                }
-            }
-        }
-    }
-    async testEndpoint() {
-        return {
-            message: 'Documents controller funcionando correctamente',
-            timestamp: new Date().toISOString(),
-            controller: 'DocumentsController'
-        };
-    }
-    async getUploadStatus() {
-        try {
-            const uploadDir = path.join(process.cwd(), 'uploads');
-            const exists = fs.existsSync(uploadDir);
-            let files = [];
-            let totalSize = 0;
-            if (exists) {
-                try {
-                    files = fs.readdirSync(uploadDir);
-                    for (const file of files) {
-                        const filePath = path.join(uploadDir, file);
-                        const stats = fs.statSync(filePath);
-                        if (stats.isFile()) {
-                            totalSize += stats.size;
-                        }
-                    }
-                }
-                catch (error) {
-                    console.error('Error reading upload directory:', error);
-                }
-            }
-            return {
-                uploadDir,
-                exists,
-                files,
-                totalFiles: files.length,
-                totalSize,
-                currentWorkingDir: process.cwd(),
-                nodeEnv: process.env.NODE_ENV
-            };
-        }
-        catch (error) {
-            console.error('Error getting upload status:', error);
-            return {
-                error: error instanceof Error ? error.message : String(error),
-                uploadDir: path.join(process.cwd(), 'uploads'),
-                exists: false
-            };
-        }
-    }
-    async ensureUploadDirectory() {
-        try {
-            const uploadDir = path.join(process.cwd(), 'uploads');
-            const exists = fs.existsSync(uploadDir);
-            if (!exists) {
-                console.log(`📁 Creando directorio de uploads: ${uploadDir}`);
-                fs.mkdirSync(uploadDir, { recursive: true });
-                console.log(`✅ Directorio de uploads creado exitosamente`);
-                return {
-                    message: 'Directorio de uploads creado exitosamente',
-                    uploadDir,
-                    created: true,
-                    exists: true
-                };
-            }
-            else {
-                console.log(`✅ Directorio de uploads ya existe: ${uploadDir}`);
-                return {
-                    message: 'Directorio de uploads ya existe',
-                    uploadDir,
-                    created: false,
-                    exists: true
-                };
-            }
-        }
-        catch (error) {
-            console.error('Error creating upload directory:', error);
-            return {
-                message: 'Error al crear el directorio de uploads',
-                error: error instanceof Error ? error.message : String(error),
-                uploadDir: path.join(process.cwd(), 'uploads'),
-                created: false,
-                exists: false
-            };
-        }
-    }
-    remove(id, req) {
-        return this.documentsService.remove(id, req.user.id, req.user.role);
-    }
-    async migrateDocuments() {
-        try {
-            this.logger.log('🚀 Iniciando migración de documentos a almacenamiento local...');
-            const sampleDocuments = [
-                {
-                    id: 'doc-001',
-                    expedienteId: 'exp-001',
-                    filename: 'contrato_compraventa.pdf',
-                    content: 'Contrato de compraventa de inmueble - Documento legal válido'
-                },
-                {
-                    id: 'doc-002',
-                    expedienteId: 'exp-002',
-                    filename: 'demanda_laboral.pdf',
-                    content: 'Demanda laboral por despido injustificado - Caso laboral'
-                },
-                {
-                    id: 'doc-c1-001',
-                    expedienteId: 'exp-c1-001',
-                    filename: 'documentoA.pdf',
-                    content: 'Documento legal tipo A - Expediente C1-001'
-                }
-            ];
-            const results = [];
-            for (const doc of sampleDocuments) {
-                try {
-                    const htmlContent = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <title>${doc.filename}</title>
-              <style>
-                body { font-family: Arial, sans-serif; margin: 40px; }
-                .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; }
-                .content { margin-top: 30px; line-height: 1.6; }
-                .footer { margin-top: 50px; text-align: center; color: #666; }
-              </style>
-            </head>
-            <body>
-              <div class="header">
-                <h1>${doc.filename.replace('.pdf', '')}</h1>
-                <p>ID: ${doc.id} | Expediente: ${doc.expedienteId}</p>
-              </div>
-              <div>content">
-                <h2>Contenido del Documento</h2>
-                <p>${doc.content}</p>
-                <p>Este es un documento de ejemplo generado automáticamente para la migración a almacenamiento local.</p>
-                <p>Fecha de generación: ${new Date().toLocaleString('es-ES')}</p>
-              </div>
-              <div class="footer">
-                <p>Sistema de Gestión Legal - Documento Migrado</p>
-              </div>
-            </body>
-            </html>
-          `;
-                    const buffer = Buffer.from(htmlContent, 'utf8');
-                    const fileInfo = await this.fileStorageService.storeFile(buffer, doc.filename, doc.expedienteId);
-                    const { PrismaClient } = __webpack_require__(9);
-                    const prisma = new PrismaClient();
-                    await prisma.document.update({
-                        where: { id: doc.id },
-                        data: {
-                            fileUrl: fileInfo.fileUrl,
-                            filename: fileInfo.filename,
-                            fileSize: fileInfo.fileSize,
-                            mimeType: fileInfo.mimeType,
-                            metadata: {
-                                migrated: true,
-                                migratedAt: new Date().toISOString(),
-                                originalUrl: `https://experimento2-production-54c0.up.railway.app/uploads/${doc.expedienteId}/${doc.filename}`
-                            }
-                        }
-                    });
-                    await prisma.$disconnect();
-                    results.push({
-                        id: doc.id,
-                        status: 'success',
-                        newFileUrl: fileInfo.fileUrl,
-                        fileSize: fileInfo.fileSize
-                    });
-                    this.logger.log(`✅ Documento ${doc.id} migrado exitosamente`);
-                }
-                catch (error) {
-                    results.push({
-                        id: doc.id,
-                        status: 'error',
-                        error: error instanceof Error ? error.message : String(error)
-                    });
-                    this.logger.error(`❌ Error migrando documento ${doc.id}:`, error);
-                }
-            }
-            return {
-                message: 'Migración de documentos completada',
-                timestamp: new Date().toISOString(),
-                totalDocuments: sampleDocuments.length,
-                results: results
-            };
-        }
-        catch (error) {
-            this.logger.error('❌ Error en migración de documentos:', error);
-            throw new Error(`Error en migración: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    }
-    async debugFileAccess(id, req) {
-        try {
-            console.log(`🔍 Diagnóstico de acceso a archivo ID: ${id}`);
-            console.log(`👤 Usuario: ${req.user.id}, Rol: ${req.user.role}`);
             const document = await this.documentsService.findOne(id, req.user.id, req.user.role);
             if (!document) {
                 throw new common_1.NotFoundException('Documento no encontrado');
             }
-            console.log(`📄 Documento encontrado: ${document.filename}`);
-            const result = {
-                documentId: document.id,
-                filename: document.filename,
-                originalName: document.originalName,
-                fileUrl: document.fileUrl,
-                mimeType: document.mimeType,
-                fileSize: document.fileSize,
-                cloudinaryStatus: 'unknown',
-                cloudinaryError: null,
-                accessTest: {},
-                recommendations: []
-            };
-            if (document.fileUrl && document.fileUrl.includes('cloudinary.com')) {
-                result.cloudinaryStatus = 'cloudinary_url';
-                result.recommendations.push('Archivo detectado en Cloudinary');
-                try {
-                    const urlResponse = await fetch(document.fileUrl, { method: 'HEAD' });
-                    result.accessTest.urlAccess = {
-                        status: urlResponse.status,
-                        statusText: urlResponse.statusText,
-                        accessible: urlResponse.ok
-                    };
-                    if (urlResponse.ok) {
-                        result.recommendations.push('URL de Cloudinary accesible directamente');
-                    }
-                    else {
-                        result.recommendations.push('URL de Cloudinary no accesible - verificar permisos');
-                    }
-                }
-                catch (urlError) {
-                    result.accessTest.urlAccess = {
-                        error: urlError instanceof Error ? urlError.message : String(urlError),
-                        accessible: false
-                    };
-                    result.recommendations.push('Error al verificar URL de Cloudinary');
-                }
+            const filePath = path.join(process.cwd(), document.fileUrl);
+            if (!fs.existsSync(filePath)) {
+                throw new common_1.NotFoundException('Archivo no encontrado en el servidor');
             }
-            else {
-                result.cloudinaryStatus = 'local_or_other';
-                result.recommendations.push('Archivo no detectado en Cloudinary');
-            }
-            try {
-                const fileInfo = await this.documentsService.getFileInfo(document);
-                result.cloudinaryStatus = fileInfo.isExternal ? 'external' : 'local';
-                result.accessTest.serviceAccess = {
-                    status: 'success',
-                    isExternal: fileInfo.isExternal,
-                    contentType: fileInfo.contentType,
-                    contentLength: fileInfo.contentLength
-                };
-                result.recommendations.push(`Archivo accesible a través del servicio (${fileInfo.isExternal ? 'EXTERNO' : 'LOCAL'})`);
-            }
-            catch (serviceError) {
-                result.cloudinaryStatus = 'error';
-                result.cloudinaryError = serviceError instanceof Error ? serviceError.message : String(serviceError);
-                result.accessTest.serviceAccess = {
-                    status: 'error',
-                    error: result.cloudinaryError
-                };
-                result.recommendations.push('Error al acceder al archivo a través del servicio');
-            }
-            if (result.mimeType === 'application/pdf') {
-                result.recommendations.push('Archivo PDF detectado - verificar visor del navegador');
-            }
-            if (result.fileSize > 5 * 1024 * 1024) {
-                result.recommendations.push('Archivo grande (>5MB) - puede causar problemas de timeout');
-            }
-            console.log(`✅ Diagnóstico completado para documento ${id}`);
-            return result;
+            const fileBuffer = fs.readFileSync(filePath);
+            res.set({
+                'Content-Type': document.mimeType,
+                'Content-Length': document.fileSize,
+                'Content-Disposition': `inline; filename="${document.originalName}"`
+            });
+            res.send(fileBuffer);
         }
         catch (error) {
-            console.error(`❌ Error en debugFileAccess:`, error);
             if (error instanceof common_1.NotFoundException) {
-                throw error;
-            }
-            else if (error instanceof common_1.ForbiddenException) {
-                throw error;
+                res.status(404).json({ message: error.message });
             }
             else {
-                throw new Error(`Error interno: ${error instanceof Error ? error.message : String(error)}`);
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                res.status(500).json({ message: `Error interno del servidor: ${errorMessage}` });
             }
         }
+    }
+    async getDocuments(req) {
+        return this.documentsService.findMyDocuments(req.user.id, req.user.role);
+    }
+    async getDocumentById(id, req) {
+        return this.documentsService.findOne(id, req.user.id, req.user.role);
+    }
+    async deleteDocument(id, req) {
+        try {
+            const document = await this.documentsService.findOne(id, req.user.id, req.user.role);
+            if (!document) {
+                throw new common_1.NotFoundException('Documento no encontrado');
+            }
+            const filePath = path.join(process.cwd(), document.fileUrl);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+            await this.documentsService.remove(id, req.user.id);
+            return { message: 'Documento eliminado exitosamente' };
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Error al eliminar documento: ${errorMessage}`);
+        }
+    }
+    getHealth() {
+        return {
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            service: 'documents-controller'
+        };
     }
 };
 exports.DocumentsController = DocumentsController;
@@ -8046,7 +5900,7 @@ __decorate([
                     type: 'string',
                     description: 'Descripción del documento'
                 },
-                caseId: {
+                expedienteId: {
                     type: 'string',
                     description: 'ID del expediente asociado (opcional)'
                 }
@@ -8055,319 +5909,27 @@ __decorate([
     }),
     (0, swagger_1.ApiResponse)({
         status: 201,
-        description: 'Documento subido exitosamente',
-        schema: {
-            type: 'object',
-            properties: {
-                id: { type: 'string' },
-                title: { type: 'string' },
-                description: { type: 'string' },
-                filename: { type: 'string' },
-                originalName: { type: 'string' },
-                mimeType: { type: 'string' },
-                size: { type: 'number' },
-                uploadedBy: { type: 'string' },
-                caseId: { type: 'string' },
-                createdAt: { type: 'string', format: 'date-time' }
-            }
-        }
+        description: 'Documento subido exitosamente'
     }),
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Archivo inválido o datos incorrectos' }),
     (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
     (0, swagger_1.ApiResponse)({ status: 413, description: 'Archivo demasiado grande' }),
-    __param(0, (0, common_1.UploadedFile)(new common_1.ParseFilePipe({
-        validators: [
-            new common_1.MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
-            new common_1.FileTypeValidator({ fileType: '.(pdf|txt|csv|doc|docx|jpg|jpeg|png|gif|webp)' }),
-        ],
-    }))),
+    __param(0, (0, common_1.UploadedFile)()),
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, typeof (_d = typeof upload_document_dto_1.UploadDocumentDto !== "undefined" && upload_document_dto_1.UploadDocumentDto) === "function" ? _d : Object, Object]),
+    __metadata("design:paramtypes", [typeof (_c = typeof Express !== "undefined" && (_b = Express.Multer) !== void 0 && _b.File) === "function" ? _c : Object, typeof (_d = typeof upload_document_dto_1.UploadDocumentDto !== "undefined" && upload_document_dto_1.UploadDocumentDto) === "function" ? _d : Object, Object]),
     __metadata("design:returntype", Promise)
 ], DocumentsController.prototype, "uploadDocument", null);
-__decorate([
-    (0, common_1.Get)(),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Obtener todos los documentos',
-        description: 'Devuelve todos los documentos accesibles para el usuario autenticado'
-    }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Lista de documentos',
-        schema: {
-            type: 'array',
-            items: {
-                type: 'object',
-                properties: {
-                    id: { type: 'string' },
-                    title: { type: 'string' },
-                    description: { type: 'string' },
-                    filename: { type: 'string' },
-                    originalName: { type: 'string' },
-                    mimeType: { type: 'string' },
-                    size: { type: 'number' },
-                    uploadedBy: { type: 'string' },
-                    caseId: { type: 'string' },
-                    createdAt: { type: 'string', format: 'date-time' }
-                }
-            }
-        }
-    }),
-    (0, common_1.Get)('my'),
-    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Obtener mis documentos',
-        description: 'Devuelve los documentos del usuario autenticado (CLIENTE ve documentos de sus expedientes, ABOGADO ve documentos de sus casos)'
-    }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Lista de documentos del usuario',
-        schema: {
-            type: 'array',
-            items: {
-                type: 'object',
-                properties: {
-                    id: { type: 'string' },
-                    filename: { type: 'string' },
-                    originalName: { type: 'string' },
-                    fileUrl: { type: 'string' },
-                    fileSize: { type: 'number' },
-                    mimeType: { type: 'string' },
-                    description: { type: 'string' },
-                    expedienteId: { type: 'string' },
-                    uploadedBy: { type: 'string' },
-                    uploadedAt: { type: 'string', format: 'date-time' },
-                    expediente: {
-                        type: 'object',
-                        properties: {
-                            id: { type: 'string' },
-                            title: { type: 'string' },
-                            status: { type: 'string' }
-                        }
-                    }
-                }
-            }
-        }
-    }),
-    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
-    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
-    __param(0, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
-], DocumentsController.prototype, "findMyDocuments", null);
-__decorate([
-    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
-    __param(0, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
-], DocumentsController.prototype, "findAll", null);
-__decorate([
-    (0, common_1.Get)('stats'),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Estadísticas de documentos',
-        description: 'Devuelve estadísticas de documentos para el usuario autenticado'
-    }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Estadísticas de documentos',
-        schema: {
-            type: 'object',
-            properties: {
-                totalDocuments: { type: 'number' },
-                totalSize: { type: 'number' },
-                documentsByType: {
-                    type: 'object',
-                    properties: {
-                        pdf: { type: 'number' },
-                        doc: { type: 'number' },
-                        image: { type: 'number' },
-                        other: { type: 'number' }
-                    }
-                },
-                recentUploads: { type: 'number' }
-            }
-        }
-    }),
-    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
-    __param(0, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
-], DocumentsController.prototype, "getStats", null);
-__decorate([
-    (0, common_1.Get)('expediente/:expedienteId'),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Obtener documentos por expediente',
-        description: 'Devuelve todos los documentos asociados a un expediente específico'
-    }),
-    (0, swagger_1.ApiParam)({ name: 'expedienteId', description: 'ID del expediente', type: 'string' }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Documentos del expediente',
-        schema: {
-            type: 'array',
-            items: {
-                type: 'object',
-                properties: {
-                    id: { type: 'string' },
-                    title: { type: 'string' },
-                    description: { type: 'string' },
-                    filename: { type: 'string' },
-                    originalName: { type: 'string' },
-                    mimeType: { type: 'string' },
-                    size: { type: 'number' },
-                    uploadedBy: { type: 'string' },
-                    caseId: { type: 'string' },
-                    createdAt: { type: 'string', format: 'date-time' }
-                }
-            }
-        }
-    }),
-    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
-    (0, swagger_1.ApiResponse)({ status: 404, description: 'Expediente no encontrado' }),
-    __param(0, (0, common_1.Param)('expedienteId')),
-    __param(1, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", void 0)
-], DocumentsController.prototype, "findByExpediente", null);
-__decorate([
-    (0, common_1.Get)(':id'),
-    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Obtener documento por ID',
-        description: 'Devuelve un documento específico por su ID. Los clientes solo pueden ver documentos de sus expedientes.'
-    }),
-    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Documento encontrado',
-        schema: {
-            type: 'object',
-            properties: {
-                id: { type: 'string' },
-                title: { type: 'string' },
-                description: { type: 'string' },
-                filename: { type: 'string' },
-                originalName: { type: 'string' },
-                mimeType: { type: 'string' },
-                size: { type: 'number' },
-                uploadedBy: { type: 'string' },
-                caseId: { type: 'string' },
-                createdAt: { type: 'string', format: 'date-time' }
-            }
-        }
-    }),
-    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
-    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
-    (0, swagger_1.ApiResponse)({ status: 404, description: 'Documento no encontrado' }),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", void 0)
-], DocumentsController.prototype, "findOne", null);
-__decorate([
-    (0, common_1.Get)('debug/document/:id'),
-    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Diagnóstico de documento específico',
-        description: 'Endpoint para diagnosticar problemas con un documento específico por ID (solo ADMIN y ABOGADO)'
-    }),
-    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Información completa del documento',
-        schema: {
-            type: 'object',
-            properties: {
-                documentId: { type: 'string' },
-                exists: { type: 'boolean' },
-                documentInfo: { type: 'object' },
-                cloudinaryStatus: { type: 'string' },
-                cloudinaryError: { type: 'string' },
-                endpointTest: { type: 'object' }
-            }
-        }
-    }),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", Promise)
-], DocumentsController.prototype, "debugDocument", null);
-__decorate([
-    (0, common_1.Get)('debug/cloudinary-status/:id'),
-    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Diagnóstico de Cloudinary',
-        description: 'Endpoint para diagnosticar problemas con archivos en Cloudinary (solo ADMIN y ABOGADO)'
-    }),
-    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Estado del archivo en Cloudinary',
-        schema: {
-            type: 'object',
-            properties: {
-                documentId: { type: 'string' },
-                filename: { type: 'string' },
-                cloudinaryStatus: { type: 'string' },
-                cloudinaryError: { type: 'string' },
-                metadata: { type: 'object' }
-            }
-        }
-    }),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", Promise)
-], DocumentsController.prototype, "debugCloudinaryStatus", null);
-__decorate([
-    (0, common_1.Get)('test-simple'),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Endpoint de prueba simple',
-        description: 'Endpoint básico para verificar que el controlador esté funcionando'
-    }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Controlador funcionando',
-        schema: {
-            type: 'object',
-            properties: {
-                message: { type: 'string' },
-                timestamp: { type: 'string' },
-                status: { type: 'string' }
-            }
-        }
-    }),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", Promise)
-], DocumentsController.prototype, "testSimple", null);
 __decorate([
     (0, common_1.Get)('file/:id'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
     (0, swagger_1.ApiOperation)({
-        summary: 'Ver documento',
-        description: 'Sirve un documento específico para visualización. Los clientes solo pueden ver documentos de sus expedientes.'
+        summary: 'Obtener documento',
+        description: 'Obtiene un documento por su ID'
     }),
-    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Archivo servido',
-        schema: {
-            type: 'string',
-            format: 'binary'
-        }
-    }),
-    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
-    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Documento obtenido exitosamente' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Documento no encontrado' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
@@ -8375,825 +5937,81 @@ __decorate([
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object, typeof (_e = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _e : Object]),
     __metadata("design:returntype", Promise)
-], DocumentsController.prototype, "serveFile", null);
+], DocumentsController.prototype, "getDocument", null);
 __decorate([
-    (0, common_1.Get)(':id/download'),
+    (0, common_1.Get)(),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
     (0, swagger_1.ApiOperation)({
-        summary: 'Descargar documento',
-        description: 'Descarga un documento específico. Los clientes solo pueden descargar documentos de sus expedientes.'
+        summary: 'Listar documentos',
+        description: 'Obtiene la lista de documentos del usuario'
     }),
-    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Archivo descargado',
-        schema: {
-            type: 'string',
-            format: 'binary'
-        }
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Lista de documentos obtenida exitosamente' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], DocumentsController.prototype, "getDocuments", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener documento por ID',
+        description: 'Obtiene un documento específico por su ID'
     }),
-    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
-    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Documento obtenido exitosamente' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Documento no encontrado' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
-    __param(2, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, typeof (_f = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _f : Object]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
-], DocumentsController.prototype, "downloadDocument", null);
-__decorate([
-    (0, common_1.Get)('test-endpoint'),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Endpoint de prueba',
-        description: 'Endpoint simple para verificar que el controlador esté funcionando'
-    }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Endpoint funcionando',
-        schema: {
-            type: 'object',
-            properties: {
-                message: { type: 'string' },
-                timestamp: { type: 'string' },
-                controller: { type: 'string' }
-            }
-        }
-    }),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", Promise)
-], DocumentsController.prototype, "testEndpoint", null);
-__decorate([
-    (0, common_1.Get)('debug/upload-status'),
-    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Estado del directorio de uploads',
-        description: 'Endpoint de diagnóstico para verificar el estado del directorio de uploads (solo ADMIN)'
-    }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Estado del directorio de uploads',
-        schema: {
-            type: 'object',
-            properties: {
-                uploadDir: { type: 'string' },
-                exists: { type: 'boolean' },
-                files: { type: 'array', items: { type: 'string' } },
-                totalFiles: { type: 'number' },
-                totalSize: { type: 'number' }
-            }
-        }
-    }),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", Promise)
-], DocumentsController.prototype, "getUploadStatus", null);
-__decorate([
-    (0, common_1.Post)('debug/ensure-upload-dir'),
-    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Crear directorio de uploads',
-        description: 'Crea el directorio de uploads si no existe (solo ADMIN)'
-    }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Directorio de uploads creado o verificado',
-        schema: {
-            type: 'object',
-            properties: {
-                message: { type: 'string' },
-                uploadDir: { type: 'string' },
-                created: { type: 'boolean' },
-                exists: { type: 'boolean' }
-            }
-        }
-    }),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", Promise)
-], DocumentsController.prototype, "ensureUploadDirectory", null);
+], DocumentsController.prototype, "getDocumentById", null);
 __decorate([
     (0, common_1.Delete)(':id'),
-    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Eliminar documento',
-        description: 'Elimina un documento del sistema (ADMIN, ABOGADO y CLIENTE pueden eliminar sus propios documentos)'
-    }),
-    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Documento eliminado exitosamente',
-        schema: {
-            type: 'object',
-            properties: {
-                message: { type: 'string', example: 'Documento eliminado exitosamente' }
-            }
-        }
-    }),
-    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
-    (0, swagger_1.ApiResponse)({ status: 403, description: 'Rol insuficiente' }),
-    (0, swagger_1.ApiResponse)({ status: 404, description: 'Documento no encontrado' }),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", void 0)
-], DocumentsController.prototype, "remove", null);
-__decorate([
-    (0, common_1.Get)('debug/file-access/:id'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO),
     (0, swagger_1.ApiOperation)({
-        summary: 'Diagnóstico de acceso a archivos',
-        description: 'Endpoint para diagnosticar problemas de acceso a archivos (solo ADMIN y ABOGADO)'
+        summary: 'Eliminar documento',
+        description: 'Elimina un documento por su ID'
     }),
-    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento', type: 'string' }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Diagnóstico del archivo',
-        schema: {
-            type: 'object',
-            properties: {
-                documentId: { type: 'string' },
-                filename: { type: 'string' },
-                originalName: { type: 'string' },
-                fileUrl: { type: 'string' },
-                mimeType: { type: 'string' },
-                fileSize: { type: 'number' },
-                cloudinaryStatus: { type: 'string' },
-                cloudinaryError: { type: 'string' },
-                accessTest: { type: 'object' },
-                recommendations: { type: 'array', items: { type: 'string' } }
-            }
-        }
-    }),
-    (0, common_1.Post)('admin/migrate-documents'),
-    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
-    (0, swagger_1.ApiOperation)({
-        summary: 'Migrar documentos a almacenamiento local',
-        description: 'Migra documentos de URLs ficticias a archivos locales en el servidor'
-    }),
-    (0, swagger_1.ApiResponse)({
-        status: 201,
-        description: 'Migración completada exitosamente',
-        schema: {
-            type: 'object',
-            properties: {
-                message: { type: 'string' },
-                timestamp: { type: 'string' },
-                totalDocuments: { type: 'number' },
-                results: {
-                    type: 'array',
-                    items: {
-                        type: 'object',
-                        properties: {
-                            id: { type: 'string' },
-                            status: { type: 'string' },
-                            newFileUrl: { type: 'string' },
-                            fileSize: { type: 'number' },
-                            error: { type: 'string' }
-                        }
-                    }
-                }
-            }
-        }
-    }),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", Promise)
-], DocumentsController.prototype, "migrateDocuments", null);
-__decorate([
-    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
-    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'ID del documento' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Documento eliminado exitosamente' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Documento no encontrado' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
-], DocumentsController.prototype, "debugFileAccess", null);
-exports.DocumentsController = DocumentsController = DocumentsController_1 = __decorate([
+], DocumentsController.prototype, "deleteDocument", null);
+__decorate([
+    (0, common_1.Get)('health'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], DocumentsController.prototype, "getHealth", null);
+exports.DocumentsController = DocumentsController = __decorate([
     (0, swagger_1.ApiTags)('documents'),
     (0, common_1.Controller)('documents'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
-    __metadata("design:paramtypes", [typeof (_a = typeof documents_service_1.DocumentsService !== "undefined" && documents_service_1.DocumentsService) === "function" ? _a : Object, typeof (_b = typeof postgres_storage_service_1.PostgresStorageService !== "undefined" && postgres_storage_service_1.PostgresStorageService) === "function" ? _b : Object, typeof (_c = typeof file_storage_service_1.FileStorageService !== "undefined" && file_storage_service_1.FileStorageService) === "function" ? _c : Object])
+    __metadata("design:paramtypes", [typeof (_a = typeof documents_service_1.DocumentsService !== "undefined" && documents_service_1.DocumentsService) === "function" ? _a : Object])
 ], DocumentsController);
 
 
 /***/ }),
-/* 53 */
+/* 46 */
 /***/ ((module) => {
 
 module.exports = require("@nestjs/platform-express");
 
 /***/ }),
-/* 54 */
+/* 47 */
 /***/ ((module) => {
 
 module.exports = require("express");
 
 /***/ }),
-/* 55 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-var PostgresStorageService_1;
-var _a;
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PostgresStorageService = void 0;
-const common_1 = __webpack_require__(2);
-const prisma_service_1 = __webpack_require__(8);
-let PostgresStorageService = PostgresStorageService_1 = class PostgresStorageService {
-    constructor(prisma) {
-        this.prisma = prisma;
-        this.logger = new common_1.Logger(PostgresStorageService_1.name);
-    }
-    async storeFile(fileBuffer, filename, originalName, mimeType, expedienteId, uploadedBy, description) {
-        try {
-            this.logger.log(`Almacenando archivo: ${originalName} (${fileBuffer.length} bytes)`);
-            const document = await this.prisma.document.create({
-                data: {
-                    filename,
-                    originalName,
-                    mimeType,
-                    fileSize: fileBuffer.length,
-                    expedienteId,
-                    uploadedBy,
-                    description,
-                    fileData: fileBuffer,
-                    fileUrl: null,
-                },
-            });
-            this.logger.log(`Archivo almacenado exitosamente con ID: ${document.id}`);
-            return {
-                id: document.id,
-                filename: document.filename,
-                fileSize: document.fileSize,
-                mimeType: document.mimeType,
-                originalName: document.originalName,
-            };
-        }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-            this.logger.error(`Error almacenando archivo: ${errorMessage}`);
-            throw error;
-        }
-    }
-    async getFile(documentId) {
-        try {
-            this.logger.log(`Obteniendo archivo con ID: ${documentId}`);
-            const document = await this.prisma.document.findUnique({
-                where: { id: documentId },
-                select: {
-                    fileData: true,
-                    mimeType: true,
-                    originalName: true,
-                    fileSize: true,
-                },
-            });
-            if (!document || !document.fileData) {
-                this.logger.warn(`Archivo no encontrado o sin datos: ${documentId}`);
-                return null;
-            }
-            this.logger.log(`Archivo obtenido exitosamente: ${document.originalName}`);
-            const fileData = Buffer.isBuffer(document.fileData)
-                ? document.fileData
-                : Buffer.from(document.fileData);
-            return {
-                fileData,
-                mimeType: document.mimeType,
-                originalName: document.originalName,
-                fileSize: document.fileSize,
-            };
-        }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-            this.logger.error(`Error obteniendo archivo: ${errorMessage}`);
-            throw error;
-        }
-    }
-    async fileExists(documentId) {
-        try {
-            const document = await this.prisma.document.findUnique({
-                where: { id: documentId },
-                select: { id: true, fileData: true },
-            });
-            return !!(document && document.fileData);
-        }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-            this.logger.error(`Error verificando existencia del archivo: ${errorMessage}`);
-            return false;
-        }
-    }
-    async deleteFile(documentId) {
-        try {
-            this.logger.log(`Eliminando archivo con ID: ${documentId}`);
-            const result = await this.prisma.document.delete({
-                where: { id: documentId },
-            });
-            this.logger.log(`Archivo eliminado exitosamente: ${result.filename}`);
-            return true;
-        }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-            this.logger.error(`Error eliminando archivo: ${errorMessage}`);
-            return false;
-        }
-    }
-    async getFileMetadata(documentId) {
-        try {
-            const document = await this.prisma.document.findUnique({
-                where: { id: documentId },
-                select: {
-                    filename: true,
-                    originalName: true,
-                    mimeType: true,
-                    fileSize: true,
-                    uploadedAt: true,
-                    description: true,
-                },
-            });
-            return document;
-        }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-            this.logger.error(`Error obteniendo metadatos: ${errorMessage}`);
-            return null;
-        }
-    }
-};
-exports.PostgresStorageService = PostgresStorageService;
-exports.PostgresStorageService = PostgresStorageService = PostgresStorageService_1 = __decorate([
-    (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
-], PostgresStorageService);
-
-
-/***/ }),
-/* 56 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var FileStorageService_1;
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.FileStorageService = void 0;
-const common_1 = __webpack_require__(2);
-const fs = __importStar(__webpack_require__(57));
-const path = __importStar(__webpack_require__(58));
-const storage_config_1 = __webpack_require__(59);
-let FileStorageService = FileStorageService_1 = class FileStorageService {
-    constructor() {
-        this.logger = new common_1.Logger(FileStorageService_1.name);
-    }
-    async storeFile(fileBuffer, originalName, expedienteId, metadata) {
-        try {
-            const timestamp = Date.now();
-            const fileExtension = path.extname(originalName);
-            const sanitizedOriginalName = this.sanitizeFilename(originalName);
-            const uniqueFilename = `${timestamp}_${sanitizedOriginalName}`;
-            const expedientePath = expedienteId || 'general';
-            const relativePath = path.join('uploads', expedientePath, uniqueFilename);
-            const fullPath = path.join(storage_config_1.STORAGE_CONFIG.uploadPath, expedientePath, uniqueFilename);
-            await this.ensureDirectoryExists(path.dirname(fullPath));
-            fs.writeFileSync(fullPath, fileBuffer);
-            const fileStats = fs.statSync(fullPath);
-            const mimeType = this.getMimeTypeFromExtension(fileExtension);
-            this.logger.log(`✅ Archivo almacenado: ${fullPath} (${fileStats.size} bytes)`);
-            return {
-                filename: uniqueFilename,
-                filePath: fullPath,
-                fileUrl: `/uploads/${relativePath}`,
-                fileSize: fileStats.size,
-                mimeType: mimeType
-            };
-        }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.logger.error(`❌ Error almacenando archivo: ${errorMessage}`);
-            throw new Error(`Error al almacenar archivo: ${errorMessage}`);
-        }
-    }
-    async readFile(fileUrl) {
-        try {
-            const relativePath = fileUrl.replace('/uploads/', '');
-            const fullPath = path.join(storage_config_1.STORAGE_CONFIG.uploadPath, relativePath);
-            if (!fs.existsSync(fullPath)) {
-                throw new Error(`Archivo no encontrado: ${fullPath}`);
-            }
-            const buffer = fs.readFileSync(fullPath);
-            const fileStats = fs.statSync(fullPath);
-            const fileExtension = path.extname(fullPath);
-            const mimeType = this.getMimeTypeFromExtension(fileExtension);
-            this.logger.log(`✅ Archivo leído: ${fullPath} (${fileStats.size} bytes)`);
-            return {
-                buffer,
-                mimeType,
-                fileSize: fileStats.size,
-                originalName: path.basename(fullPath)
-            };
-        }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.logger.error(`❌ Error leyendo archivo: ${errorMessage}`);
-            throw new Error(`Error al leer archivo: ${errorMessage}`);
-        }
-    }
-    async deleteFile(fileUrl) {
-        try {
-            const relativePath = fileUrl.replace('/uploads/', '');
-            const fullPath = path.join(storage_config_1.STORAGE_CONFIG.uploadPath, relativePath);
-            if (fs.existsSync(fullPath)) {
-                fs.unlinkSync(fullPath);
-                this.logger.log(`✅ Archivo eliminado: ${fullPath}`);
-                return true;
-            }
-            return false;
-        }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.logger.error(`❌ Error eliminando archivo: ${errorMessage}`);
-            throw new Error(`Error al eliminar archivo: ${errorMessage}`);
-        }
-    }
-    async fileExists(fileUrl) {
-        try {
-            const relativePath = fileUrl.replace('/uploads/', '');
-            const fullPath = path.join(storage_config_1.STORAGE_CONFIG.uploadPath, relativePath);
-            return fs.existsSync(fullPath);
-        }
-        catch (error) {
-            return false;
-        }
-    }
-    async getFileInfo(fileUrl) {
-        try {
-            const relativePath = fileUrl.replace('/uploads/', '');
-            const fullPath = path.join(storage_config_1.STORAGE_CONFIG.uploadPath, relativePath);
-            if (!fs.existsSync(fullPath)) {
-                return { exists: false };
-            }
-            const fileStats = fs.statSync(fullPath);
-            const fileExtension = path.extname(fullPath);
-            const mimeType = this.getMimeTypeFromExtension(fileExtension);
-            return {
-                exists: true,
-                fileSize: fileStats.size,
-                mimeType: mimeType,
-                lastModified: fileStats.mtime
-            };
-        }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.logger.error(`❌ Error obteniendo información del archivo: ${errorMessage}`);
-            return { exists: false };
-        }
-    }
-    async listFiles(expedienteId) {
-        try {
-            const expedientePath = expedienteId || 'general';
-            const fullPath = path.join(storage_config_1.STORAGE_CONFIG.uploadPath, expedientePath);
-            if (!fs.existsSync(fullPath)) {
-                return [];
-            }
-            const files = fs.readdirSync(fullPath);
-            return files.filter(file => {
-                const filePath = path.join(fullPath, file);
-                return fs.statSync(filePath).isFile();
-            });
-        }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.logger.error(`❌ Error listando archivos: ${errorMessage}`);
-            return [];
-        }
-    }
-    async ensureDirectoryExists(dirPath) {
-        if (!fs.existsSync(dirPath)) {
-            fs.mkdirSync(dirPath, { recursive: true });
-            this.logger.log(`📁 Directorio creado: ${dirPath}`);
-        }
-    }
-    sanitizeFilename(filename) {
-        return filename
-            .replace(/[^a-zA-Z0-9.-]/g, '_')
-            .replace(/_{2,}/g, '_')
-            .substring(0, 100);
-    }
-    getMimeTypeFromExtension(extension) {
-        const mimeTypes = {
-            '.pdf': 'application/pdf',
-            '.doc': 'application/msword',
-            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            '.xls': 'application/vnd.ms-excel',
-            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            '.txt': 'text/plain',
-            '.csv': 'text/csv',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.png': 'image/png',
-            '.gif': 'image/gif',
-            '.webp': 'image/webp'
-        };
-        return mimeTypes[extension.toLowerCase()] || 'application/octet-stream';
-    }
-};
-exports.FileStorageService = FileStorageService;
-exports.FileStorageService = FileStorageService = FileStorageService_1 = __decorate([
-    (0, common_1.Injectable)()
-], FileStorageService);
-
-
-/***/ }),
-/* 57 */
-/***/ ((module) => {
-
-module.exports = require("fs");
-
-/***/ }),
-/* 58 */
-/***/ ((module) => {
-
-module.exports = require("path");
-
-/***/ }),
-/* 59 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.STORAGE_CONFIG = void 0;
-exports.getUploadPath = getUploadPath;
-exports.getPublicUrl = getPublicUrl;
-exports.isValidFileType = isValidFileType;
-exports.isValidFileSize = isValidFileSize;
-exports.sanitizeFilename = sanitizeFilename;
-exports.generateFilePath = generateFilePath;
-exports.getFullFilePath = getFullFilePath;
-exports.fileExists = fileExists;
-exports.ensureDirectoryExists = ensureDirectoryExists;
-exports.getFileInfo = getFileInfo;
-exports.cleanupTempFiles = cleanupTempFiles;
-exports.getStorageStats = getStorageStats;
-exports.STORAGE_CONFIG = {
-    type: 'local',
-    uploadPath: process.env.UPLOAD_DEST || './uploads',
-    maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760'),
-    allowedMimeTypes: [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-powerpoint',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'text/plain',
-        'text/csv',
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-        'image/webp'
-    ],
-    directories: {
-        documents: 'documents',
-        temp: 'temp',
-        backup: 'backup'
-    },
-    baseUrl: process.env.BASE_URL || '',
-    security: {
-        validateExtension: true,
-        sanitizeFilename: true,
-        allowOverwrite: false
-    }
-};
-function getUploadPath(subPath = '') {
-    const basePath = exports.STORAGE_CONFIG.uploadPath;
-    return subPath ? `${basePath}/${subPath}` : basePath;
-}
-function getPublicUrl(filePath) {
-    const baseUrl = exports.STORAGE_CONFIG.baseUrl;
-    return `${baseUrl}/uploads/${filePath}`;
-}
-function isValidFileType(mimeType) {
-    return exports.STORAGE_CONFIG.allowedMimeTypes.includes(mimeType);
-}
-function isValidFileSize(size) {
-    return size <= exports.STORAGE_CONFIG.maxFileSize;
-}
-function sanitizeFilename(filename) {
-    if (!exports.STORAGE_CONFIG.security.sanitizeFilename) {
-        return filename;
-    }
-    return filename
-        .replace(/[^a-zA-Z0-9.-]/g, '_')
-        .replace(/_{2,}/g, '_')
-        .toLowerCase();
-}
-function generateFilePath(expedienteId, filename) {
-    const sanitizedFilename = sanitizeFilename(filename);
-    const expedienteDir = expedienteId || 'general';
-    return `${exports.STORAGE_CONFIG.directories.documents}/${expedienteDir}/${sanitizedFilename}`;
-}
-function getFullFilePath(expedienteId, filename) {
-    const relativePath = generateFilePath(expedienteId, filename);
-    return getUploadPath(relativePath);
-}
-async function fileExists(filePath) {
-    try {
-        const fs = await Promise.resolve().then(() => __importStar(__webpack_require__(60)));
-        await fs.access(filePath);
-        return true;
-    }
-    catch {
-        return false;
-    }
-}
-async function ensureDirectoryExists(dirPath) {
-    try {
-        const fs = await Promise.resolve().then(() => __importStar(__webpack_require__(60)));
-        await fs.mkdir(dirPath, { recursive: true });
-    }
-    catch (error) {
-        console.error(`Error creando directorio ${dirPath}:`, error);
-        throw error;
-    }
-}
-async function getFileInfo(filePath) {
-    try {
-        const fs = await Promise.resolve().then(() => __importStar(__webpack_require__(60)));
-        const stats = await fs.stat(filePath);
-        return {
-            exists: true,
-            size: stats.size,
-            created: stats.birthtime,
-            modified: stats.mtime,
-            isFile: stats.isFile(),
-            isDirectory: stats.isDirectory()
-        };
-    }
-    catch (error) {
-        return {
-            exists: false,
-            error: error instanceof Error ? error.message : String(error)
-        };
-    }
-}
-async function cleanupTempFiles() {
-    try {
-        const fs = await Promise.resolve().then(() => __importStar(__webpack_require__(60)));
-        const path = await Promise.resolve().then(() => __importStar(__webpack_require__(58)));
-        const tempPath = getUploadPath(exports.STORAGE_CONFIG.directories.temp);
-        if (await fileExists(tempPath)) {
-            const files = await fs.readdir(tempPath);
-            const now = Date.now();
-            const maxAge = 24 * 60 * 60 * 1000;
-            for (const file of files) {
-                const filePath = path.join(tempPath, file);
-                const stats = await fs.stat(filePath);
-                if (now - stats.mtime.getTime() > maxAge) {
-                    await fs.unlink(filePath);
-                    console.log(`🗑️  Archivo temporal eliminado: ${file}`);
-                }
-            }
-        }
-    }
-    catch (error) {
-        console.error('Error limpiando archivos temporales:', error);
-    }
-}
-async function getStorageStats() {
-    try {
-        const fs = await Promise.resolve().then(() => __importStar(__webpack_require__(60)));
-        const path = await Promise.resolve().then(() => __importStar(__webpack_require__(58)));
-        const basePath = exports.STORAGE_CONFIG.uploadPath;
-        const documentsPath = getUploadPath(exports.STORAGE_CONFIG.directories.documents);
-        let totalFiles = 0;
-        let totalSize = 0;
-        let expedientesCount = 0;
-        if (await fileExists(documentsPath)) {
-            const expedientes = await fs.readdir(documentsPath);
-            expedientesCount = expedientes.length;
-            for (const expediente of expedientes) {
-                const expedientePath = path.join(documentsPath, expediente);
-                const expedienteStats = await fs.stat(expedientePath);
-                if (expedienteStats.isDirectory()) {
-                    const files = await fs.readdir(expedientePath);
-                    totalFiles += files.length;
-                    for (const file of files) {
-                        const filePath = path.join(expedientePath, file);
-                        const fileStats = await fs.stat(filePath);
-                        totalSize += fileStats.size;
-                    }
-                }
-            }
-        }
-        return {
-            totalFiles,
-            totalSize,
-            expedientesCount,
-            maxFileSize: exports.STORAGE_CONFIG.maxFileSize,
-            uploadPath: basePath
-        };
-    }
-    catch (error) {
-        console.error('Error obteniendo estadísticas de almacenamiento:', error);
-        return {
-            error: error instanceof Error ? error.message : String(error)
-        };
-    }
-}
-
-
-/***/ }),
-/* 60 */
-/***/ ((module) => {
-
-module.exports = require("fs/promises");
-
-/***/ }),
-/* 61 */
+/* 48 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9247,7 +6065,19 @@ __decorate([
 
 
 /***/ }),
-/* 62 */
+/* 49 */
+/***/ ((module) => {
+
+module.exports = require("fs");
+
+/***/ }),
+/* 50 */
+/***/ ((module) => {
+
+module.exports = require("path");
+
+/***/ }),
+/* 51 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9260,10 +6090,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AppointmentsModule = void 0;
 const common_1 = __webpack_require__(2);
-const appointments_controller_1 = __webpack_require__(63);
-const appointments_service_1 = __webpack_require__(64);
-const visitor_appointments_controller_1 = __webpack_require__(68);
-const visitor_appointments_service_1 = __webpack_require__(69);
+const appointments_controller_1 = __webpack_require__(52);
+const appointments_service_1 = __webpack_require__(53);
+const visitor_appointments_controller_1 = __webpack_require__(57);
+const visitor_appointments_service_1 = __webpack_require__(58);
 const prisma_module_1 = __webpack_require__(37);
 const email_service_1 = __webpack_require__(17);
 let AppointmentsModule = class AppointmentsModule {
@@ -9280,7 +6110,7 @@ exports.AppointmentsModule = AppointmentsModule = __decorate([
 
 
 /***/ }),
-/* 63 */
+/* 52 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9301,11 +6131,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AppointmentsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const appointments_service_1 = __webpack_require__(64);
+const appointments_service_1 = __webpack_require__(53);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const create_appointment_dto_1 = __webpack_require__(65);
-const create_lawyer_appointment_dto_1 = __webpack_require__(66);
-const update_appointment_dto_1 = __webpack_require__(67);
+const create_appointment_dto_1 = __webpack_require__(54);
+const create_lawyer_appointment_dto_1 = __webpack_require__(55);
+const update_appointment_dto_1 = __webpack_require__(56);
 let AppointmentsController = class AppointmentsController {
     constructor(appointmentsService) {
         this.appointmentsService = appointmentsService;
@@ -9699,7 +6529,7 @@ exports.AppointmentsController = AppointmentsController = __decorate([
 
 
 /***/ }),
-/* 64 */
+/* 53 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10304,7 +7134,7 @@ exports.AppointmentsService = AppointmentsService = __decorate([
 
 
 /***/ }),
-/* 65 */
+/* 54 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10368,7 +7198,7 @@ __decorate([
 
 
 /***/ }),
-/* 66 */
+/* 55 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10432,7 +7262,7 @@ __decorate([
 
 
 /***/ }),
-/* 67 */
+/* 56 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10486,7 +7316,7 @@ __decorate([
 
 
 /***/ }),
-/* 68 */
+/* 57 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10507,8 +7337,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VisitorAppointmentsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const visitor_appointments_service_1 = __webpack_require__(69);
-const create_visitor_appointment_dto_1 = __webpack_require__(70);
+const visitor_appointments_service_1 = __webpack_require__(58);
+const create_visitor_appointment_dto_1 = __webpack_require__(59);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
@@ -10801,7 +7631,7 @@ exports.VisitorAppointmentsController = VisitorAppointmentsController = __decora
 
 
 /***/ }),
-/* 69 */
+/* 58 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11017,7 +7847,7 @@ exports.VisitorAppointmentsService = VisitorAppointmentsService = __decorate([
 
 
 /***/ }),
-/* 70 */
+/* 59 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11095,7 +7925,7 @@ __decorate([
 
 
 /***/ }),
-/* 71 */
+/* 60 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11108,8 +7938,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TasksModule = void 0;
 const common_1 = __webpack_require__(2);
-const tasks_controller_1 = __webpack_require__(72);
-const tasks_service_1 = __webpack_require__(73);
+const tasks_controller_1 = __webpack_require__(61);
+const tasks_service_1 = __webpack_require__(62);
 const prisma_module_1 = __webpack_require__(37);
 let TasksModule = class TasksModule {
 };
@@ -11125,7 +7955,7 @@ exports.TasksModule = TasksModule = __decorate([
 
 
 /***/ }),
-/* 72 */
+/* 61 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11146,9 +7976,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TasksController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const tasks_service_1 = __webpack_require__(73);
-const create_task_dto_1 = __webpack_require__(74);
-const update_task_dto_1 = __webpack_require__(75);
+const tasks_service_1 = __webpack_require__(62);
+const create_task_dto_1 = __webpack_require__(63);
+const update_task_dto_1 = __webpack_require__(64);
 const jwt_auth_guard_1 = __webpack_require__(27);
 let TasksController = class TasksController {
     constructor(tasksService) {
@@ -11506,7 +8336,7 @@ exports.TasksController = TasksController = __decorate([
 
 
 /***/ }),
-/* 73 */
+/* 62 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11524,7 +8354,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TasksService = void 0;
 const common_1 = __webpack_require__(2);
 const prisma_service_1 = __webpack_require__(8);
-const create_task_dto_1 = __webpack_require__(74);
+const create_task_dto_1 = __webpack_require__(63);
 let TasksService = class TasksService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -12049,7 +8879,7 @@ exports.TasksService = TasksService = __decorate([
 
 
 /***/ }),
-/* 74 */
+/* 63 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12119,7 +8949,7 @@ __decorate([
 
 
 /***/ }),
-/* 75 */
+/* 64 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12136,7 +8966,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateTaskDto = void 0;
 const swagger_1 = __webpack_require__(3);
-const create_task_dto_1 = __webpack_require__(74);
+const create_task_dto_1 = __webpack_require__(63);
 const class_validator_1 = __webpack_require__(23);
 class UpdateTaskDto extends (0, swagger_1.PartialType)(create_task_dto_1.CreateTaskDto) {
 }
@@ -12149,7 +8979,7 @@ __decorate([
 
 
 /***/ }),
-/* 76 */
+/* 65 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12162,8 +8992,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReportsModule = void 0;
 const common_1 = __webpack_require__(2);
-const reports_controller_1 = __webpack_require__(77);
-const reports_service_1 = __webpack_require__(78);
+const reports_controller_1 = __webpack_require__(66);
+const reports_service_1 = __webpack_require__(67);
 const prisma_module_1 = __webpack_require__(37);
 let ReportsModule = class ReportsModule {
 };
@@ -12179,7 +9009,7 @@ exports.ReportsModule = ReportsModule = __decorate([
 
 
 /***/ }),
-/* 77 */
+/* 66 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12200,7 +9030,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReportsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const reports_service_1 = __webpack_require__(78);
+const reports_service_1 = __webpack_require__(67);
 const jwt_auth_guard_1 = __webpack_require__(27);
 let ReportsController = class ReportsController {
     constructor(reportsService) {
@@ -12285,7 +9115,7 @@ exports.ReportsController = ReportsController = __decorate([
 
 
 /***/ }),
-/* 78 */
+/* 67 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12411,7 +9241,7 @@ exports.ReportsService = ReportsService = __decorate([
 
 
 /***/ }),
-/* 79 */
+/* 68 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12424,15 +9254,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AdminModule = void 0;
 const common_1 = __webpack_require__(2);
-const admin_controller_1 = __webpack_require__(80);
-const admin_service_1 = __webpack_require__(81);
-const layouts_controller_1 = __webpack_require__(82);
-const layouts_controller_2 = __webpack_require__(82);
-const layouts_service_1 = __webpack_require__(83);
-const menu_config_controller_1 = __webpack_require__(86);
-const menu_config_service_1 = __webpack_require__(87);
-const site_config_controller_1 = __webpack_require__(89);
-const site_config_service_1 = __webpack_require__(90);
+const admin_controller_1 = __webpack_require__(69);
+const admin_service_1 = __webpack_require__(70);
+const layouts_controller_1 = __webpack_require__(71);
+const layouts_controller_2 = __webpack_require__(71);
+const layouts_service_1 = __webpack_require__(72);
+const menu_config_controller_1 = __webpack_require__(75);
+const menu_config_service_1 = __webpack_require__(76);
+const site_config_controller_1 = __webpack_require__(78);
+const site_config_service_1 = __webpack_require__(79);
 const prisma_module_1 = __webpack_require__(37);
 let AdminModule = class AdminModule {
 };
@@ -12464,7 +9294,7 @@ exports.AdminModule = AdminModule = __decorate([
 
 
 /***/ }),
-/* 80 */
+/* 69 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12485,7 +9315,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AdminController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const admin_service_1 = __webpack_require__(81);
+const admin_service_1 = __webpack_require__(70);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
@@ -13269,7 +10099,7 @@ exports.AdminController = AdminController = __decorate([
 
 
 /***/ }),
-/* 81 */
+/* 70 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -13837,7 +10667,7 @@ exports.AdminService = AdminService = __decorate([
 
 
 /***/ }),
-/* 82 */
+/* 71 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -13862,8 +10692,8 @@ const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
-const layouts_service_1 = __webpack_require__(83);
-const layout_dto_1 = __webpack_require__(84);
+const layouts_service_1 = __webpack_require__(72);
+const layout_dto_1 = __webpack_require__(73);
 let LayoutsController = class LayoutsController {
     constructor(layoutsService) {
         this.layoutsService = layoutsService;
@@ -14199,7 +11029,7 @@ exports.AdminLayoutsController = AdminLayoutsController = __decorate([
 
 
 /***/ }),
-/* 83 */
+/* 72 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -14598,7 +11428,7 @@ exports.LayoutsService = LayoutsService = __decorate([
 
 
 /***/ }),
-/* 84 */
+/* 73 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -14614,7 +11444,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateLayoutDto = exports.CreateLayoutDto = exports.LayoutConfigDto = exports.ComponentConfigDto = void 0;
 const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(85);
+const class_transformer_1 = __webpack_require__(74);
 const swagger_1 = __webpack_require__(3);
 class ComponentConfigDto {
 }
@@ -14752,13 +11582,13 @@ __decorate([
 
 
 /***/ }),
-/* 85 */
+/* 74 */
 /***/ ((module) => {
 
 module.exports = require("class-transformer");
 
 /***/ }),
-/* 86 */
+/* 75 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -14783,8 +11613,8 @@ const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
-const menu_config_service_1 = __webpack_require__(87);
-const menu_config_dto_1 = __webpack_require__(88);
+const menu_config_service_1 = __webpack_require__(76);
+const menu_config_dto_1 = __webpack_require__(77);
 let MenuConfigController = class MenuConfigController {
     constructor(menuConfigService) {
         this.menuConfigService = menuConfigService;
@@ -14993,7 +11823,7 @@ exports.MenuConfigController = MenuConfigController = __decorate([
 
 
 /***/ }),
-/* 87 */
+/* 76 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -15277,7 +12107,7 @@ exports.MenuConfigService = MenuConfigService = __decorate([
 
 
 /***/ }),
-/* 88 */
+/* 77 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -15295,7 +12125,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MenuConfigResponseDto = exports.UpdateMenuConfigDto = exports.CreateMenuConfigDto = exports.MenuItemDto = void 0;
 const swagger_1 = __webpack_require__(3);
 const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(85);
+const class_transformer_1 = __webpack_require__(74);
 const client_1 = __webpack_require__(9);
 class MenuItemDto {
 }
@@ -15455,7 +12285,7 @@ __decorate([
 
 
 /***/ }),
-/* 89 */
+/* 78 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -15479,8 +12309,8 @@ const swagger_1 = __webpack_require__(3);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
-const site_config_service_1 = __webpack_require__(90);
-const site_config_dto_1 = __webpack_require__(91);
+const site_config_service_1 = __webpack_require__(79);
+const site_config_dto_1 = __webpack_require__(80);
 let SiteConfigController = class SiteConfigController {
     constructor(siteConfigService) {
         this.siteConfigService = siteConfigService;
@@ -15766,7 +12596,7 @@ exports.SiteConfigController = SiteConfigController = __decorate([
 
 
 /***/ }),
-/* 90 */
+/* 79 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -16110,7 +12940,7 @@ exports.SiteConfigService = SiteConfigService = __decorate([
 
 
 /***/ }),
-/* 91 */
+/* 80 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -16266,7 +13096,7 @@ __decorate([
 
 
 /***/ }),
-/* 92 */
+/* 81 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -16279,9 +13109,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatModule = void 0;
 const common_1 = __webpack_require__(2);
-const chat_controller_1 = __webpack_require__(93);
-const chat_service_1 = __webpack_require__(94);
-const chat_gateway_1 = __webpack_require__(96);
+const chat_controller_1 = __webpack_require__(82);
+const chat_service_1 = __webpack_require__(83);
+const chat_gateway_1 = __webpack_require__(85);
 const prisma_module_1 = __webpack_require__(37);
 let ChatModule = class ChatModule {
 };
@@ -16297,7 +13127,7 @@ exports.ChatModule = ChatModule = __decorate([
 
 
 /***/ }),
-/* 93 */
+/* 82 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -16318,9 +13148,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const chat_service_1 = __webpack_require__(94);
+const chat_service_1 = __webpack_require__(83);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const create_message_dto_1 = __webpack_require__(95);
+const create_message_dto_1 = __webpack_require__(84);
 let ChatController = class ChatController {
     constructor(chatService) {
         this.chatService = chatService;
@@ -16558,7 +13388,7 @@ exports.ChatController = ChatController = __decorate([
 
 
 /***/ }),
-/* 94 */
+/* 83 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -16957,7 +13787,7 @@ exports.ChatService = ChatService = __decorate([
 
 
 /***/ }),
-/* 95 */
+/* 84 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -16989,7 +13819,7 @@ __decorate([
 
 
 /***/ }),
-/* 96 */
+/* 85 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -17008,9 +13838,9 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 var _a, _b, _c, _d, _e, _f;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatGateway = void 0;
-const websockets_1 = __webpack_require__(97);
-const socket_io_1 = __webpack_require__(98);
-const chat_service_1 = __webpack_require__(94);
+const websockets_1 = __webpack_require__(86);
+const socket_io_1 = __webpack_require__(87);
+const chat_service_1 = __webpack_require__(83);
 let ChatGateway = class ChatGateway {
     constructor(chatService) {
         this.chatService = chatService;
@@ -17180,19 +14010,19 @@ exports.ChatGateway = ChatGateway = __decorate([
 
 
 /***/ }),
-/* 97 */
+/* 86 */
 /***/ ((module) => {
 
 module.exports = require("@nestjs/websockets");
 
 /***/ }),
-/* 98 */
+/* 87 */
 /***/ ((module) => {
 
 module.exports = require("socket.io");
 
 /***/ }),
-/* 99 */
+/* 88 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -17205,8 +14035,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatbotModule = void 0;
 const common_1 = __webpack_require__(2);
-const chatbot_controller_1 = __webpack_require__(100);
-const chatbot_service_1 = __webpack_require__(101);
+const chatbot_controller_1 = __webpack_require__(89);
+const chatbot_service_1 = __webpack_require__(90);
 const prisma_module_1 = __webpack_require__(37);
 const auth_module_1 = __webpack_require__(12);
 let ChatbotModule = class ChatbotModule {
@@ -17223,7 +14053,7 @@ exports.ChatbotModule = ChatbotModule = __decorate([
 
 
 /***/ }),
-/* 100 */
+/* 89 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -17244,7 +14074,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatbotController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const chatbot_service_1 = __webpack_require__(101);
+const chatbot_service_1 = __webpack_require__(90);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
@@ -17428,7 +14258,7 @@ exports.ChatbotController = ChatbotController = __decorate([
 
 
 /***/ }),
-/* 101 */
+/* 90 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -17774,7 +14604,7 @@ exports.ChatbotService = ChatbotService = ChatbotService_1 = __decorate([
 
 
 /***/ }),
-/* 102 */
+/* 91 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -17787,8 +14617,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ParametrosModule = void 0;
 const common_1 = __webpack_require__(2);
-const parametros_service_1 = __webpack_require__(103);
-const parametros_controller_1 = __webpack_require__(104);
+const parametros_service_1 = __webpack_require__(92);
+const parametros_controller_1 = __webpack_require__(93);
 const prisma_module_1 = __webpack_require__(37);
 let ParametrosModule = class ParametrosModule {
 };
@@ -17804,7 +14634,7 @@ exports.ParametrosModule = ParametrosModule = __decorate([
 
 
 /***/ }),
-/* 103 */
+/* 92 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -18032,7 +14862,7 @@ exports.ParametrosService = ParametrosService = __decorate([
 
 
 /***/ }),
-/* 104 */
+/* 93 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -18053,7 +14883,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ParametrosController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const parametros_service_1 = __webpack_require__(103);
+const parametros_service_1 = __webpack_require__(92);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
@@ -18605,7 +15435,7 @@ exports.ParametrosController = ParametrosController = __decorate([
 
 
 /***/ }),
-/* 105 */
+/* 94 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -18618,17 +15448,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InvoicesModule = void 0;
 const common_1 = __webpack_require__(2);
-const invoices_service_1 = __webpack_require__(106);
-const invoices_controller_1 = __webpack_require__(121);
-const facturae_controller_1 = __webpack_require__(127);
-const facturae_service_1 = __webpack_require__(113);
-const external_systems_controller_1 = __webpack_require__(128);
-const external_systems_service_1 = __webpack_require__(129);
-const pdf_generator_service_1 = __webpack_require__(115);
-const invoice_audit_service_1 = __webpack_require__(119);
-const digital_signature_service_1 = __webpack_require__(124);
+const invoices_service_1 = __webpack_require__(95);
+const invoices_controller_1 = __webpack_require__(110);
+const facturae_controller_1 = __webpack_require__(116);
+const facturae_service_1 = __webpack_require__(102);
+const external_systems_controller_1 = __webpack_require__(117);
+const external_systems_service_1 = __webpack_require__(118);
+const pdf_generator_service_1 = __webpack_require__(104);
+const invoice_audit_service_1 = __webpack_require__(108);
+const digital_signature_service_1 = __webpack_require__(113);
 const auth_module_1 = __webpack_require__(12);
-const parametros_module_1 = __webpack_require__(102);
+const parametros_module_1 = __webpack_require__(91);
 let InvoicesModule = class InvoicesModule {
 };
 exports.InvoicesModule = InvoicesModule;
@@ -18642,7 +15472,7 @@ exports.InvoicesModule = InvoicesModule = __decorate([
 
 
 /***/ }),
-/* 106 */
+/* 95 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -18694,16 +15524,16 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InvoicesService = void 0;
 const common_1 = __webpack_require__(2);
 const prisma_service_1 = __webpack_require__(8);
-const facturae_xml_util_1 = __webpack_require__(107);
-const xades_sign_util_1 = __webpack_require__(109);
-const facturae_service_1 = __webpack_require__(113);
-const pdf_generator_service_1 = __webpack_require__(115);
-const fs = __importStar(__webpack_require__(57));
+const facturae_xml_util_1 = __webpack_require__(96);
+const xades_sign_util_1 = __webpack_require__(98);
+const facturae_service_1 = __webpack_require__(102);
+const pdf_generator_service_1 = __webpack_require__(104);
+const fs = __importStar(__webpack_require__(49));
 const crypto = __importStar(__webpack_require__(20));
-const pdf_lib_1 = __webpack_require__(118);
-const QRCode = __importStar(__webpack_require__(117));
-const invoice_audit_service_1 = __webpack_require__(119);
-const invoice_status_constants_1 = __webpack_require__(120);
+const pdf_lib_1 = __webpack_require__(107);
+const QRCode = __importStar(__webpack_require__(106));
+const invoice_audit_service_1 = __webpack_require__(108);
+const invoice_status_constants_1 = __webpack_require__(109);
 let InvoicesService = InvoicesService_1 = class InvoicesService {
     constructor(prisma, pdfGeneratorService, invoiceAuditService) {
         this.prisma = prisma;
@@ -19715,7 +16545,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
     async generateInvoicePdfProfessionalVectorial(invoice) {
         try {
             this.logger.log('Generando PDF profesional vectorial (compatible con Railway)');
-            const { PDFDocument, rgb, StandardFonts } = await Promise.resolve().then(() => __importStar(__webpack_require__(118)));
+            const { PDFDocument, rgb, StandardFonts } = await Promise.resolve().then(() => __importStar(__webpack_require__(107)));
             const pdfDoc = await PDFDocument.create();
             const page = pdfDoc.addPage([595, 842]);
             const { width, height } = page.getSize();
@@ -19913,7 +16743,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
                 color: darkGray
             });
             try {
-                const QRCode = await Promise.resolve().then(() => __importStar(__webpack_require__(117)));
+                const QRCode = await Promise.resolve().then(() => __importStar(__webpack_require__(106)));
                 const qrData = [
                     `NIF:${invoice.emisor?.email || ''}`,
                     `NUM:${invoice.numeroFactura || ''}`,
@@ -20076,7 +16906,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
         }
     }
     async htmlToPdfWithPuppeteer(htmlContent) {
-        const puppeteer = await Promise.resolve().then(() => __importStar(__webpack_require__(116)));
+        const puppeteer = await Promise.resolve().then(() => __importStar(__webpack_require__(105)));
         let browser;
         try {
             this.logger.log('[PUPPETEER] Iniciando Puppeteer...');
@@ -20610,7 +17440,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
             `HASH:${invoiceHash}`
         ].join('|');
         console.log('🔍 [generateInvoiceHtml] QR Data generado:', qrData);
-        const qrImageDataUrl = await (await Promise.resolve().then(() => __importStar(__webpack_require__(117)))).toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
+        const qrImageDataUrl = await (await Promise.resolve().then(() => __importStar(__webpack_require__(106)))).toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
         if (invoice.facturaOriginalId) {
             console.log('🔄 [generateInvoiceHtml] Es factura rectificativa, obteniendo datos de factura original');
             const facturaOriginal = await this.prisma.invoice.findUnique({
@@ -20785,14 +17615,14 @@ exports.InvoicesService = InvoicesService = InvoicesService_1 = __decorate([
 
 
 /***/ }),
-/* 107 */
+/* 96 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.generateFacturaeXML = generateFacturaeXML;
 exports.generateFacturaeXMLFromInvoice = generateFacturaeXMLFromInvoice;
-const xmlbuilder2_1 = __webpack_require__(108);
+const xmlbuilder2_1 = __webpack_require__(97);
 function generateFacturaeXML(data) {
     const root = (0, xmlbuilder2_1.create)({ version: '1.0', encoding: 'UTF-8' })
         .ele('Facturae', {
@@ -21209,13 +18039,13 @@ function generateFacturaeXMLFromInvoice(invoice) {
 
 
 /***/ }),
-/* 108 */
+/* 97 */
 /***/ ((module) => {
 
 module.exports = require("xmlbuilder2");
 
 /***/ }),
-/* 109 */
+/* 98 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21260,9 +18090,9 @@ exports.validateCertificate = validateCertificate;
 exports.checkCertificateStatus = checkCertificateStatus;
 exports.getTimestamp = getTimestamp;
 exports.validateSignature = validateSignature;
-const xadesjs = __importStar(__webpack_require__(110));
-const webcrypto_1 = __webpack_require__(111);
-const xmldom_1 = __webpack_require__(112);
+const xadesjs = __importStar(__webpack_require__(99));
+const webcrypto_1 = __webpack_require__(100);
+const xmldom_1 = __webpack_require__(101);
 const webcrypto = new webcrypto_1.Crypto();
 xadesjs.Application.setEngine("OpenSSL", webcrypto);
 var XAdESLevel;
@@ -21436,25 +18266,25 @@ function validateSignature(xmlContent) {
 
 
 /***/ }),
-/* 110 */
+/* 99 */
 /***/ ((module) => {
 
 module.exports = require("xadesjs");
 
 /***/ }),
-/* 111 */
+/* 100 */
 /***/ ((module) => {
 
 module.exports = require("@peculiar/webcrypto");
 
 /***/ }),
-/* 112 */
+/* 101 */
 /***/ ((module) => {
 
 module.exports = require("xmldom");
 
 /***/ }),
-/* 113 */
+/* 102 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21504,11 +18334,11 @@ var FacturaeService_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FacturaeService = void 0;
 const common_1 = __webpack_require__(2);
-const facturae_xml_util_1 = __webpack_require__(107);
-const xades_sign_util_1 = __webpack_require__(109);
-const facturae_validator_util_1 = __webpack_require__(114);
-const fs = __importStar(__webpack_require__(57));
-const path = __importStar(__webpack_require__(58));
+const facturae_xml_util_1 = __webpack_require__(96);
+const xades_sign_util_1 = __webpack_require__(98);
+const facturae_validator_util_1 = __webpack_require__(103);
+const fs = __importStar(__webpack_require__(49));
+const path = __importStar(__webpack_require__(50));
 let FacturaeService = FacturaeService_1 = class FacturaeService {
     constructor() {
         this.logger = new common_1.Logger(FacturaeService_1.name);
@@ -21777,7 +18607,7 @@ exports.FacturaeService = FacturaeService = FacturaeService_1 = __decorate([
 
 
 /***/ }),
-/* 114 */
+/* 103 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21816,8 +18646,8 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FacturaeValidator = void 0;
-const xmldom_1 = __webpack_require__(112);
-const path = __importStar(__webpack_require__(58));
+const xmldom_1 = __webpack_require__(101);
+const path = __importStar(__webpack_require__(50));
 class FacturaeValidator {
     static validateXML(xmlContent, options = {}) {
         const result = {
@@ -22272,7 +19102,7 @@ FacturaeValidator.FACTURAE_SCHEMA_PATH = path.join(__dirname, '../../schemas/fac
 
 
 /***/ }),
-/* 115 */
+/* 104 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -22323,11 +19153,11 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PdfGeneratorService = void 0;
 const common_1 = __webpack_require__(2);
-const puppeteer = __importStar(__webpack_require__(116));
-const fs = __importStar(__webpack_require__(57));
-const path = __importStar(__webpack_require__(58));
-const QRCode = __importStar(__webpack_require__(117));
-const parametros_service_1 = __webpack_require__(103);
+const puppeteer = __importStar(__webpack_require__(105));
+const fs = __importStar(__webpack_require__(49));
+const path = __importStar(__webpack_require__(50));
+const QRCode = __importStar(__webpack_require__(106));
+const parametros_service_1 = __webpack_require__(92);
 let PdfGeneratorService = PdfGeneratorService_1 = class PdfGeneratorService {
     constructor(parametrosService) {
         this.parametrosService = parametrosService;
@@ -22880,25 +19710,25 @@ exports.PdfGeneratorService = PdfGeneratorService = PdfGeneratorService_1 = __de
 
 
 /***/ }),
-/* 116 */
+/* 105 */
 /***/ ((module) => {
 
 module.exports = require("puppeteer");
 
 /***/ }),
-/* 117 */
+/* 106 */
 /***/ ((module) => {
 
 module.exports = require("qrcode");
 
 /***/ }),
-/* 118 */
+/* 107 */
 /***/ ((module) => {
 
 module.exports = require("pdf-lib");
 
 /***/ }),
-/* 119 */
+/* 108 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23031,7 +19861,7 @@ exports.InvoiceAuditService = InvoiceAuditService = __decorate([
 
 
 /***/ }),
-/* 120 */
+/* 109 */
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -23143,7 +19973,7 @@ exports.getStatusColor = getStatusColor;
 
 
 /***/ }),
-/* 121 */
+/* 110 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23197,20 +20027,20 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InvoicesController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const invoices_service_1 = __webpack_require__(106);
-const create_invoice_dto_1 = __webpack_require__(122);
-const update_invoice_dto_1 = __webpack_require__(123);
+const invoices_service_1 = __webpack_require__(95);
+const create_invoice_dto_1 = __webpack_require__(111);
+const update_invoice_dto_1 = __webpack_require__(112);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
 const client_1 = __webpack_require__(9);
-const express_1 = __webpack_require__(54);
-const invoice_audit_service_1 = __webpack_require__(119);
-const digital_signature_service_1 = __webpack_require__(124);
-const fs = __importStar(__webpack_require__(57));
-const path = __importStar(__webpack_require__(58));
-const platform_express_1 = __webpack_require__(53);
-const multer = __importStar(__webpack_require__(126));
+const express_1 = __webpack_require__(47);
+const invoice_audit_service_1 = __webpack_require__(108);
+const digital_signature_service_1 = __webpack_require__(113);
+const fs = __importStar(__webpack_require__(49));
+const path = __importStar(__webpack_require__(50));
+const platform_express_1 = __webpack_require__(46);
+const multer = __importStar(__webpack_require__(115));
 let InvoicesController = class InvoicesController {
     constructor(invoicesService, invoiceAuditService, digitalSignatureService) {
         this.invoicesService = invoicesService;
@@ -23339,7 +20169,7 @@ let InvoicesController = class InvoicesController {
     async testPdf(id, res, req) {
         try {
             console.log('[TEST-PDF] Generando PDF de prueba...');
-            const { PDFDocument, rgb } = await Promise.resolve().then(() => __importStar(__webpack_require__(118)));
+            const { PDFDocument, rgb } = await Promise.resolve().then(() => __importStar(__webpack_require__(107)));
             const pdfDoc = await PDFDocument.create();
             const page = pdfDoc.addPage([595, 842]);
             const { width, height } = page.getSize();
@@ -24525,7 +21355,7 @@ exports.InvoicesController = InvoicesController = __decorate([
 
 
 /***/ }),
-/* 122 */
+/* 111 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -24541,7 +21371,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateInvoiceDto = void 0;
 const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(85);
+const class_transformer_1 = __webpack_require__(74);
 const swagger_1 = __webpack_require__(3);
 class InvoiceItemDto {
 }
@@ -24863,7 +21693,7 @@ __decorate([
 
 
 /***/ }),
-/* 123 */
+/* 112 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -24880,7 +21710,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateInvoiceDto = exports.UpdateInvoiceItemDto = void 0;
 const swagger_1 = __webpack_require__(3);
 const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(85);
+const class_transformer_1 = __webpack_require__(74);
 class UpdateInvoiceItemDto {
 }
 exports.UpdateInvoiceItemDto = UpdateInvoiceItemDto;
@@ -25109,7 +21939,7 @@ __decorate([
 
 
 /***/ }),
-/* 124 */
+/* 113 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25159,9 +21989,9 @@ var DigitalSignatureService_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DigitalSignatureService = void 0;
 const common_1 = __webpack_require__(2);
-const axios_1 = __importDefault(__webpack_require__(125));
-const fs = __importStar(__webpack_require__(57));
-const path = __importStar(__webpack_require__(58));
+const axios_1 = __importDefault(__webpack_require__(114));
+const fs = __importStar(__webpack_require__(49));
+const path = __importStar(__webpack_require__(50));
 let DigitalSignatureService = DigitalSignatureService_1 = class DigitalSignatureService {
     constructor() {
         this.logger = new common_1.Logger(DigitalSignatureService_1.name);
@@ -25353,19 +22183,19 @@ exports.DigitalSignatureService = DigitalSignatureService = DigitalSignatureServ
 
 
 /***/ }),
-/* 125 */
+/* 114 */
 /***/ ((module) => {
 
 module.exports = require("axios");
 
 /***/ }),
-/* 126 */
+/* 115 */
 /***/ ((module) => {
 
 module.exports = require("multer");
 
 /***/ }),
-/* 127 */
+/* 116 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25419,10 +22249,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FacturaeController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const express_1 = __webpack_require__(54);
-const invoices_service_1 = __webpack_require__(106);
+const express_1 = __webpack_require__(47);
+const invoices_service_1 = __webpack_require__(95);
 const jwt_auth_guard_1 = __webpack_require__(27);
-const xades_sign_util_1 = __webpack_require__(109);
+const xades_sign_util_1 = __webpack_require__(98);
 let FacturaeController = class FacturaeController {
     constructor(invoicesService) {
         this.invoicesService = invoicesService;
@@ -25474,7 +22304,7 @@ let FacturaeController = class FacturaeController {
     }
     async validateXML(data) {
         const { xml, checkSignature = true } = data;
-        const { FacturaeValidator } = await Promise.resolve().then(() => __importStar(__webpack_require__(114)));
+        const { FacturaeValidator } = await Promise.resolve().then(() => __importStar(__webpack_require__(103)));
         if (checkSignature) {
             return FacturaeValidator.validateSignedDocument(xml, {
                 validateSchema: true,
@@ -25859,7 +22689,7 @@ exports.FacturaeController = FacturaeController = __decorate([
 
 
 /***/ }),
-/* 128 */
+/* 117 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25880,7 +22710,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ExternalSystemsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const external_systems_service_1 = __webpack_require__(129);
+const external_systems_service_1 = __webpack_require__(118);
 const jwt_auth_guard_1 = __webpack_require__(27);
 let ExternalSystemsController = class ExternalSystemsController {
     constructor(externalSystemsService) {
@@ -26234,7 +23064,7 @@ exports.ExternalSystemsController = ExternalSystemsController = __decorate([
 
 
 /***/ }),
-/* 129 */
+/* 118 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -26252,8 +23082,8 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ExternalSystemsService = void 0;
 const common_1 = __webpack_require__(2);
-const facturae_validator_util_1 = __webpack_require__(114);
-const invoices_service_1 = __webpack_require__(106);
+const facturae_validator_util_1 = __webpack_require__(103);
+const invoices_service_1 = __webpack_require__(95);
 let ExternalSystemsService = ExternalSystemsService_1 = class ExternalSystemsService {
     constructor(invoicesService) {
         this.invoicesService = invoicesService;
@@ -26499,7 +23329,7 @@ exports.ExternalSystemsService = ExternalSystemsService = ExternalSystemsService
 
 
 /***/ }),
-/* 130 */
+/* 119 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -26512,8 +23342,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProvisionFondosModule = void 0;
 const common_1 = __webpack_require__(2);
-const provision_fondos_controller_1 = __webpack_require__(131);
-const provision_fondos_service_1 = __webpack_require__(132);
+const provision_fondos_controller_1 = __webpack_require__(120);
+const provision_fondos_service_1 = __webpack_require__(121);
 const prisma_module_1 = __webpack_require__(37);
 let ProvisionFondosModule = class ProvisionFondosModule {
 };
@@ -26529,7 +23359,7 @@ exports.ProvisionFondosModule = ProvisionFondosModule = __decorate([
 
 
 /***/ }),
-/* 131 */
+/* 120 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -26550,8 +23380,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProvisionFondosController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const provision_fondos_service_1 = __webpack_require__(132);
-const create_provision_fondos_dto_1 = __webpack_require__(133);
+const provision_fondos_service_1 = __webpack_require__(121);
+const create_provision_fondos_dto_1 = __webpack_require__(122);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
@@ -26805,7 +23635,7 @@ exports.ProvisionFondosController = ProvisionFondosController = __decorate([
 
 
 /***/ }),
-/* 132 */
+/* 121 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -26939,7 +23769,7 @@ exports.ProvisionFondosService = ProvisionFondosService = __decorate([
 
 
 /***/ }),
-/* 133 */
+/* 122 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -27025,7 +23855,7 @@ __decorate([
 
 
 /***/ }),
-/* 134 */
+/* 123 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -27038,8 +23868,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ContactModule = void 0;
 const common_1 = __webpack_require__(2);
-const contact_controller_1 = __webpack_require__(135);
-const contact_service_1 = __webpack_require__(136);
+const contact_controller_1 = __webpack_require__(124);
+const contact_service_1 = __webpack_require__(125);
 const prisma_module_1 = __webpack_require__(37);
 const auth_module_1 = __webpack_require__(12);
 let ContactModule = class ContactModule {
@@ -27056,7 +23886,7 @@ exports.ContactModule = ContactModule = __decorate([
 
 
 /***/ }),
-/* 135 */
+/* 124 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -27076,9 +23906,9 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ContactController = void 0;
 const common_1 = __webpack_require__(2);
-const platform_express_1 = __webpack_require__(53);
+const platform_express_1 = __webpack_require__(46);
 const swagger_1 = __webpack_require__(3);
-const contact_service_1 = __webpack_require__(136);
+const contact_service_1 = __webpack_require__(125);
 const jwt_auth_guard_1 = __webpack_require__(27);
 let ContactController = class ContactController {
     constructor(contactService) {
@@ -27126,7 +23956,7 @@ exports.ContactController = ContactController = __decorate([
 
 
 /***/ }),
-/* 136 */
+/* 125 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -27178,8 +24008,8 @@ exports.ContactService = void 0;
 const common_1 = __webpack_require__(2);
 const prisma_service_1 = __webpack_require__(8);
 const email_service_1 = __webpack_require__(17);
-const fs = __importStar(__webpack_require__(57));
-const path = __importStar(__webpack_require__(58));
+const fs = __importStar(__webpack_require__(49));
+const path = __importStar(__webpack_require__(50));
 let ContactService = class ContactService {
     constructor(prisma, emailService) {
         this.prisma = prisma;
@@ -27382,7 +24212,7 @@ exports.ContactService = ContactService = __decorate([
 
 
 /***/ }),
-/* 137 */
+/* 126 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -27395,8 +24225,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TeleassistanceModule = void 0;
 const common_1 = __webpack_require__(2);
-const teleassistance_controller_1 = __webpack_require__(138);
-const teleassistance_service_1 = __webpack_require__(139);
+const teleassistance_controller_1 = __webpack_require__(127);
+const teleassistance_service_1 = __webpack_require__(128);
 const prisma_module_1 = __webpack_require__(37);
 let TeleassistanceModule = class TeleassistanceModule {
 };
@@ -27412,7 +24242,7 @@ exports.TeleassistanceModule = TeleassistanceModule = __decorate([
 
 
 /***/ }),
-/* 138 */
+/* 127 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -27433,9 +24263,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TeleassistanceController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const teleassistance_service_1 = __webpack_require__(139);
-const create_teleassistance_session_dto_1 = __webpack_require__(140);
-const update_teleassistance_session_dto_1 = __webpack_require__(141);
+const teleassistance_service_1 = __webpack_require__(128);
+const create_teleassistance_session_dto_1 = __webpack_require__(129);
+const update_teleassistance_session_dto_1 = __webpack_require__(130);
 const jwt_auth_guard_1 = __webpack_require__(27);
 const roles_guard_1 = __webpack_require__(35);
 const roles_decorator_1 = __webpack_require__(36);
@@ -27708,7 +24538,7 @@ exports.TeleassistanceController = TeleassistanceController = __decorate([
 
 
 /***/ }),
-/* 139 */
+/* 128 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -28254,7 +25084,7 @@ exports.TeleassistanceService = TeleassistanceService = __decorate([
 
 
 /***/ }),
-/* 140 */
+/* 129 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -28341,7 +25171,7 @@ __decorate([
 
 
 /***/ }),
-/* 141 */
+/* 130 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -28399,7 +25229,7 @@ __decorate([
 
 
 /***/ }),
-/* 142 */
+/* 131 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -28412,9 +25242,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.NotesModule = void 0;
 const common_1 = __webpack_require__(2);
-const notes_controller_1 = __webpack_require__(143);
-const public_notes_controller_1 = __webpack_require__(147);
-const notes_service_1 = __webpack_require__(144);
+const notes_controller_1 = __webpack_require__(132);
+const public_notes_controller_1 = __webpack_require__(136);
+const notes_service_1 = __webpack_require__(133);
 const prisma_module_1 = __webpack_require__(37);
 let NotesModule = class NotesModule {
 };
@@ -28430,7 +25260,7 @@ exports.NotesModule = NotesModule = __decorate([
 
 
 /***/ }),
-/* 143 */
+/* 132 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -28451,9 +25281,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.NotesController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const notes_service_1 = __webpack_require__(144);
-const create_note_dto_1 = __webpack_require__(145);
-const update_note_dto_1 = __webpack_require__(146);
+const notes_service_1 = __webpack_require__(133);
+const create_note_dto_1 = __webpack_require__(134);
+const update_note_dto_1 = __webpack_require__(135);
 const jwt_auth_guard_1 = __webpack_require__(27);
 let NotesController = class NotesController {
     constructor(notesService) {
@@ -28621,7 +25451,7 @@ exports.NotesController = NotesController = __decorate([
 
 
 /***/ }),
-/* 144 */
+/* 133 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -28798,7 +25628,7 @@ exports.NotesService = NotesService = __decorate([
 
 
 /***/ }),
-/* 145 */
+/* 134 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -28845,21 +25675,21 @@ __decorate([
 
 
 /***/ }),
-/* 146 */
+/* 135 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateNoteDto = void 0;
 const swagger_1 = __webpack_require__(3);
-const create_note_dto_1 = __webpack_require__(145);
+const create_note_dto_1 = __webpack_require__(134);
 class UpdateNoteDto extends (0, swagger_1.PartialType)(create_note_dto_1.CreateNoteDto) {
 }
 exports.UpdateNoteDto = UpdateNoteDto;
 
 
 /***/ }),
-/* 147 */
+/* 136 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -28877,7 +25707,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PublicNotesController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const notes_service_1 = __webpack_require__(144);
+const notes_service_1 = __webpack_require__(133);
 let PublicNotesController = class PublicNotesController {
     constructor(notesService) {
         this.notesService = notesService;
@@ -28917,19 +25747,19 @@ exports.PublicNotesController = PublicNotesController = __decorate([
 
 
 /***/ }),
-/* 148 */
+/* 137 */
 /***/ ((module) => {
 
 module.exports = require("helmet");
 
 /***/ }),
-/* 149 */
+/* 138 */
 /***/ ((module) => {
 
 module.exports = require("express-rate-limit");
 
 /***/ }),
-/* 150 */
+/* 139 */
 /***/ ((module) => {
 
 module.exports = require("compression");
