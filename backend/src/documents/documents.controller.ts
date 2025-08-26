@@ -22,6 +22,7 @@ import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody, ApiParam, ApiConsumes } from '@nestjs/swagger';
 import { PostgresStorageService } from '../storage/postgres-storage.service';
 import { DocumentsService } from './documents.service';
+import { FileStorageService } from './file-storage.service';
 import { UploadDocumentDto } from './dto/upload-document.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -38,7 +39,8 @@ import { STORAGE_CONFIG } from '../config/storage.config';
 export class DocumentsController {
   constructor(
     private readonly documentsService: DocumentsService,
-    private readonly postgresStorageService: PostgresStorageService
+    private readonly postgresStorageService: PostgresStorageService,
+    private readonly fileStorageService: FileStorageService
   ) {}
 
   @Post('upload')

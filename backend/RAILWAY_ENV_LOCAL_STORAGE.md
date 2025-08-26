@@ -168,3 +168,4 @@ Si persisten los problemas después de esta configuración:
 3. Comprobar que **todas las variables obligatorias** estén presentes
 4. Ejecutar el **health check** del almacenamiento
 
+

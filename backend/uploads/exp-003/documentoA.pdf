@@ -1,0 +1,43 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>documentoA.pdf</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+        .content { line-height: 1.6; }
+        .footer { margin-top: 50px; text-align: center; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>documentoA</h1>
+        <p>Documento de Ejemplo - Sistema de Gestión Legal</p>
+    </div>
+    
+    <div class="content">
+        <h2>Contenido del Documento</h2>
+        <p>Documento A para Cliente Uno - Documento de ejemplo generado automáticamente</p>
+        
+        <h3>Detalles del Sistema</h3>
+        <ul>
+            <li><strong>Fecha de Generación:</strong> 26/8/2025</li>
+            <li><strong>Hora:</strong> 17:56:52</li>
+            <li><strong>Sistema:</strong> Railway + PostgreSQL</li>
+            <li><strong>Almacenamiento:</strong> Local en servidor</li>
+        </ul>
+        
+        <h3>Información Técnica</h3>
+        <p>Este documento fue generado automáticamente por el sistema de gestión legal 
+        implementado en Railway. El archivo se almacena localmente en el servidor y se 
+        sirve directamente desde la base de datos PostgreSQL.</p>
+    </div>
+    
+    <div class="footer">
+        <p>Documento generado automáticamente - Sistema de Gestión Legal</p>
+        <p>Railway + PostgreSQL + NestJS</p>
+    </div>
+</body>
+</html>
