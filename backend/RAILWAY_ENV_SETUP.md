@@ -171,3 +171,4 @@ Los logs deberían mostrar:
 ---
 
 **⚠️ Importante**: Después de configurar las variables, SIEMPRE reinicia el servicio en Railway para que los cambios surtan efecto.
+

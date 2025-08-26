@@ -485,7 +485,10 @@ async function main() {
   // Verificar datos existentes
   const existingInvoices = await prisma.invoice.count();
   const existingUsers = await prisma.user.count();
-  const existingCases = await prisma.case.count();
+  const existingExpedientes = await prisma.expediente.count();
+  const existingDocuments = await prisma.document.count();
+  const existingTasks = await prisma.task.count();
+  const existingAppointments = await prisma.appointment.count();
   
   console.log('✅ Seed completado exitosamente!');
   console.log('\n📋 Datos creados:');
@@ -493,13 +496,16 @@ async function main() {
   console.log('- 2 Abogados');
   console.log('- 2 Clientes');
   console.log('- 3 Expedientes');
-  console.log('- 2 Documentos');
+  console.log('- 4 Documentos');
   console.log('- 2 Citas');
   console.log('- 4 Tareas');
   
   console.log('\n🔍 Estado de la base de datos:');
   console.log(`- Usuarios totales: ${existingUsers}`);
-  console.log(`- Expedientes totales: ${existingCases}`);
+  console.log(`- Expedientes totales: ${existingExpedientes}`);
+  console.log(`- Documentos totales: ${existingDocuments}`);
+  console.log(`- Tareas totales: ${existingTasks}`);
+  console.log(`- Citas totales: ${existingAppointments}`);
   console.log(`- Facturas existentes: ${existingInvoices} (preservadas)`);
   
   console.log('\n🔑 Credenciales de acceso:');

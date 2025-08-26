@@ -167,3 +167,4 @@ Si persisten los problemas después de esta configuración:
 2. Verificar que **no haya variables de Cloudinary** configuradas
 3. Comprobar que **todas las variables obligatorias** estén presentes
 4. Ejecutar el **health check** del almacenamiento
+

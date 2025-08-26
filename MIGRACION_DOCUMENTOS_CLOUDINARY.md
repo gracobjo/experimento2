@@ -207,3 +207,4 @@ railway logs
 **⚠️ Importante**: La migración es **irreversible** una vez ejecutada. Asegúrate de que el backup se haya creado correctamente antes de proceder.
 
 **🚀 Próximo Paso**: Ejecutar `check-document-status.js` para verificar el estado actual antes de la migración.
+

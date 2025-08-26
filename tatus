@@ -650,4 +650,6 @@ warning: in the working copy of 'frontend/vite.config.ts', LF will be replaced b
 [32m+[m[32m            let cloudinaryPublicId = document.metadata?.cloudinaryPublicId;[m
 [32m+[m[32m            if (!cloudinaryPublicId) {[m
 [32m+[m[32m                this.logger.log(`Documento ${documentId} no tiene metadatos de Cloudinary, intentando migración...`);[m
-[32m+[m[32m                cloudinaryPublicId = await th
+[32m+[m[32m                cloudinaryPublicId = await th[33mbd211e4[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: Corregir endpoint /api/documents/file/:id que estaba causando error 500 - Completar método serveFile con manejo correcto de streams - Agregar res.end() y manejo de cierre de conexión - Resuelve problema de visualización de documentos
+[33mfa40ae1[m docs: Agregar guía completa de migración de documentos a Cloudinary - Resuelve problema de URLs antiguas en PostgreSQL - Scripts de verificación y migración automática - Documentación paso a paso para Railway
+[33md3f1186[m feat: Optimizar logging del frontend para reducir logs repetitivos de token - Configuración de logging condicional por nivel - Logs de token limitados a 1 por sesión - Logging optimizado para producción - Resuelve problema de logs excesivos en consola

@@ -35,11 +35,18 @@ export const useDocuments = (): UseDocumentsReturn => {
       
       if (emergencyMode) {
         console.log('⚠️ Modo de emergencia activado para documentos');
+        console.log('🚨 Los usuarios no pueden visualizar documentos temporalmente');
       }
       
     } catch (err: any) {
       setError(err.message || 'Error al obtener documentos');
       console.error('Error fetching documents:', err);
+      
+      // Si hay error 500, probablemente estamos en modo de emergencia
+      if (err.response?.status === 500) {
+        setIsEmergencyMode(true);
+        console.log('🚨 Error 500 detectado, activando modo de emergencia');
+      }
     } finally {
       setLoading(false);
     }
