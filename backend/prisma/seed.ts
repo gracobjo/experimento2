@@ -153,7 +153,7 @@ async function main() {
       expedienteId: expediente1.id,
       filename: 'contrato_compraventa.pdf',
       originalName: 'contrato_compraventa.pdf',
-      fileUrl: 'https://example.com/documents/contrato_compraventa.pdf',
+              fileUrl: 'https://experimento2-production-54c0.up.railway.app/uploads/exp-001/contrato_compraventa.pdf',
       fileSize: 123456, // tamaño en bytes (puedes poner un número realista)
       mimeType: 'application/pdf',
       uploadedBy: lawyer1.id, // o el id del usuario que sube el documento
@@ -170,7 +170,7 @@ async function main() {
       expedienteId: expediente2.id,
       filename: 'demanda_laboral.pdf',
       originalName: 'demanda_laboral.pdf',
-      fileUrl: 'https://example.com/documents/demanda_laboral.pdf',
+              fileUrl: 'https://experimento2-production-54c0.up.railway.app/uploads/exp-002/demanda_laboral.pdf',
       fileSize: 234567, // tamaño en bytes
       mimeType: 'application/pdf',
       uploadedBy: lawyer2.id,
@@ -359,7 +359,7 @@ async function main() {
       expedienteId: expedienteA.id,
       filename: 'documentoA.pdf',
       originalName: 'documentoA.pdf',
-      fileUrl: 'https://example.com/documents/documentoA.pdf',
+              fileUrl: 'https://experimento2-production-54c0.up.railway.app/uploads/exp-c1-001/documentoA.pdf',
       fileSize: 123456,
       mimeType: 'application/pdf',
       uploadedBy: lawyer1.id,
@@ -375,7 +375,7 @@ async function main() {
       expedienteId: expedienteB.id,
       filename: 'documentoB.pdf',
       originalName: 'documentoB.pdf',
-      fileUrl: 'https://example.com/documents/documentoB.pdf',
+              fileUrl: 'https://experimento2-production-54c0.up.railway.app/uploads/exp-c1-001/documentoB.pdf',
       fileSize: 654321,
       mimeType: 'application/pdf',
       uploadedBy: lawyer1.id,

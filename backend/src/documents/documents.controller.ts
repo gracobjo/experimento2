@@ -1205,7 +1205,7 @@ export class DocumentsController {
               metadata: {
                 migrated: true,
                 migratedAt: new Date().toISOString(),
-                originalUrl: `https://example.com/documents/${doc.filename}`
+                originalUrl: `https://experimento2-production-54c0.up.railway.app/uploads/${doc.expedienteId}/${doc.filename}`
               }
             }
           });
