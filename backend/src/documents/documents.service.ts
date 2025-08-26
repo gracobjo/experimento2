@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Role } from '@prisma/client';
+import * as https from 'https';
+import * as http from 'http';
+import { URL } from 'url';
 
 @Injectable()
 export class DocumentsService {
@@ -427,6 +430,103 @@ export class DocumentsService {
       }
       console.error('Error removing document:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Determina si un documento es externo o local
+   */
+  isExternalDocument(fileUrl: string): boolean {
+    if (!fileUrl) return false;
+    
+    try {
+      const url = new URL(fileUrl);
+      // Si la URL no es local (no empieza con /uploads/), es externa
+      return !fileUrl.startsWith('/uploads/') && (url.protocol === 'http:' || url.protocol === 'https:');
+    } catch {
+      // Si no es una URL válida, asumimos que es local
+      return false;
+    }
+  }
+
+  /**
+   * Descarga un archivo externo y lo devuelve como buffer
+   */
+  async downloadExternalFile(fileUrl: string): Promise<{ buffer: Buffer; contentType: string; contentLength: number }> {
+    return new Promise((resolve, reject) => {
+      const url = new URL(fileUrl);
+      const protocol = url.protocol === 'https:' ? https : http;
+      
+      const request = protocol.get(fileUrl, (response) => {
+        if (response.statusCode !== 200) {
+          reject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`));
+          return;
+        }
+
+        const chunks: Buffer[] = [];
+        let totalLength = 0;
+
+        response.on('data', (chunk) => {
+          chunks.push(chunk);
+          totalLength += chunk.length;
+        });
+
+        response.on('end', () => {
+          const buffer = Buffer.concat(chunks);
+          const contentType = response.headers['content-type'] || 'application/octet-stream';
+          const contentLength = parseInt(response.headers['content-length'] || '0') || totalLength;
+          
+          resolve({ buffer, contentType, contentLength });
+        });
+      });
+
+      request.on('error', (error) => {
+        reject(new Error(`Error descargando archivo: ${error.message}`));
+      });
+
+      request.on('timeout', () => {
+        request.destroy();
+        reject(new Error('Timeout al descargar archivo'));
+      });
+
+      // Timeout de 30 segundos
+      request.setTimeout(30000);
+    });
+  }
+
+  /**
+   * Obtiene información del archivo (local o externo)
+   */
+  async getFileInfo(document: any): Promise<{
+    isExternal: boolean;
+    localPath?: string;
+    externalUrl?: string;
+    contentType: string;
+    contentLength: number;
+  }> {
+    const isExternal = this.isExternalDocument(document.fileUrl);
+    
+    if (isExternal) {
+      try {
+        const fileInfo = await this.downloadExternalFile(document.fileUrl);
+        return {
+          isExternal: true,
+          externalUrl: document.fileUrl,
+          contentType: fileInfo.contentType,
+          contentLength: fileInfo.contentLength
+        };
+      } catch (error) {
+        throw new Error(`Error al acceder al archivo externo: ${error.message}`);
+      }
+    } else {
+      // Archivo local
+      const localPath = document.fileUrl?.replace('/uploads/', '');
+      return {
+        isExternal: false,
+        localPath,
+        contentType: document.mimeType || 'application/octet-stream',
+        contentLength: document.fileSize || 0
+      };
     }
   }
 } 
