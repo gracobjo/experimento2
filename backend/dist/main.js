@@ -223,6 +223,8 @@ async function bootstrap() {
     app.setGlobalPrefix('api', {
         exclude: [
             { path: 'health', method: common_1.RequestMethod.GET },
+            { path: 'system-health', method: common_1.RequestMethod.GET },
+            { path: 'connectivity', method: common_1.RequestMethod.GET },
             { path: 'debug-env', method: common_1.RequestMethod.GET },
             { path: 'test-health', method: common_1.RequestMethod.GET },
             { path: 'api-test', method: common_1.RequestMethod.GET },
@@ -255,7 +257,9 @@ async function bootstrap() {
     console.log(`🌍 CORS origins configurados: http://localhost:5173, http://localhost:3000, https://experimento2-fenm.vercel.app, https://experimento2-production-54c0.up.railway.app, *.vercel.app, *.railway.app`);
     console.log(`📁 Archivos estáticos disponibles en /uploads`);
     console.log(`📚 Documentación Swagger disponible en /docs`);
-    console.log(`💚 Health check disponible en /health`);
+    console.log(`💚 Health check básico disponible en /health`);
+    console.log(`🖥️ System health disponible en /system-health`);
+    console.log(`🔗 Connectivity check disponible en /connectivity`);
     console.log(`🔧 Debug environment disponible en /debug-env`);
     console.log(`🗄️ Database status disponible en /db-status`);
     console.log(`📅 Appointments test disponible en /appointments-test`);
@@ -607,6 +611,8 @@ let HealthController = class HealthController {
         return {
             status: 'ok',
             timestamp: new Date().toISOString(),
+            service: 'experimento2-backend',
+            uptime: process.uptime()
         };
     }
     getDebugEnv() {
@@ -622,11 +628,28 @@ let HealthController = class HealthController {
             timestamp: new Date().toISOString(),
             endpoints: [
                 '/health',
+                '/system-health',
+                '/connectivity',
                 '/debug-env',
                 '/test-health',
                 '/db-status',
                 '/appointments-test'
             ]
+        };
+    }
+    getSystemHealth() {
+        const memUsage = process.memoryUsage();
+        return {
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            environment: process.env.NODE_ENV || 'development',
+            version: process.version,
+            memory: {
+                rss: `${Math.round(memUsage.rss / 1024 / 1024)} MB`,
+                heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)} MB`,
+                heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)} MB`,
+                external: `${Math.round(memUsage.external / 1024 / 1024)} MB`
+            }
         };
     }
     async getDbStatus() {
@@ -661,6 +684,20 @@ let HealthController = class HealthController {
                 stack: error instanceof Error ? error.stack : undefined
             };
         }
+    }
+    getConnectivity() {
+        return {
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            endpoints: [
+                '/health',
+                '/system-health',
+                '/connectivity',
+                '/db-status',
+                '/appointments-test'
+            ],
+            database: process.env.DATABASE_URL ? 'CONFIGURADO' : 'NO CONFIGURADO'
+        };
     }
     async getAppointmentsTest() {
         try {
@@ -758,11 +795,23 @@ __decorate([
     __metadata("design:returntype", Object)
 ], HealthController.prototype, "getTestHealth", null);
 __decorate([
+    (0, common_1.Get)('system-health'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Object)
+], HealthController.prototype, "getSystemHealth", null);
+__decorate([
     (0, common_1.Get)('db-status'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], HealthController.prototype, "getDbStatus", null);
+__decorate([
+    (0, common_1.Get)('connectivity'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Object)
+], HealthController.prototype, "getConnectivity", null);
 __decorate([
     (0, common_1.Get)('appointments-test'),
     __metadata("design:type", Function),

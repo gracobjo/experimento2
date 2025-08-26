@@ -6,10 +6,12 @@ export class HealthController {
   constructor(private prisma: PrismaService) {}
 
   @Get('health')
-  getHealth(): { status: string; timestamp: string } {
+  getHealth(): { status: string; timestamp: string; service: string; uptime: number } {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
+      service: 'experimento2-backend',
+      uptime: process.uptime()
     };
   }
 
@@ -29,11 +31,30 @@ export class HealthController {
       timestamp: new Date().toISOString(),
       endpoints: [
         '/health',
+        '/system-health',
+        '/connectivity',
         '/debug-env',
         '/test-health',
         '/db-status',
         '/appointments-test'
       ]
+    };
+  }
+
+  @Get('system-health')
+  getSystemHealth(): { status: string; timestamp: string; environment: string; version: string; memory: any } {
+    const memUsage = process.memoryUsage();
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      version: process.version,
+      memory: {
+        rss: `${Math.round(memUsage.rss / 1024 / 1024)} MB`,
+        heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)} MB`,
+        heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)} MB`,
+        external: `${Math.round(memUsage.external / 1024 / 1024)} MB`
+      }
     };
   }
 
@@ -75,6 +96,22 @@ export class HealthController {
         stack: error instanceof Error ? error.stack : undefined
       };
     }
+  }
+
+  @Get('connectivity')
+  getConnectivity(): { status: string; timestamp: string; endpoints: string[]; database: string } {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      endpoints: [
+        '/health',
+        '/system-health',
+        '/connectivity',
+        '/db-status',
+        '/appointments-test'
+      ],
+      database: process.env.DATABASE_URL ? 'CONFIGURADO' : 'NO CONFIGURADO'
+    };
   }
 
   @Get('appointments-test')

@@ -214,6 +214,8 @@ async function bootstrap() {
   app.setGlobalPrefix('api', {
     exclude: [
       { path: 'health', method: RequestMethod.GET },
+      { path: 'system-health', method: RequestMethod.GET },
+      { path: 'connectivity', method: RequestMethod.GET },
       { path: 'debug-env', method: RequestMethod.GET },
       { path: 'test-health', method: RequestMethod.GET },
       { path: 'api-test', method: RequestMethod.GET },
@@ -251,7 +253,9 @@ async function bootstrap() {
   console.log(`🌍 CORS origins configurados: http://localhost:5173, http://localhost:3000, https://experimento2-fenm.vercel.app, https://experimento2-production-54c0.up.railway.app, *.vercel.app, *.railway.app`);
   console.log(`📁 Archivos estáticos disponibles en /uploads`);
   console.log(`📚 Documentación Swagger disponible en /docs`);
-  console.log(`💚 Health check disponible en /health`);
+  console.log(`💚 Health check básico disponible en /health`);
+  console.log(`🖥️ System health disponible en /system-health`);
+  console.log(`🔗 Connectivity check disponible en /connectivity`);
   console.log(`🔧 Debug environment disponible en /debug-env`);
   console.log(`🗄️ Database status disponible en /db-status`);
   console.log(`📅 Appointments test disponible en /appointments-test`);
