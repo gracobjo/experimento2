@@ -238,49 +238,104 @@ export class EmailService {
     nombre: string;
     email: string;
   }) {
-    const mailOptions = {
-      from: process.env.EMAIL_USER || 'tu-email@gmail.com',
-      to: contactData.email,
-      subject: 'Confirmación de Consulta - Despacho de Abogados',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2c3e50;">¡Gracias por tu Consulta!</h2>
-          <p>Hola ${contactData.nombre},</p>
-          <p>Hemos recibido tu consulta correctamente. Nuestro equipo de abogados especialistas la revisará y se pondrá en contacto contigo en las próximas 24 horas.</p>
-          
-          <div style="background-color: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #27ae60; margin-top: 0;">¿Qué puedes esperar?</h3>
-            <ul style="color: #2c3e50;">
-              <li>Respuesta personalizada de un abogado especialista</li>
-              <li>Evaluación inicial de tu caso</li>
-              <li>Orientación sobre los próximos pasos</li>
-              <li>Información sobre honorarios si aplica</li>
-            </ul>
-          </div>
-          
-          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
-            <p><strong>Teléfono:</strong> +34 612 345 678</p>
-            <p><strong>Email:</strong> info@despachoabogados.com</p>
-            <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
-            <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
-          </div>
-          
-          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-          <p style="color: #7f8c8d; font-size: 12px;">
-            Despacho de Abogados García & Asociados<br>
-            Más de 15 años de experiencia en servicios legales
-          </p>
-        </div>
-      `,
-    };
-
-    try {
-      await this.transporter.sendMail(mailOptions);
-      return true;
-    } catch (error) {
-      console.error('Error sending contact confirmation email:', error);
-      return false;
+    if (this.useSendGrid) {
+      // Usar SendGrid
+      try {
+        console.log('[EMAIL] 📧 Enviando email de confirmación con SendGrid...');
+        
+        const msg = {
+          to: contactData.email,
+          from: this.fromEmail,
+          subject: 'Confirmación de Consulta - Despacho de Abogados',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #2c3e50;">¡Gracias por tu Consulta!</h2>
+              <p>Hola ${contactData.nombre},</p>
+              <p>Hemos recibido tu consulta correctamente. Nuestro equipo de abogados especialistas la revisará y se pondrá en contacto contigo en las próximas 24 horas.</p>
+              
+              <div style="background-color: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #27ae60; margin-top: 0;">¿Qué puedes esperar?</h3>
+                <ul style="color: #2c3e50;">
+                  <li>Respuesta personalizada de un abogado especialista</li>
+                  <li>Evaluación inicial de tu caso</li>
+                  <li>Orientación sobre los próximos pasos</li>
+                  <li>Información sobre honorarios si aplica</li>
+                </ul>
+              </div>
+              
+              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+                <p><strong>Teléfono:</strong> +34 612 345 678</p>
+                <p><strong>Email:</strong> info@despachoabogados.com</p>
+                <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+                <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+              </div>
+              
+              <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+              <p style="color: #7f8c8d; font-size: 12px;">
+                Despacho de Abogados García & Asociados<br>
+                Más de 15 años de experiencia en servicios legales
+              </p>
+            </div>
+          `,
+        };
+        
+        await sgMail.send(msg);
+        console.log('[EMAIL] ✅ Email de confirmación enviado exitosamente con SendGrid');
+        return true;
+      } catch (error) {
+        console.error('[EMAIL] ❌ Error enviando email de confirmación con SendGrid:', error);
+        return false;
+      }
+    } else {
+      // Usar Gmail (fallback)
+      try {
+        console.log('[EMAIL] 📧 Enviando email de confirmación con Gmail (fallback)...');
+        
+        const mailOptions = {
+          from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+          to: contactData.email,
+          subject: 'Confirmación de Consulta - Despacho de Abogados',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #2c3e50;">¡Gracias por tu Consulta!</h2>
+              <p>Hola ${contactData.nombre},</p>
+              <p>Hemos recibido tu consulta correctamente. Nuestro equipo de abogados especialistas la revisará y se pondrá en contacto contigo en las próximas 24 horas.</p>
+              
+              <div style="background-color: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #27ae60; margin-top: 0;">¿Qué puedes esperar?</h3>
+                <ul style="color: #2c3e50;">
+                  <li>Respuesta personalizada de un abogado especialista</li>
+                  <li>Evaluación inicial de tu caso</li>
+                  <li>Orientación sobre los próximos pasos</li>
+                  <li>Información sobre honorarios si aplica</li>
+                </ul>
+              </div>
+              
+              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #34495e; margin-top: 0;">Información de Contacto</h3>
+                <p><strong>Teléfono:</strong> +34 612 345 678</p>
+                <p><strong>Email:</strong> info@despachoabogados.com</p>
+                <p><strong>Dirección:</strong> Calle Principal 123, Madrid, 28001</p>
+                <p><strong>Horario:</strong> Lunes - Viernes: 9:00 - 18:00</p>
+              </div>
+              
+              <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+              <p style="color: #7f8c8d; font-size: 12px;">
+                Despacho de Abogados García & Asociados<br>
+                Más de 15 años de experiencia en servicios legales
+              </p>
+            </div>
+          `,
+        };
+        
+        await this.transporter.sendMail(mailOptions);
+        console.log('[EMAIL] ✅ Email de confirmación enviado exitosamente con Gmail');
+        return true;
+      } catch (error) {
+        console.error('[EMAIL] ❌ Error enviando email de confirmación con Gmail:', error);
+        return false;
+      }
     }
   }
 
