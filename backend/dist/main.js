@@ -24404,39 +24404,52 @@ let ContactService = class ContactService {
             let adminEmailSent = false;
             try {
                 console.log('[CONTACT] 📧 Enviando email de notificación al admin...');
-                await this.emailService.sendContactNotification({
+                console.log('[CONTACT] ⏱️ Iniciando timeout de 30 segundos para email...');
+                const emailPromise = this.emailService.sendContactNotification({
                     nombre: contactData.nombre,
                     email: contactData.email,
                     telefono: contactData.telefono,
                     asunto: contactData.asunto,
                     mensaje: contactData.mensaje
                 });
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Timeout: Email tardó más de 30 segundos')), 30000);
+                });
+                await Promise.race([emailPromise, timeoutPromise]);
                 adminEmailSent = true;
-                console.log('[CONTACT] Email de notificación al administrador enviado');
+                console.log('[CONTACT] ✅ Email de notificación al administrador enviado exitosamente');
             }
             catch (emailError) {
-                console.error('[CONTACT] Error sending contact notification email:', emailError);
+                console.error('[CONTACT] ❌ Error sending contact notification email:', emailError);
                 console.error('[CONTACT] Error details:', {
                     code: emailError.code,
                     command: emailError.command,
-                    message: emailError.message || String(emailError)
+                    message: emailError.message || String(emailError),
+                    stack: emailError.stack
                 });
             }
             let userEmailSent = false;
             try {
-                await this.emailService.sendContactConfirmation({
+                console.log('[CONTACT] 📧 Enviando email de confirmación al usuario...');
+                console.log('[CONTACT] ⏱️ Iniciando timeout de 30 segundos para email de confirmación...');
+                const emailPromise = this.emailService.sendContactConfirmation({
                     nombre: contactData.nombre,
                     email: contactData.email
                 });
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Timeout: Email de confirmación tardó más de 30 segundos')), 30000);
+                });
+                await Promise.race([emailPromise, timeoutPromise]);
                 userEmailSent = true;
-                console.log('[CONTACT] Email de confirmación al usuario enviado');
+                console.log('[CONTACT] ✅ Email de confirmación al usuario enviado exitosamente');
             }
             catch (emailError) {
-                console.error('[CONTACT] Error sending contact confirmation email:', emailError);
+                console.error('[CONTACT] ❌ Error sending contact confirmation email:', emailError);
                 console.error('[CONTACT] Error details:', {
                     code: emailError.code,
                     command: emailError.command,
-                    message: emailError.message || String(emailError)
+                    message: emailError.message || String(emailError),
+                    stack: emailError.stack
                 });
             }
             return {
