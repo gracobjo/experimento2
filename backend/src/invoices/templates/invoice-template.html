@@ -17,7 +17,7 @@
             width: 210mm;
             min-height: 297mm;
             margin: 0 auto;
-            padding: 20px 28px 120px 28px;
+            padding: 16px 28px 80px 28px;
             background: #fff;
             position: relative;
             box-sizing: border-box;
@@ -33,7 +33,7 @@
                 max-width: 210mm;
                 min-height: auto;
                 margin: 0;
-                padding: 16px 20px 80px 20px;
+                padding: 12px 20px 60px 20px;
             }
         }
         /* Encabezado */
@@ -41,13 +41,13 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
         
         /* Estilos específicos para visualización web */
         @media screen {
             .header {
-                margin-bottom: 8px;
+                margin-bottom: 4px;
             }
         }
         .header-row {
@@ -79,22 +79,22 @@
             text-align: center;
             font-size: 1rem;
             color: #666;
-            margin-top: 2px;
-            margin-bottom: 8px;
+            margin-top: 1px;
+            margin-bottom: 4px;
         }
         /* Bloques de datos */
         .data-blocks {
             display: flex;
             justify-content: space-between;
             gap: 28px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         
         /* Estilos específicos para visualización web */
         @media screen {
             .data-blocks {
                 gap: 20px;
-                margin-bottom: 6px;
+                margin-bottom: 4px;
             }
         }
         .party-block {
@@ -175,7 +175,7 @@
         }
         /* Tabla de conceptos */
         .items-section {
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
         .items-table {
             width: 100%;
@@ -189,14 +189,14 @@
         .items-table th {
             background: #003366;
             color: white;
-            padding: 7px 5px;
+            padding: 5px 5px;
             text-align: left;
             font-weight: 600;
             font-size: 1rem;
             border: none;
         }
         .items-table td {
-            padding: 7px 5px;
+            padding: 5px 5px;
             border-bottom: 1px solid #e5e7eb;
             font-size: 0.98rem;
             vertical-align: top;
@@ -226,7 +226,7 @@
         }
         .provisiones-table th,
         .provisiones-table td {
-            padding: 7px 5px;
+            padding: 5px 5px;
             border-bottom: 1px solid #e5e7eb;
             font-size: 0.98rem;
             vertical-align: top;
@@ -242,8 +242,8 @@
             width: 100%;
             display: flex;
             justify-content: flex-end;
-            margin-top: 10px;
-            margin-bottom: 10px;
+            margin-top: 8px;
+            margin-bottom: 8px;
         }
         
         /* Contenedor de totales con mejor control de espacio */
@@ -263,9 +263,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 15px;
+            padding: 6px 15px;
             border-bottom: 1px solid #e5e7eb;
-            min-height: 40px;
+            min-height: 35px;
         }
         
         .total-row-item:last-child {
@@ -391,6 +391,7 @@
             justify-content: space-between;
             width: 100%;
             height: 100%;
+            padding: 8px;
         }
         
         .qr-integrated .firma-text {
@@ -401,16 +402,16 @@
         }
         
         .qr-integrated .qr-section {
-            margin-left: 20px;
+            margin-left: 30px;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
         
         .qr-integrated .qr-section img {
-            width: 60px;
-            height: 60px;
-            margin-bottom: 4px;
+            width: 50px;
+            height: 50px;
+            margin-bottom: 3px;
         }
         
         .qr-integrated .qr-legend {
@@ -430,8 +431,8 @@
         /* Estilos específicos para visualización web */
         @media screen {
             .qr-integrated .qr-section img {
-                width: 50px;
-                height: 50px;
+                width: 45px;
+                height: 45px;
             }
             
             .qr-integrated .qr-legend {
@@ -537,7 +538,7 @@
             position: absolute;
             left: 0;
             bottom: 0;
-            padding: 0 32px 24px 32px;
+            padding: 0 32px 16px 32px;
             box-sizing: border-box;
             text-align: left;
             color: #666;
@@ -547,13 +548,13 @@
         /* Estilos específicos para visualización web */
         @media screen {
             .footer {
-                padding: 0 20px 16px 20px;
+                padding: 0 20px 12px 20px;
                 font-size: 0.85rem;
             }
         }
         .firma-block {
-            margin-top: 16px;
-            height: 3cm;
+            margin-top: 12px;
+            height: 2.5cm;
             border: 1px dashed #bbb;
             border-radius: 8px;
             background: #f8fafc;
@@ -569,9 +570,9 @@
         /* Estilos específicos para visualización web */
         @media screen {
             .firma-block {
-                height: 2cm;
+                height: 1.8cm;
                 font-size: 0.8rem;
-                margin-top: 8px;
+                margin-top: 6px;
             }
         }
         /* Responsive */
@@ -611,7 +612,7 @@
             </div>
         </div>
         <!-- Espacio adicional para aprovechar el área disponible -->
-        <div style="height: 20px;"></div>
+        <div style="height: 12px;"></div>
         <!-- Datos de factura -->
         <div class="factura-datos">
             <span class="factura-num">FACTURA {{numeroFactura}}</span>
@@ -619,7 +620,7 @@
             <span class="factura-status">{{estado}}</span>
         </div>
         <!-- Información adicional - Movida más cerca del expediente -->
-        <div class="additional-info" style="margin-top: 8px; margin-bottom: 16px;">
+        <div class="additional-info" style="margin-top: 6px; margin-bottom: 12px;">
             <div class="info-row">
                 <span class="info-label">Fecha de Operación:</span>
                 <span class="info-value">{{fechaOperacion}}</span>
@@ -680,7 +681,10 @@
         </script>
         <!-- Conceptos -->
         {{#if items}}
-        <div class="items-section">
+        <div class="items-section" style="margin-top: 6px;">
+            <div style="font-size: 1rem; font-weight: bold; color: #003366; margin-bottom: 4px;">
+                Conceptos
+            </div>
             <table class="items-table">
                 <thead>
                     <tr>
@@ -706,8 +710,8 @@
         
         <!-- Detalle de provisiones aplicadas -->
         {{#if provisiones}}
-        <div class="items-section" style="margin-top: 10px;">
-            <div style="font-size: 1rem; font-weight: bold; color: #003366; margin-bottom: 8px;">
+        <div class="items-section" style="margin-top: 6px;">
+            <div style="font-size: 1rem; font-weight: bold; color: #003366; margin-bottom: 4px;">
                 Provisiones de Fondos Aplicadas
             </div>
             <table class="items-table provisiones-table">
@@ -773,10 +777,10 @@
         <!-- Pie de página -->
         <div class="footer">
             <div>Firmado electrónicamente conforme a la ley vigente. Código de verificación incluido.</div>
-            <div style="font-size:0.93rem; color:#003366; margin-top:2px;">Verifica la autenticidad en: <span style="text-decoration:underline;">{{verificacionUrl}}</span></div>
+            <div style="font-size:0.93rem; color:#003366; margin-top:1px;">Verifica la autenticidad en: <span style="text-decoration:underline;">{{verificacionUrl}}</span></div>
         </div>
         <!-- QR y espacio para firma/certificado -->
-        <div class="firma-block">
+        <div class="firma-block" style="margin-top: 8px;">
             <div class="qr-integrated">
                 <div class="firma-text">
                     Espacio reservado para certificado/firma
