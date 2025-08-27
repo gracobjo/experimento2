@@ -6,12 +6,22 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor() {
-    // Configuración para Gmail (puedes cambiar por tu proveedor de email)
+    // Configuración para Gmail con fallback a variables alternativas
+    const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
+    const emailPassword = process.env.EMAIL_PASSWORD || process.env.SMTP_PASS;
+    
+    if (!emailUser || !emailPassword) {
+      console.warn('[EMAIL] ⚠️ Variables de email no configuradas. El servicio de email no funcionará.');
+      console.warn('[EMAIL] Configura EMAIL_USER y EMAIL_PASSWORD en Railway para habilitar emails.');
+    } else {
+      console.log('[EMAIL] ✅ Configuración de email detectada:', emailUser);
+    }
+    
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER || 'tu-email@gmail.com',
-        pass: process.env.EMAIL_PASSWORD || 'tu-password-de-aplicacion',
+        user: emailUser || 'tu-email@gmail.com',
+        pass: emailPassword || 'tu-password-de-aplicacion',
       },
     });
   }
