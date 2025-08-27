@@ -24042,14 +24042,32 @@ let ContactController = class ContactController {
     constructor(contactService) {
         this.contactService = contactService;
     }
+    async contactOptions() {
+        return { message: 'OPTIONS handled' };
+    }
     async sendContactMessage(contactData) {
         return this.contactService.sendContactMessage(contactData);
+    }
+    async testContact() {
+        return {
+            message: 'Endpoint de contacto funcionando correctamente',
+            timestamp: new Date().toISOString(),
+            environment: process.env.NODE_ENV || 'development',
+            emailConfigured: !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD)
+        };
     }
     async sendLawyerMessage(messageData, files, req) {
         return this.contactService.sendLawyerMessage(messageData, files, req.user);
     }
 };
 exports.ContactController = ContactController;
+__decorate([
+    (0, common_1.Post)('options'),
+    (0, swagger_1.ApiOperation)({ summary: 'OPTIONS para CORS preflight' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ContactController.prototype, "contactOptions", null);
 __decorate([
     (0, common_1.Post)(),
     (0, swagger_1.ApiOperation)({ summary: 'Enviar mensaje de contacto general' }),
@@ -24060,6 +24078,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], ContactController.prototype, "sendContactMessage", null);
+__decorate([
+    (0, common_1.Get)('test'),
+    (0, swagger_1.ApiOperation)({ summary: 'Probar endpoint de contacto' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Endpoint funcionando correctamente' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ContactController.prototype, "testContact", null);
 __decorate([
     (0, common_1.Post)('lawyer'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
@@ -24208,6 +24234,11 @@ let ContactService = class ContactService {
     }
     async sendContactMessage(contactData) {
         try {
+            console.log('[CONTACT] Recibiendo mensaje de contacto:', {
+                nombre: contactData.nombre,
+                email: contactData.email,
+                asunto: contactData.asunto
+            });
             const contact = await this.prisma.contact.create({
                 data: {
                     nombre: contactData.nombre,
@@ -24219,6 +24250,20 @@ let ContactService = class ContactService {
                     userAgent: contactData.userAgent || 'unknown'
                 }
             });
+            console.log('[CONTACT] Mensaje guardado en BD con ID:', contact.id);
+            const emailUser = process.env.EMAIL_USER;
+            const emailPassword = process.env.EMAIL_PASSWORD;
+            if (!emailUser || !emailPassword) {
+                console.warn('[CONTACT] Servicio de email no configurado. Variables EMAIL_USER o EMAIL_PASSWORD faltantes.');
+                console.warn('[CONTACT] El mensaje se guardó en la base de datos pero no se enviaron emails.');
+                return {
+                    success: true,
+                    message: 'Mensaje recibido correctamente. Nos pondremos en contacto contigo pronto.',
+                    data: contact,
+                    emailStatus: 'not_configured'
+                };
+            }
+            let adminEmailSent = false;
             try {
                 await this.emailService.sendContactNotification({
                     nombre: contactData.nombre,
@@ -24227,27 +24272,47 @@ let ContactService = class ContactService {
                     asunto: contactData.asunto,
                     mensaje: contactData.mensaje
                 });
+                adminEmailSent = true;
+                console.log('[CONTACT] Email de notificación al administrador enviado');
             }
             catch (emailError) {
-                console.error('Error sending contact notification email:', emailError);
+                console.error('[CONTACT] Error sending contact notification email:', emailError);
+                console.error('[CONTACT] Error details:', {
+                    code: emailError.code,
+                    command: emailError.command,
+                    message: emailError.message || String(emailError)
+                });
             }
+            let userEmailSent = false;
             try {
                 await this.emailService.sendContactConfirmation({
                     nombre: contactData.nombre,
                     email: contactData.email
                 });
+                userEmailSent = true;
+                console.log('[CONTACT] Email de confirmación al usuario enviado');
             }
             catch (emailError) {
-                console.error('Error sending contact confirmation email:', emailError);
+                console.error('[CONTACT] Error sending contact confirmation email:', emailError);
+                console.error('[CONTACT] Error details:', {
+                    code: emailError.code,
+                    command: emailError.command,
+                    message: emailError.message || String(emailError)
+                });
             }
             return {
                 success: true,
                 message: 'Mensaje enviado correctamente. Nos pondremos en contacto contigo pronto.',
-                data: contact
+                data: contact,
+                emailStatus: {
+                    adminNotification: adminEmailSent,
+                    userConfirmation: userEmailSent,
+                    configured: true
+                }
             };
         }
         catch (error) {
-            console.error('Error en sendContactMessage:', error);
+            console.error('[CONTACT] Error crítico en sendContactMessage:', error);
             throw error;
         }
     }

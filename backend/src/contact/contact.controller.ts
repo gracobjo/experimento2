@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseInterceptors, UploadedFiles, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseInterceptors, UploadedFiles, UseGuards, Request } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes } from '@nestjs/swagger';
 import { ContactService } from './contact.service';
@@ -21,12 +21,30 @@ interface MulterFile {
 export class ContactController {
   constructor(private readonly contactService: ContactService) {}
 
+  @Post('options')
+  @ApiOperation({ summary: 'OPTIONS para CORS preflight' })
+  async contactOptions() {
+    return { message: 'OPTIONS handled' };
+  }
+
   @Post()
   @ApiOperation({ summary: 'Enviar mensaje de contacto general' })
   @ApiResponse({ status: 201, description: 'Mensaje enviado exitosamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
   async sendContactMessage(@Body() contactData: any) {
     return this.contactService.sendContactMessage(contactData);
+  }
+
+  @Get('test')
+  @ApiOperation({ summary: 'Probar endpoint de contacto' })
+  @ApiResponse({ status: 200, description: 'Endpoint funcionando correctamente' })
+  async testContact() {
+    return {
+      message: 'Endpoint de contacto funcionando correctamente',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      emailConfigured: !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD)
+    };
   }
 
   @Post('lawyer')

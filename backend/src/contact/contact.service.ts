@@ -85,6 +85,12 @@ export class ContactService {
 
   async sendContactMessage(contactData: any) {
     try {
+      console.log('[CONTACT] Recibiendo mensaje de contacto:', {
+        nombre: contactData.nombre,
+        email: contactData.email,
+        asunto: contactData.asunto
+      });
+
       // Guardar en la base de datos
       const contact = await this.prisma.contact.create({
         data: {
@@ -98,7 +104,26 @@ export class ContactService {
         }
       });
 
-      // Enviar email de notificación al administrador
+      console.log('[CONTACT] Mensaje guardado en BD con ID:', contact.id);
+
+      // Verificar si el servicio de email está configurado
+      const emailUser = process.env.EMAIL_USER;
+      const emailPassword = process.env.EMAIL_PASSWORD;
+      
+      if (!emailUser || !emailPassword) {
+        console.warn('[CONTACT] Servicio de email no configurado. Variables EMAIL_USER o EMAIL_PASSWORD faltantes.');
+        console.warn('[CONTACT] El mensaje se guardó en la base de datos pero no se enviaron emails.');
+        
+        return {
+          success: true,
+          message: 'Mensaje recibido correctamente. Nos pondremos en contacto contigo pronto.',
+          data: contact,
+          emailStatus: 'not_configured'
+        };
+      }
+
+      // Enviar email de notificación al administrador (no bloquear si falla)
+      let adminEmailSent = false;
       try {
         await this.emailService.sendContactNotification({
           nombre: contactData.nombre,
@@ -107,27 +132,47 @@ export class ContactService {
           asunto: contactData.asunto,
           mensaje: contactData.mensaje
         });
+        adminEmailSent = true;
+        console.log('[CONTACT] Email de notificación al administrador enviado');
       } catch (emailError) {
-        console.error('Error sending contact notification email:', emailError);
+        console.error('[CONTACT] Error sending contact notification email:', emailError);
+        console.error('[CONTACT] Error details:', {
+          code: (emailError as any).code,
+          command: (emailError as any).command,
+          message: (emailError as any).message || String(emailError)
+        });
       }
 
-      // Enviar email de confirmación al usuario
+      // Enviar email de confirmación al usuario (no bloquear si falla)
+      let userEmailSent = false;
       try {
         await this.emailService.sendContactConfirmation({
           nombre: contactData.nombre,
           email: contactData.email
         });
+        userEmailSent = true;
+        console.log('[CONTACT] Email de confirmación al usuario enviado');
       } catch (emailError) {
-        console.error('Error sending contact confirmation email:', emailError);
+        console.error('[CONTACT] Error sending contact confirmation email:', emailError);
+        console.error('[CONTACT] Error details:', {
+          code: (emailError as any).code,
+          command: (emailError as any).command,
+          message: (emailError as any).message || String(emailError)
+        });
       }
 
       return {
         success: true,
         message: 'Mensaje enviado correctamente. Nos pondremos en contacto contigo pronto.',
-        data: contact
+        data: contact,
+        emailStatus: {
+          adminNotification: adminEmailSent,
+          userConfirmation: userEmailSent,
+          configured: true
+        }
       };
     } catch (error) {
-      console.error('Error en sendContactMessage:', error);
+      console.error('[CONTACT] Error crítico en sendContactMessage:', error);
       throw error;
     }
   }
