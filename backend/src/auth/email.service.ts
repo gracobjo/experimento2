@@ -1,28 +1,51 @@
 import { Injectable } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
+import * as sgMail from '@sendgrid/mail';
 
 @Injectable()
 export class EmailService {
   private transporter: nodemailer.Transporter;
+  private useSendGrid: boolean = false;
+  private fromEmail: string = 'noreply@despachoabogados.com';
 
     constructor() {
-    // Configuración para Gmail con fallback a variables alternativas
-    const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
-    const emailPassword = process.env.EMAIL_PASSWORD || process.env.SMTP_PASS;
+    // Configuración para SendGrid (recomendado para Railway)
+    const sendgridApiKey = process.env.SENDGRID_API_KEY;
+    const fromEmail = process.env.FROM_EMAIL || process.env.EMAIL_USER || 'noreply@despachoabogados.com';
     
-    if (!emailUser || !emailPassword) {
-      console.warn('[EMAIL] ⚠️ Variables de email no configuradas. El servicio de email no funcionará.');
-      console.warn('[EMAIL] Configura EMAIL_USER y EMAIL_PASSWORD en Railway para habilitar emails.');
+    if (!sendgridApiKey) {
+      console.warn('[EMAIL] ⚠️ Variable SENDGRID_API_KEY no configurada. El servicio de email no funcionará.');
+      console.warn('[EMAIL] Configura SENDGRID_API_KEY en Railway para habilitar emails con SendGrid.');
+      
+      // Fallback a Gmail si no hay SendGrid
+      const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
+      const emailPassword = process.env.EMAIL_PASSWORD || process.env.SMTP_PASS;
+      
+      if (!emailUser || !emailPassword) {
+        console.warn('[EMAIL] ⚠️ También faltan variables de Gmail. Email completamente deshabilitado.');
+      } else {
+        console.log('[EMAIL] 🔄 Fallback a Gmail configurado:', emailUser);
+        this.setupGmailFallback(emailUser, emailPassword);
+      }
     } else {
-      console.log('[EMAIL] ✅ Configuración de email detectada:', emailUser);
-      console.log('[EMAIL] 🔧 Configurando timeouts extendidos para Railway...');
+      console.log('[EMAIL] ✅ Configuración de SendGrid detectada');
+      console.log('[EMAIL] 📧 Email de origen configurado:', fromEmail);
+      
+      // Configurar SendGrid
+      sgMail.setApiKey(sendgridApiKey);
+      this.useSendGrid = true;
+      this.fromEmail = fromEmail;
     }
+  }
+
+  private setupGmailFallback(emailUser: string, emailPassword: string) {
+    console.log('[EMAIL] 🔧 Configurando Gmail con timeouts extendidos para Railway...');
     
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: emailUser || 'tu-email@gmail.com',
-        pass: emailPassword || 'tu-password-de-aplicacion',
+        user: emailUser,
+        pass: emailPassword,
       },
       // Configuración para Railway - aumentar timeouts
       connectionTimeout: 60000, // 60 segundos
@@ -39,12 +62,23 @@ export class EmailService {
   // Método para verificar la conexión SMTP
   async verifyConnection() {
     try {
-      console.log('[EMAIL] 🔍 Verificando conexión SMTP...');
-      await this.transporter.verify();
-      console.log('[EMAIL] ✅ Conexión SMTP verificada correctamente');
-      return true;
+      if (this.useSendGrid) {
+        console.log('[EMAIL] 🔍 Verificando conexión SendGrid...');
+        // Para SendGrid, verificamos que la API key esté configurada
+        if (process.env.SENDGRID_API_KEY) {
+          console.log('[EMAIL] ✅ API Key de SendGrid configurada correctamente');
+          return true;
+        } else {
+          throw new Error('SENDGRID_API_KEY no configurada');
+        }
+      } else {
+        console.log('[EMAIL] 🔍 Verificando conexión SMTP (Gmail)...');
+        await this.transporter.verify();
+        console.log('[EMAIL] ✅ Conexión SMTP verificada correctamente');
+        return true;
+      }
     } catch (error) {
-      console.error('[EMAIL] ❌ Error verificando conexión SMTP:', error);
+      console.error('[EMAIL] ❌ Error verificando conexión:', error);
       return false;
     }
   }
@@ -95,47 +129,100 @@ export class EmailService {
   }) {
     const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER || 'admin@despachoabogados.com';
     
-    const mailOptions = {
-      from: process.env.EMAIL_USER || 'tu-email@gmail.com',
-      to: adminEmail,
-      subject: `Nueva Consulta: ${contactData.asunto}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2c3e50;">Nueva Consulta Recibida</h2>
-          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #34495e; margin-top: 0;">Información del Cliente</h3>
-            <p><strong>Nombre:</strong> ${contactData.nombre}</p>
-            <p><strong>Email:</strong> <a href="mailto:${contactData.email}">${contactData.email}</a></p>
-            ${contactData.telefono ? `<p><strong>Teléfono:</strong> <a href="tel:${contactData.telefono}">${contactData.telefono}</a></p>` : ''}
-            <p><strong>Asunto:</strong> ${contactData.asunto}</p>
-          </div>
-          
-          <div style="background-color: #ecf0f1; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #34495e; margin-top: 0;">Mensaje</h3>
-            <p style="white-space: pre-wrap; line-height: 1.6;">${contactData.mensaje}</p>
-          </div>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="mailto:${contactData.email}?subject=Re: ${contactData.asunto}" 
-               style="background-color: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-              Responder al Cliente
-            </a>
-          </div>
-          
-          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-          <p style="color: #7f8c8d; font-size: 12px;">
-            Sistema Legal - Notificación automática
-          </p>
-        </div>
-      `,
-    };
-
-    try {
-      await this.transporter.sendMail(mailOptions);
-      return true;
-    } catch (error) {
-      console.error('Error sending contact notification email:', error);
-      return false;
+    if (this.useSendGrid) {
+      // Usar SendGrid
+      try {
+        console.log('[EMAIL] 📧 Enviando email con SendGrid...');
+        
+        const msg = {
+          to: adminEmail,
+          from: this.fromEmail,
+          subject: `Nueva Consulta: ${contactData.asunto}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #2c3e50;">Nueva Consulta Recibida</h2>
+              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #34495e; margin-top: 0;">Información del Cliente</h3>
+                <p><strong>Nombre:</strong> ${contactData.nombre}</p>
+                <p><strong>Email:</strong> <a href="mailto:${contactData.email}">${contactData.email}</a></p>
+                ${contactData.telefono ? `<p><strong>Teléfono:</strong> <a href="tel:${contactData.telefono}">${contactData.telefono}</a></p>` : ''}
+                <p><strong>Asunto:</strong> ${contactData.asunto}</p>
+              </div>
+              
+              <div style="background-color: #ecf0f1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #34495e; margin-top: 0;">Mensaje</h3>
+                <p style="white-space: pre-wrap; line-height: 1.6;">${contactData.mensaje}</p>
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="mailto:${contactData.email}?subject=Re: ${contactData.asunto}" 
+                   style="background-color: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                  Responder al Cliente
+                </a>
+              </div>
+              
+              <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+              <p style="color: #7f8c8d; font-size: 12px;">
+                Sistema Legal - Notificación automática
+              </p>
+            </div>
+          `,
+        };
+        
+        await sgMail.send(msg);
+        console.log('[EMAIL] ✅ Email enviado exitosamente con SendGrid');
+        return true;
+      } catch (error) {
+        console.error('[EMAIL] ❌ Error enviando email con SendGrid:', error);
+        return false;
+      }
+    } else {
+      // Usar Gmail (fallback)
+      try {
+        console.log('[EMAIL] 📧 Enviando email con Gmail (fallback)...');
+        
+        const mailOptions = {
+          from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+          to: adminEmail,
+          subject: `Nueva Consulta: ${contactData.asunto}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #2c3e50;">Nueva Consulta Recibida</h2>
+              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #34495e; margin-top: 0;">Información del Cliente</h3>
+                <p><strong>Nombre:</strong> ${contactData.nombre}</p>
+                <p><strong>Email:</strong> <a href="mailto:${contactData.email}">${contactData.email}</a></p>
+                ${contactData.telefono ? `<p><strong>Teléfono:</strong> <a href="tel:${contactData.telefono}">${contactData.telefono}</a></p>` : ''}
+                <p><strong>Asunto:</strong> ${contactData.asunto}</p>
+              </div>
+              
+              <div style="background-color: #ecf0f1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #34495e; margin-top: 0;">Mensaje</h3>
+                <p style="white-space: pre-wrap; line-height: 1.6;">${contactData.mensaje}</p>
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="mailto:${contactData.email}?subject=Re: ${contactData.asunto}" 
+                   style="background-color: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                  Responder al Cliente
+                </a>
+              </div>
+              
+              <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+              <p style="color: #7f8c8d; font-size: 12px;">
+                Sistema Legal - Notificación automática
+              </p>
+            </div>
+          `,
+        };
+        
+        await this.transporter.sendMail(mailOptions);
+        console.log('[EMAIL] ✅ Email enviado exitosamente con Gmail');
+        return true;
+      } catch (error) {
+        console.error('[EMAIL] ❌ Error enviando email con Gmail:', error);
+        return false;
+      }
     }
   }
 

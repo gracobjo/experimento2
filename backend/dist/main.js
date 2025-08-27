@@ -46,11 +46,11 @@ const core_1 = __webpack_require__(1);
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
 const app_module_1 = __webpack_require__(4);
-const express = __importStar(__webpack_require__(47));
-const path = __importStar(__webpack_require__(50));
-const helmet_1 = __importDefault(__webpack_require__(137));
-const express_rate_limit_1 = __importDefault(__webpack_require__(138));
-const compression_1 = __importDefault(__webpack_require__(139));
+const express = __importStar(__webpack_require__(48));
+const path = __importStar(__webpack_require__(51));
+const helmet_1 = __importDefault(__webpack_require__(138));
+const express_rate_limit_1 = __importDefault(__webpack_require__(139));
+const compression_1 = __importDefault(__webpack_require__(140));
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     console.log('🔍 === VARIABLES DE ENTORNO ===');
@@ -352,22 +352,22 @@ const app_controller_1 = __webpack_require__(6);
 const app_service_1 = __webpack_require__(7);
 const health_module_1 = __webpack_require__(10);
 const auth_module_1 = __webpack_require__(12);
-const users_module_1 = __webpack_require__(30);
-const cases_module_1 = __webpack_require__(38);
-const documents_module_1 = __webpack_require__(43);
-const appointments_module_1 = __webpack_require__(51);
-const tasks_module_1 = __webpack_require__(60);
-const reports_module_1 = __webpack_require__(65);
-const admin_module_1 = __webpack_require__(68);
-const chat_module_1 = __webpack_require__(81);
-const chatbot_module_1 = __webpack_require__(88);
-const prisma_module_1 = __webpack_require__(37);
-const parametros_module_1 = __webpack_require__(91);
-const invoices_module_1 = __webpack_require__(94);
-const provision_fondos_module_1 = __webpack_require__(119);
-const contact_module_1 = __webpack_require__(123);
-const teleassistance_module_1 = __webpack_require__(126);
-const notes_module_1 = __webpack_require__(131);
+const users_module_1 = __webpack_require__(31);
+const cases_module_1 = __webpack_require__(39);
+const documents_module_1 = __webpack_require__(44);
+const appointments_module_1 = __webpack_require__(52);
+const tasks_module_1 = __webpack_require__(61);
+const reports_module_1 = __webpack_require__(66);
+const admin_module_1 = __webpack_require__(69);
+const chat_module_1 = __webpack_require__(82);
+const chatbot_module_1 = __webpack_require__(89);
+const prisma_module_1 = __webpack_require__(38);
+const parametros_module_1 = __webpack_require__(92);
+const invoices_module_1 = __webpack_require__(95);
+const provision_fondos_module_1 = __webpack_require__(120);
+const contact_module_1 = __webpack_require__(124);
+const teleassistance_module_1 = __webpack_require__(127);
+const notes_module_1 = __webpack_require__(132);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -894,11 +894,11 @@ const common_1 = __webpack_require__(2);
 const jwt_1 = __webpack_require__(13);
 const passport_1 = __webpack_require__(14);
 const auth_service_1 = __webpack_require__(15);
-const auth_controller_1 = __webpack_require__(21);
-const jwt_strategy_1 = __webpack_require__(28);
-const users_module_1 = __webpack_require__(30);
+const auth_controller_1 = __webpack_require__(22);
+const jwt_strategy_1 = __webpack_require__(29);
+const users_module_1 = __webpack_require__(31);
 const email_service_1 = __webpack_require__(17);
-const prisma_module_1 = __webpack_require__(37);
+const prisma_module_1 = __webpack_require__(38);
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -989,8 +989,8 @@ const jwt_1 = __webpack_require__(13);
 const prisma_service_1 = __webpack_require__(8);
 const users_service_1 = __webpack_require__(16);
 const email_service_1 = __webpack_require__(17);
-const bcrypt = __importStar(__webpack_require__(19));
-const crypto = __importStar(__webpack_require__(20));
+const bcrypt = __importStar(__webpack_require__(20));
+const crypto = __importStar(__webpack_require__(21));
 let AuthService = class AuthService {
     constructor(prisma, jwtService, usersService, emailService) {
         this.prisma = prisma;
@@ -1522,23 +1522,41 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.EmailService = void 0;
 const common_1 = __webpack_require__(2);
 const nodemailer = __importStar(__webpack_require__(18));
+const sgMail = __importStar(__webpack_require__(19));
 let EmailService = class EmailService {
     constructor() {
-        const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
-        const emailPassword = process.env.EMAIL_PASSWORD || process.env.SMTP_PASS;
-        if (!emailUser || !emailPassword) {
-            console.warn('[EMAIL] ⚠️ Variables de email no configuradas. El servicio de email no funcionará.');
-            console.warn('[EMAIL] Configura EMAIL_USER y EMAIL_PASSWORD en Railway para habilitar emails.');
+        this.useSendGrid = false;
+        this.fromEmail = 'noreply@despachoabogados.com';
+        const sendgridApiKey = process.env.SENDGRID_API_KEY;
+        const fromEmail = process.env.FROM_EMAIL || process.env.EMAIL_USER || 'noreply@despachoabogados.com';
+        if (!sendgridApiKey) {
+            console.warn('[EMAIL] ⚠️ Variable SENDGRID_API_KEY no configurada. El servicio de email no funcionará.');
+            console.warn('[EMAIL] Configura SENDGRID_API_KEY en Railway para habilitar emails con SendGrid.');
+            const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
+            const emailPassword = process.env.EMAIL_PASSWORD || process.env.SMTP_PASS;
+            if (!emailUser || !emailPassword) {
+                console.warn('[EMAIL] ⚠️ También faltan variables de Gmail. Email completamente deshabilitado.');
+            }
+            else {
+                console.log('[EMAIL] 🔄 Fallback a Gmail configurado:', emailUser);
+                this.setupGmailFallback(emailUser, emailPassword);
+            }
         }
         else {
-            console.log('[EMAIL] ✅ Configuración de email detectada:', emailUser);
-            console.log('[EMAIL] 🔧 Configurando timeouts extendidos para Railway...');
+            console.log('[EMAIL] ✅ Configuración de SendGrid detectada');
+            console.log('[EMAIL] 📧 Email de origen configurado:', fromEmail);
+            sgMail.setApiKey(sendgridApiKey);
+            this.useSendGrid = true;
+            this.fromEmail = fromEmail;
         }
+    }
+    setupGmailFallback(emailUser, emailPassword) {
+        console.log('[EMAIL] 🔧 Configurando Gmail con timeouts extendidos para Railway...');
         this.transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: emailUser || 'tu-email@gmail.com',
-                pass: emailPassword || 'tu-password-de-aplicacion',
+                user: emailUser,
+                pass: emailPassword,
             },
             connectionTimeout: 60000,
             greetingTimeout: 30000,
@@ -1551,13 +1569,25 @@ let EmailService = class EmailService {
     }
     async verifyConnection() {
         try {
-            console.log('[EMAIL] 🔍 Verificando conexión SMTP...');
-            await this.transporter.verify();
-            console.log('[EMAIL] ✅ Conexión SMTP verificada correctamente');
-            return true;
+            if (this.useSendGrid) {
+                console.log('[EMAIL] 🔍 Verificando conexión SendGrid...');
+                if (process.env.SENDGRID_API_KEY) {
+                    console.log('[EMAIL] ✅ API Key de SendGrid configurada correctamente');
+                    return true;
+                }
+                else {
+                    throw new Error('SENDGRID_API_KEY no configurada');
+                }
+            }
+            else {
+                console.log('[EMAIL] 🔍 Verificando conexión SMTP (Gmail)...');
+                await this.transporter.verify();
+                console.log('[EMAIL] ✅ Conexión SMTP verificada correctamente');
+                return true;
+            }
         }
         catch (error) {
-            console.error('[EMAIL] ❌ Error verificando conexión SMTP:', error);
+            console.error('[EMAIL] ❌ Error verificando conexión:', error);
             return false;
         }
     }
@@ -1598,47 +1628,97 @@ let EmailService = class EmailService {
     }
     async sendContactNotification(contactData) {
         const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER || 'admin@despachoabogados.com';
-        const mailOptions = {
-            from: process.env.EMAIL_USER || 'tu-email@gmail.com',
-            to: adminEmail,
-            subject: `Nueva Consulta: ${contactData.asunto}`,
-            html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2c3e50;">Nueva Consulta Recibida</h2>
-          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #34495e; margin-top: 0;">Información del Cliente</h3>
-            <p><strong>Nombre:</strong> ${contactData.nombre}</p>
-            <p><strong>Email:</strong> <a href="mailto:${contactData.email}">${contactData.email}</a></p>
-            ${contactData.telefono ? `<p><strong>Teléfono:</strong> <a href="tel:${contactData.telefono}">${contactData.telefono}</a></p>` : ''}
-            <p><strong>Asunto:</strong> ${contactData.asunto}</p>
-          </div>
-          
-          <div style="background-color: #ecf0f1; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #34495e; margin-top: 0;">Mensaje</h3>
-            <p style="white-space: pre-wrap; line-height: 1.6;">${contactData.mensaje}</p>
-          </div>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="mailto:${contactData.email}?subject=Re: ${contactData.asunto}" 
-               style="background-color: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-              Responder al Cliente
-            </a>
-          </div>
-          
-          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-          <p style="color: #7f8c8d; font-size: 12px;">
-            Sistema Legal - Notificación automática
-          </p>
-        </div>
-      `,
-        };
-        try {
-            await this.transporter.sendMail(mailOptions);
-            return true;
+        if (this.useSendGrid) {
+            try {
+                console.log('[EMAIL] 📧 Enviando email con SendGrid...');
+                const msg = {
+                    to: adminEmail,
+                    from: this.fromEmail,
+                    subject: `Nueva Consulta: ${contactData.asunto}`,
+                    html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #2c3e50;">Nueva Consulta Recibida</h2>
+              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #34495e; margin-top: 0;">Información del Cliente</h3>
+                <p><strong>Nombre:</strong> ${contactData.nombre}</p>
+                <p><strong>Email:</strong> <a href="mailto:${contactData.email}">${contactData.email}</a></p>
+                ${contactData.telefono ? `<p><strong>Teléfono:</strong> <a href="tel:${contactData.telefono}">${contactData.telefono}</a></p>` : ''}
+                <p><strong>Asunto:</strong> ${contactData.asunto}</p>
+              </div>
+              
+              <div style="background-color: #ecf0f1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #34495e; margin-top: 0;">Mensaje</h3>
+                <p style="white-space: pre-wrap; line-height: 1.6;">${contactData.mensaje}</p>
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="mailto:${contactData.email}?subject=Re: ${contactData.asunto}" 
+                   style="background-color: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                  Responder al Cliente
+                </a>
+              </div>
+              
+              <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+              <p style="color: #7f8c8d; font-size: 12px;">
+                Sistema Legal - Notificación automática
+              </p>
+            </div>
+          `,
+                };
+                await sgMail.send(msg);
+                console.log('[EMAIL] ✅ Email enviado exitosamente con SendGrid');
+                return true;
+            }
+            catch (error) {
+                console.error('[EMAIL] ❌ Error enviando email con SendGrid:', error);
+                return false;
+            }
         }
-        catch (error) {
-            console.error('Error sending contact notification email:', error);
-            return false;
+        else {
+            try {
+                console.log('[EMAIL] 📧 Enviando email con Gmail (fallback)...');
+                const mailOptions = {
+                    from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+                    to: adminEmail,
+                    subject: `Nueva Consulta: ${contactData.asunto}`,
+                    html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #2c3e50;">Nueva Consulta Recibida</h2>
+              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #34495e; margin-top: 0;">Información del Cliente</h3>
+                <p><strong>Nombre:</strong> ${contactData.nombre}</p>
+                <p><strong>Email:</strong> <a href="mailto:${contactData.email}">${contactData.email}</a></p>
+                ${contactData.telefono ? `<p><strong>Teléfono:</strong> <a href="tel:${contactData.telefono}">${contactData.telefono}</a></p>` : ''}
+                <p><strong>Asunto:</strong> ${contactData.asunto}</p>
+              </div>
+              
+              <div style="background-color: #ecf0f1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="color: #34495e; margin-top: 0;">Mensaje</h3>
+                <p style="white-space: pre-wrap; line-height: 1.6;">${contactData.mensaje}</p>
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="mailto:${contactData.email}?subject=Re: ${contactData.asunto}" 
+                   style="background-color: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                  Responder al Cliente
+                </a>
+              </div>
+              
+              <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+              <p style="color: #7f8c8d; font-size: 12px;">
+                Sistema Legal - Notificación automática
+              </p>
+            </div>
+          `,
+                };
+                await this.transporter.sendMail(mailOptions);
+                console.log('[EMAIL] ✅ Email enviado exitosamente con Gmail');
+                return true;
+            }
+            catch (error) {
+                console.error('[EMAIL] ❌ Error enviando email con Gmail:', error);
+                return false;
+            }
         }
     }
     async sendContactConfirmation(contactData) {
@@ -2407,16 +2487,22 @@ module.exports = require("nodemailer");
 /* 19 */
 /***/ ((module) => {
 
-module.exports = require("bcrypt");
+module.exports = require("@sendgrid/mail");
 
 /***/ }),
 /* 20 */
 /***/ ((module) => {
 
-module.exports = require("crypto");
+module.exports = require("bcrypt");
 
 /***/ }),
 /* 21 */
+/***/ ((module) => {
+
+module.exports = require("crypto");
+
+/***/ }),
+/* 22 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2438,11 +2524,11 @@ exports.AuthController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
 const auth_service_1 = __webpack_require__(15);
-const login_dto_1 = __webpack_require__(22);
-const register_dto_1 = __webpack_require__(24);
-const forgot_password_dto_1 = __webpack_require__(25);
-const reset_password_dto_1 = __webpack_require__(26);
-const jwt_auth_guard_1 = __webpack_require__(27);
+const login_dto_1 = __webpack_require__(23);
+const register_dto_1 = __webpack_require__(25);
+const forgot_password_dto_1 = __webpack_require__(26);
+const reset_password_dto_1 = __webpack_require__(27);
+const jwt_auth_guard_1 = __webpack_require__(28);
 let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
@@ -2594,7 +2680,7 @@ exports.AuthController = AuthController = __decorate([
 
 
 /***/ }),
-/* 22 */
+/* 23 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2609,7 +2695,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LoginDto = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 class LoginDto {
 }
@@ -2637,13 +2723,13 @@ __decorate([
 
 
 /***/ }),
-/* 23 */
+/* 24 */
 /***/ ((module) => {
 
 module.exports = require("class-validator");
 
 /***/ }),
-/* 24 */
+/* 25 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2659,7 +2745,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RegisterDto = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 const client_1 = __webpack_require__(9);
 class RegisterDto {
@@ -2706,33 +2792,6 @@ __decorate([
 
 
 /***/ }),
-/* 25 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ForgotPasswordDto = void 0;
-const class_validator_1 = __webpack_require__(23);
-class ForgotPasswordDto {
-}
-exports.ForgotPasswordDto = ForgotPasswordDto;
-__decorate([
-    (0, class_validator_1.IsEmail)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], ForgotPasswordDto.prototype, "email", void 0);
-
-
-/***/ }),
 /* 26 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -2747,8 +2806,35 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ForgotPasswordDto = void 0;
+const class_validator_1 = __webpack_require__(24);
+class ForgotPasswordDto {
+}
+exports.ForgotPasswordDto = ForgotPasswordDto;
+__decorate([
+    (0, class_validator_1.IsEmail)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], ForgotPasswordDto.prototype, "email", void 0);
+
+
+/***/ }),
+/* 27 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResetPasswordDto = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 class ResetPasswordDto {
 }
@@ -2778,7 +2864,7 @@ __decorate([
 
 
 /***/ }),
-/* 27 */
+/* 28 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2801,7 +2887,7 @@ exports.JwtAuthGuard = JwtAuthGuard = __decorate([
 
 
 /***/ }),
-/* 28 */
+/* 29 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2819,7 +2905,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.JwtStrategy = void 0;
 const common_1 = __webpack_require__(2);
 const passport_1 = __webpack_require__(14);
-const passport_jwt_1 = __webpack_require__(29);
+const passport_jwt_1 = __webpack_require__(30);
 const config_1 = __webpack_require__(5);
 const prisma_service_1 = __webpack_require__(8);
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
@@ -2863,13 +2949,13 @@ exports.JwtStrategy = JwtStrategy = __decorate([
 
 
 /***/ }),
-/* 29 */
+/* 30 */
 /***/ ((module) => {
 
 module.exports = require("passport-jwt");
 
 /***/ }),
-/* 30 */
+/* 31 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2883,7 +2969,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UsersModule = void 0;
 const common_1 = __webpack_require__(2);
 const users_service_1 = __webpack_require__(16);
-const users_controller_1 = __webpack_require__(31);
+const users_controller_1 = __webpack_require__(32);
 let UsersModule = class UsersModule {
 };
 exports.UsersModule = UsersModule;
@@ -2897,7 +2983,7 @@ exports.UsersModule = UsersModule = __decorate([
 
 
 /***/ }),
-/* 31 */
+/* 32 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2919,12 +3005,12 @@ exports.UsersController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
 const users_service_1 = __webpack_require__(16);
-const create_user_dto_1 = __webpack_require__(32);
-const update_user_dto_1 = __webpack_require__(33);
-const update_client_profile_dto_1 = __webpack_require__(34);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(35);
-const roles_decorator_1 = __webpack_require__(36);
+const create_user_dto_1 = __webpack_require__(33);
+const update_user_dto_1 = __webpack_require__(34);
+const update_client_profile_dto_1 = __webpack_require__(35);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const roles_guard_1 = __webpack_require__(36);
+const roles_decorator_1 = __webpack_require__(37);
 const client_1 = __webpack_require__(9);
 let UsersController = class UsersController {
     constructor(usersService) {
@@ -3379,7 +3465,7 @@ exports.UsersController = UsersController = __decorate([
 
 
 /***/ }),
-/* 32 */
+/* 33 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3395,7 +3481,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateUserDto = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 const client_1 = __webpack_require__(9);
 class CreateUserDto {
@@ -3442,7 +3528,7 @@ __decorate([
 
 
 /***/ }),
-/* 33 */
+/* 34 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3458,7 +3544,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateUserDto = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 const client_1 = __webpack_require__(9);
 class UpdateUserDto {
@@ -3513,7 +3599,7 @@ __decorate([
 
 
 /***/ }),
-/* 34 */
+/* 35 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3529,7 +3615,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateClientProfileDto = void 0;
 const swagger_1 = __webpack_require__(3);
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 class UpdateClientProfileDto {
 }
 exports.UpdateClientProfileDto = UpdateClientProfileDto;
@@ -3572,7 +3658,7 @@ __decorate([
 
 
 /***/ }),
-/* 35 */
+/* 36 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3591,7 +3677,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RolesGuard = void 0;
 const common_1 = __webpack_require__(2);
 const core_1 = __webpack_require__(1);
-const roles_decorator_1 = __webpack_require__(36);
+const roles_decorator_1 = __webpack_require__(37);
 let RolesGuard = RolesGuard_1 = class RolesGuard {
     constructor(reflector) {
         this.reflector = reflector;
@@ -3631,7 +3717,7 @@ exports.RolesGuard = RolesGuard = RolesGuard_1 = __decorate([
 
 
 /***/ }),
-/* 36 */
+/* 37 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
@@ -3644,7 +3730,7 @@ exports.Roles = Roles;
 
 
 /***/ }),
-/* 37 */
+/* 38 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3671,7 +3757,7 @@ exports.PrismaModule = PrismaModule = __decorate([
 
 
 /***/ }),
-/* 38 */
+/* 39 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3684,8 +3770,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CasesModule = void 0;
 const common_1 = __webpack_require__(2);
-const cases_service_1 = __webpack_require__(39);
-const cases_controller_1 = __webpack_require__(40);
+const cases_service_1 = __webpack_require__(40);
+const cases_controller_1 = __webpack_require__(41);
 let CasesModule = class CasesModule {
 };
 exports.CasesModule = CasesModule;
@@ -3699,7 +3785,7 @@ exports.CasesModule = CasesModule = __decorate([
 
 
 /***/ }),
-/* 39 */
+/* 40 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4496,7 +4582,7 @@ exports.CasesService = CasesService = __decorate([
 
 
 /***/ }),
-/* 40 */
+/* 41 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4517,12 +4603,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CasesController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const cases_service_1 = __webpack_require__(39);
-const create_case_dto_1 = __webpack_require__(41);
-const update_case_dto_1 = __webpack_require__(42);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(35);
-const roles_decorator_1 = __webpack_require__(36);
+const cases_service_1 = __webpack_require__(40);
+const create_case_dto_1 = __webpack_require__(42);
+const update_case_dto_1 = __webpack_require__(43);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const roles_guard_1 = __webpack_require__(36);
+const roles_decorator_1 = __webpack_require__(37);
 const client_1 = __webpack_require__(9);
 let CasesController = class CasesController {
     constructor(casesService) {
@@ -5374,7 +5460,7 @@ exports.CasesController = CasesController = __decorate([
 
 
 /***/ }),
-/* 41 */
+/* 42 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5389,7 +5475,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateCaseDto = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 class CreateCaseDto {
 }
@@ -5450,7 +5536,7 @@ __decorate([
 
 
 /***/ }),
-/* 42 */
+/* 43 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5465,7 +5551,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateCaseDto = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 class UpdateCaseDto {
 }
@@ -5529,7 +5615,7 @@ __decorate([
 
 
 /***/ }),
-/* 43 */
+/* 44 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5542,9 +5628,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DocumentsModule = void 0;
 const common_1 = __webpack_require__(2);
-const documents_service_1 = __webpack_require__(44);
-const documents_controller_1 = __webpack_require__(45);
-const prisma_module_1 = __webpack_require__(37);
+const documents_service_1 = __webpack_require__(45);
+const documents_controller_1 = __webpack_require__(46);
+const prisma_module_1 = __webpack_require__(38);
 let DocumentsModule = class DocumentsModule {
 };
 exports.DocumentsModule = DocumentsModule;
@@ -5559,7 +5645,7 @@ exports.DocumentsModule = DocumentsModule = __decorate([
 
 
 /***/ }),
-/* 44 */
+/* 45 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5778,7 +5864,7 @@ exports.DocumentsService = DocumentsService = __decorate([
 
 
 /***/ }),
-/* 45 */
+/* 46 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5831,17 +5917,17 @@ var _a, _b, _c, _d, _e;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DocumentsController = void 0;
 const common_1 = __webpack_require__(2);
-const platform_express_1 = __webpack_require__(46);
-const express_1 = __webpack_require__(47);
+const platform_express_1 = __webpack_require__(47);
+const express_1 = __webpack_require__(48);
 const swagger_1 = __webpack_require__(3);
-const documents_service_1 = __webpack_require__(44);
-const upload_document_dto_1 = __webpack_require__(48);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(35);
-const roles_decorator_1 = __webpack_require__(36);
+const documents_service_1 = __webpack_require__(45);
+const upload_document_dto_1 = __webpack_require__(49);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const roles_guard_1 = __webpack_require__(36);
+const roles_decorator_1 = __webpack_require__(37);
 const client_1 = __webpack_require__(9);
-const fs = __importStar(__webpack_require__(49));
-const path = __importStar(__webpack_require__(50));
+const fs = __importStar(__webpack_require__(50));
+const path = __importStar(__webpack_require__(51));
 let DocumentsController = class DocumentsController {
     constructor(documentsService) {
         this.documentsService = documentsService;
@@ -6112,19 +6198,19 @@ exports.DocumentsController = DocumentsController = __decorate([
 
 
 /***/ }),
-/* 46 */
+/* 47 */
 /***/ ((module) => {
 
 module.exports = require("@nestjs/platform-express");
 
 /***/ }),
-/* 47 */
+/* 48 */
 /***/ ((module) => {
 
 module.exports = require("express");
 
 /***/ }),
-/* 48 */
+/* 49 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -6139,7 +6225,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UploadDocumentDto = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 class UploadDocumentDto {
 }
@@ -6168,19 +6254,19 @@ __decorate([
 
 
 /***/ }),
-/* 49 */
+/* 50 */
 /***/ ((module) => {
 
 module.exports = require("fs");
 
 /***/ }),
-/* 50 */
+/* 51 */
 /***/ ((module) => {
 
 module.exports = require("path");
 
 /***/ }),
-/* 51 */
+/* 52 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -6193,11 +6279,11 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AppointmentsModule = void 0;
 const common_1 = __webpack_require__(2);
-const appointments_controller_1 = __webpack_require__(52);
-const appointments_service_1 = __webpack_require__(53);
-const visitor_appointments_controller_1 = __webpack_require__(57);
-const visitor_appointments_service_1 = __webpack_require__(58);
-const prisma_module_1 = __webpack_require__(37);
+const appointments_controller_1 = __webpack_require__(53);
+const appointments_service_1 = __webpack_require__(54);
+const visitor_appointments_controller_1 = __webpack_require__(58);
+const visitor_appointments_service_1 = __webpack_require__(59);
+const prisma_module_1 = __webpack_require__(38);
 const email_service_1 = __webpack_require__(17);
 let AppointmentsModule = class AppointmentsModule {
 };
@@ -6213,7 +6299,7 @@ exports.AppointmentsModule = AppointmentsModule = __decorate([
 
 
 /***/ }),
-/* 52 */
+/* 53 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -6234,11 +6320,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AppointmentsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const appointments_service_1 = __webpack_require__(53);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const create_appointment_dto_1 = __webpack_require__(54);
-const create_lawyer_appointment_dto_1 = __webpack_require__(55);
-const update_appointment_dto_1 = __webpack_require__(56);
+const appointments_service_1 = __webpack_require__(54);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const create_appointment_dto_1 = __webpack_require__(55);
+const create_lawyer_appointment_dto_1 = __webpack_require__(56);
+const update_appointment_dto_1 = __webpack_require__(57);
 let AppointmentsController = class AppointmentsController {
     constructor(appointmentsService) {
         this.appointmentsService = appointmentsService;
@@ -6632,7 +6718,7 @@ exports.AppointmentsController = AppointmentsController = __decorate([
 
 
 /***/ }),
-/* 53 */
+/* 54 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7237,7 +7323,7 @@ exports.AppointmentsService = AppointmentsService = __decorate([
 
 
 /***/ }),
-/* 54 */
+/* 55 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7252,7 +7338,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateAppointmentDto = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 class CreateAppointmentDto {
 }
@@ -7301,7 +7387,7 @@ __decorate([
 
 
 /***/ }),
-/* 55 */
+/* 56 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7316,7 +7402,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateLawyerAppointmentDto = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 class CreateLawyerAppointmentDto {
 }
@@ -7365,7 +7451,7 @@ __decorate([
 
 
 /***/ }),
-/* 56 */
+/* 57 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7380,7 +7466,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateAppointmentDto = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 class UpdateAppointmentDto {
 }
@@ -7419,7 +7505,7 @@ __decorate([
 
 
 /***/ }),
-/* 57 */
+/* 58 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7440,11 +7526,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VisitorAppointmentsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const visitor_appointments_service_1 = __webpack_require__(58);
-const create_visitor_appointment_dto_1 = __webpack_require__(59);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(35);
-const roles_decorator_1 = __webpack_require__(36);
+const visitor_appointments_service_1 = __webpack_require__(59);
+const create_visitor_appointment_dto_1 = __webpack_require__(60);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const roles_guard_1 = __webpack_require__(36);
+const roles_decorator_1 = __webpack_require__(37);
 let VisitorAppointmentsController = class VisitorAppointmentsController {
     constructor(visitorAppointmentsService) {
         this.visitorAppointmentsService = visitorAppointmentsService;
@@ -7734,7 +7820,7 @@ exports.VisitorAppointmentsController = VisitorAppointmentsController = __decora
 
 
 /***/ }),
-/* 58 */
+/* 59 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7950,7 +8036,7 @@ exports.VisitorAppointmentsService = VisitorAppointmentsService = __decorate([
 
 
 /***/ }),
-/* 59 */
+/* 60 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7965,7 +8051,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateVisitorAppointmentDto = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 class CreateVisitorAppointmentDto {
 }
@@ -8028,7 +8114,7 @@ __decorate([
 
 
 /***/ }),
-/* 60 */
+/* 61 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8041,9 +8127,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TasksModule = void 0;
 const common_1 = __webpack_require__(2);
-const tasks_controller_1 = __webpack_require__(61);
-const tasks_service_1 = __webpack_require__(62);
-const prisma_module_1 = __webpack_require__(37);
+const tasks_controller_1 = __webpack_require__(62);
+const tasks_service_1 = __webpack_require__(63);
+const prisma_module_1 = __webpack_require__(38);
 let TasksModule = class TasksModule {
 };
 exports.TasksModule = TasksModule;
@@ -8058,7 +8144,7 @@ exports.TasksModule = TasksModule = __decorate([
 
 
 /***/ }),
-/* 61 */
+/* 62 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8079,10 +8165,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TasksController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const tasks_service_1 = __webpack_require__(62);
-const create_task_dto_1 = __webpack_require__(63);
-const update_task_dto_1 = __webpack_require__(64);
-const jwt_auth_guard_1 = __webpack_require__(27);
+const tasks_service_1 = __webpack_require__(63);
+const create_task_dto_1 = __webpack_require__(64);
+const update_task_dto_1 = __webpack_require__(65);
+const jwt_auth_guard_1 = __webpack_require__(28);
 let TasksController = class TasksController {
     constructor(tasksService) {
         this.tasksService = tasksService;
@@ -8439,7 +8525,7 @@ exports.TasksController = TasksController = __decorate([
 
 
 /***/ }),
-/* 62 */
+/* 63 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8457,7 +8543,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TasksService = void 0;
 const common_1 = __webpack_require__(2);
 const prisma_service_1 = __webpack_require__(8);
-const create_task_dto_1 = __webpack_require__(63);
+const create_task_dto_1 = __webpack_require__(64);
 let TasksService = class TasksService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -8982,7 +9068,7 @@ exports.TasksService = TasksService = __decorate([
 
 
 /***/ }),
-/* 63 */
+/* 64 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8997,7 +9083,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateTaskDto = exports.TaskStatus = exports.TaskPriority = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 var TaskPriority;
 (function (TaskPriority) {
     TaskPriority["BAJA"] = "BAJA";
@@ -9052,7 +9138,7 @@ __decorate([
 
 
 /***/ }),
-/* 64 */
+/* 65 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9069,8 +9155,8 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateTaskDto = void 0;
 const swagger_1 = __webpack_require__(3);
-const create_task_dto_1 = __webpack_require__(63);
-const class_validator_1 = __webpack_require__(23);
+const create_task_dto_1 = __webpack_require__(64);
+const class_validator_1 = __webpack_require__(24);
 class UpdateTaskDto extends (0, swagger_1.PartialType)(create_task_dto_1.CreateTaskDto) {
 }
 exports.UpdateTaskDto = UpdateTaskDto;
@@ -9082,7 +9168,7 @@ __decorate([
 
 
 /***/ }),
-/* 65 */
+/* 66 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9095,9 +9181,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReportsModule = void 0;
 const common_1 = __webpack_require__(2);
-const reports_controller_1 = __webpack_require__(66);
-const reports_service_1 = __webpack_require__(67);
-const prisma_module_1 = __webpack_require__(37);
+const reports_controller_1 = __webpack_require__(67);
+const reports_service_1 = __webpack_require__(68);
+const prisma_module_1 = __webpack_require__(38);
 let ReportsModule = class ReportsModule {
 };
 exports.ReportsModule = ReportsModule;
@@ -9112,7 +9198,7 @@ exports.ReportsModule = ReportsModule = __decorate([
 
 
 /***/ }),
-/* 66 */
+/* 67 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9133,8 +9219,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReportsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const reports_service_1 = __webpack_require__(67);
-const jwt_auth_guard_1 = __webpack_require__(27);
+const reports_service_1 = __webpack_require__(68);
+const jwt_auth_guard_1 = __webpack_require__(28);
 let ReportsController = class ReportsController {
     constructor(reportsService) {
         this.reportsService = reportsService;
@@ -9218,7 +9304,7 @@ exports.ReportsController = ReportsController = __decorate([
 
 
 /***/ }),
-/* 67 */
+/* 68 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9344,7 +9430,7 @@ exports.ReportsService = ReportsService = __decorate([
 
 
 /***/ }),
-/* 68 */
+/* 69 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9357,16 +9443,16 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AdminModule = void 0;
 const common_1 = __webpack_require__(2);
-const admin_controller_1 = __webpack_require__(69);
-const admin_service_1 = __webpack_require__(70);
-const layouts_controller_1 = __webpack_require__(71);
-const layouts_controller_2 = __webpack_require__(71);
-const layouts_service_1 = __webpack_require__(72);
-const menu_config_controller_1 = __webpack_require__(75);
-const menu_config_service_1 = __webpack_require__(76);
-const site_config_controller_1 = __webpack_require__(78);
-const site_config_service_1 = __webpack_require__(79);
-const prisma_module_1 = __webpack_require__(37);
+const admin_controller_1 = __webpack_require__(70);
+const admin_service_1 = __webpack_require__(71);
+const layouts_controller_1 = __webpack_require__(72);
+const layouts_controller_2 = __webpack_require__(72);
+const layouts_service_1 = __webpack_require__(73);
+const menu_config_controller_1 = __webpack_require__(76);
+const menu_config_service_1 = __webpack_require__(77);
+const site_config_controller_1 = __webpack_require__(79);
+const site_config_service_1 = __webpack_require__(80);
+const prisma_module_1 = __webpack_require__(38);
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
@@ -9397,7 +9483,7 @@ exports.AdminModule = AdminModule = __decorate([
 
 
 /***/ }),
-/* 69 */
+/* 70 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9418,10 +9504,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AdminController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const admin_service_1 = __webpack_require__(70);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(35);
-const roles_decorator_1 = __webpack_require__(36);
+const admin_service_1 = __webpack_require__(71);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const roles_guard_1 = __webpack_require__(36);
+const roles_decorator_1 = __webpack_require__(37);
 let AdminController = class AdminController {
     constructor(adminService) {
         this.adminService = adminService;
@@ -10202,7 +10288,7 @@ exports.AdminController = AdminController = __decorate([
 
 
 /***/ }),
-/* 70 */
+/* 71 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10770,7 +10856,7 @@ exports.AdminService = AdminService = __decorate([
 
 
 /***/ }),
-/* 71 */
+/* 72 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10791,12 +10877,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AdminLayoutsController = exports.LayoutsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(35);
-const roles_decorator_1 = __webpack_require__(36);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const roles_guard_1 = __webpack_require__(36);
+const roles_decorator_1 = __webpack_require__(37);
 const client_1 = __webpack_require__(9);
-const layouts_service_1 = __webpack_require__(72);
-const layout_dto_1 = __webpack_require__(73);
+const layouts_service_1 = __webpack_require__(73);
+const layout_dto_1 = __webpack_require__(74);
 let LayoutsController = class LayoutsController {
     constructor(layoutsService) {
         this.layoutsService = layoutsService;
@@ -11132,7 +11218,7 @@ exports.AdminLayoutsController = AdminLayoutsController = __decorate([
 
 
 /***/ }),
-/* 72 */
+/* 73 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11531,7 +11617,7 @@ exports.LayoutsService = LayoutsService = __decorate([
 
 
 /***/ }),
-/* 73 */
+/* 74 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11546,8 +11632,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateLayoutDto = exports.CreateLayoutDto = exports.LayoutConfigDto = exports.ComponentConfigDto = void 0;
-const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(74);
+const class_validator_1 = __webpack_require__(24);
+const class_transformer_1 = __webpack_require__(75);
 const swagger_1 = __webpack_require__(3);
 class ComponentConfigDto {
 }
@@ -11685,13 +11771,13 @@ __decorate([
 
 
 /***/ }),
-/* 74 */
+/* 75 */
 /***/ ((module) => {
 
 module.exports = require("class-transformer");
 
 /***/ }),
-/* 75 */
+/* 76 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -11712,12 +11798,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MenuConfigController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(35);
-const roles_decorator_1 = __webpack_require__(36);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const roles_guard_1 = __webpack_require__(36);
+const roles_decorator_1 = __webpack_require__(37);
 const client_1 = __webpack_require__(9);
-const menu_config_service_1 = __webpack_require__(76);
-const menu_config_dto_1 = __webpack_require__(77);
+const menu_config_service_1 = __webpack_require__(77);
+const menu_config_dto_1 = __webpack_require__(78);
 let MenuConfigController = class MenuConfigController {
     constructor(menuConfigService) {
         this.menuConfigService = menuConfigService;
@@ -11926,7 +12012,7 @@ exports.MenuConfigController = MenuConfigController = __decorate([
 
 
 /***/ }),
-/* 76 */
+/* 77 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12210,7 +12296,7 @@ exports.MenuConfigService = MenuConfigService = __decorate([
 
 
 /***/ }),
-/* 77 */
+/* 78 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12227,8 +12313,8 @@ var _a, _b, _c, _d, _e;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MenuConfigResponseDto = exports.UpdateMenuConfigDto = exports.CreateMenuConfigDto = exports.MenuItemDto = void 0;
 const swagger_1 = __webpack_require__(3);
-const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(74);
+const class_validator_1 = __webpack_require__(24);
+const class_transformer_1 = __webpack_require__(75);
 const client_1 = __webpack_require__(9);
 class MenuItemDto {
 }
@@ -12388,7 +12474,7 @@ __decorate([
 
 
 /***/ }),
-/* 78 */
+/* 79 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -12409,11 +12495,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SiteConfigController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(35);
-const roles_decorator_1 = __webpack_require__(36);
-const site_config_service_1 = __webpack_require__(79);
-const site_config_dto_1 = __webpack_require__(80);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const roles_guard_1 = __webpack_require__(36);
+const roles_decorator_1 = __webpack_require__(37);
+const site_config_service_1 = __webpack_require__(80);
+const site_config_dto_1 = __webpack_require__(81);
 let SiteConfigController = class SiteConfigController {
     constructor(siteConfigService) {
         this.siteConfigService = siteConfigService;
@@ -12699,7 +12785,7 @@ exports.SiteConfigController = SiteConfigController = __decorate([
 
 
 /***/ }),
-/* 79 */
+/* 80 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -13043,7 +13129,7 @@ exports.SiteConfigService = SiteConfigService = __decorate([
 
 
 /***/ }),
-/* 80 */
+/* 81 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -13060,7 +13146,7 @@ var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SiteConfigCategoryDto = exports.SiteConfigResponseDto = exports.UpdateSiteConfigDto = exports.CreateSiteConfigDto = void 0;
 const swagger_1 = __webpack_require__(3);
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 class CreateSiteConfigDto {
 }
 exports.CreateSiteConfigDto = CreateSiteConfigDto;
@@ -13199,7 +13285,7 @@ __decorate([
 
 
 /***/ }),
-/* 81 */
+/* 82 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -13212,10 +13298,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatModule = void 0;
 const common_1 = __webpack_require__(2);
-const chat_controller_1 = __webpack_require__(82);
-const chat_service_1 = __webpack_require__(83);
-const chat_gateway_1 = __webpack_require__(85);
-const prisma_module_1 = __webpack_require__(37);
+const chat_controller_1 = __webpack_require__(83);
+const chat_service_1 = __webpack_require__(84);
+const chat_gateway_1 = __webpack_require__(86);
+const prisma_module_1 = __webpack_require__(38);
 let ChatModule = class ChatModule {
 };
 exports.ChatModule = ChatModule;
@@ -13230,7 +13316,7 @@ exports.ChatModule = ChatModule = __decorate([
 
 
 /***/ }),
-/* 82 */
+/* 83 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -13251,9 +13337,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const chat_service_1 = __webpack_require__(83);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const create_message_dto_1 = __webpack_require__(84);
+const chat_service_1 = __webpack_require__(84);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const create_message_dto_1 = __webpack_require__(85);
 let ChatController = class ChatController {
     constructor(chatService) {
         this.chatService = chatService;
@@ -13491,7 +13577,7 @@ exports.ChatController = ChatController = __decorate([
 
 
 /***/ }),
-/* 83 */
+/* 84 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -13890,7 +13976,7 @@ exports.ChatService = ChatService = __decorate([
 
 
 /***/ }),
-/* 84 */
+/* 85 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -13905,7 +13991,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateMessageDto = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 class CreateMessageDto {
 }
 exports.CreateMessageDto = CreateMessageDto;
@@ -13922,7 +14008,7 @@ __decorate([
 
 
 /***/ }),
-/* 85 */
+/* 86 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -13941,9 +14027,9 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 var _a, _b, _c, _d, _e, _f;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatGateway = void 0;
-const websockets_1 = __webpack_require__(86);
-const socket_io_1 = __webpack_require__(87);
-const chat_service_1 = __webpack_require__(83);
+const websockets_1 = __webpack_require__(87);
+const socket_io_1 = __webpack_require__(88);
+const chat_service_1 = __webpack_require__(84);
 let ChatGateway = class ChatGateway {
     constructor(chatService) {
         this.chatService = chatService;
@@ -14113,19 +14199,19 @@ exports.ChatGateway = ChatGateway = __decorate([
 
 
 /***/ }),
-/* 86 */
+/* 87 */
 /***/ ((module) => {
 
 module.exports = require("@nestjs/websockets");
 
 /***/ }),
-/* 87 */
+/* 88 */
 /***/ ((module) => {
 
 module.exports = require("socket.io");
 
 /***/ }),
-/* 88 */
+/* 89 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -14138,9 +14224,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatbotModule = void 0;
 const common_1 = __webpack_require__(2);
-const chatbot_controller_1 = __webpack_require__(89);
-const chatbot_service_1 = __webpack_require__(90);
-const prisma_module_1 = __webpack_require__(37);
+const chatbot_controller_1 = __webpack_require__(90);
+const chatbot_service_1 = __webpack_require__(91);
+const prisma_module_1 = __webpack_require__(38);
 const auth_module_1 = __webpack_require__(12);
 let ChatbotModule = class ChatbotModule {
 };
@@ -14156,7 +14242,7 @@ exports.ChatbotModule = ChatbotModule = __decorate([
 
 
 /***/ }),
-/* 89 */
+/* 90 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -14177,10 +14263,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChatbotController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const chatbot_service_1 = __webpack_require__(90);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(35);
-const roles_decorator_1 = __webpack_require__(36);
+const chatbot_service_1 = __webpack_require__(91);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const roles_guard_1 = __webpack_require__(36);
+const roles_decorator_1 = __webpack_require__(37);
 let ChatbotController = class ChatbotController {
     constructor(chatbotService) {
         this.chatbotService = chatbotService;
@@ -14361,7 +14447,7 @@ exports.ChatbotController = ChatbotController = __decorate([
 
 
 /***/ }),
-/* 90 */
+/* 91 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -14707,7 +14793,7 @@ exports.ChatbotService = ChatbotService = ChatbotService_1 = __decorate([
 
 
 /***/ }),
-/* 91 */
+/* 92 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -14720,9 +14806,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ParametrosModule = void 0;
 const common_1 = __webpack_require__(2);
-const parametros_service_1 = __webpack_require__(92);
-const parametros_controller_1 = __webpack_require__(93);
-const prisma_module_1 = __webpack_require__(37);
+const parametros_service_1 = __webpack_require__(93);
+const parametros_controller_1 = __webpack_require__(94);
+const prisma_module_1 = __webpack_require__(38);
 let ParametrosModule = class ParametrosModule {
 };
 exports.ParametrosModule = ParametrosModule;
@@ -14737,7 +14823,7 @@ exports.ParametrosModule = ParametrosModule = __decorate([
 
 
 /***/ }),
-/* 92 */
+/* 93 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -15040,7 +15126,7 @@ exports.ParametrosService = ParametrosService = __decorate([
 
 
 /***/ }),
-/* 93 */
+/* 94 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -15061,10 +15147,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ParametrosController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const parametros_service_1 = __webpack_require__(92);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(35);
-const roles_decorator_1 = __webpack_require__(36);
+const parametros_service_1 = __webpack_require__(93);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const roles_guard_1 = __webpack_require__(36);
+const roles_decorator_1 = __webpack_require__(37);
 let ParametrosController = class ParametrosController {
     constructor(parametrosService) {
         this.parametrosService = parametrosService;
@@ -15651,7 +15737,7 @@ exports.ParametrosController = ParametrosController = __decorate([
 
 
 /***/ }),
-/* 94 */
+/* 95 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -15664,17 +15750,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InvoicesModule = void 0;
 const common_1 = __webpack_require__(2);
-const invoices_service_1 = __webpack_require__(95);
-const invoices_controller_1 = __webpack_require__(110);
-const facturae_controller_1 = __webpack_require__(116);
-const facturae_service_1 = __webpack_require__(102);
-const external_systems_controller_1 = __webpack_require__(117);
-const external_systems_service_1 = __webpack_require__(118);
-const pdf_generator_service_1 = __webpack_require__(104);
-const invoice_audit_service_1 = __webpack_require__(108);
-const digital_signature_service_1 = __webpack_require__(113);
+const invoices_service_1 = __webpack_require__(96);
+const invoices_controller_1 = __webpack_require__(111);
+const facturae_controller_1 = __webpack_require__(117);
+const facturae_service_1 = __webpack_require__(103);
+const external_systems_controller_1 = __webpack_require__(118);
+const external_systems_service_1 = __webpack_require__(119);
+const pdf_generator_service_1 = __webpack_require__(105);
+const invoice_audit_service_1 = __webpack_require__(109);
+const digital_signature_service_1 = __webpack_require__(114);
 const auth_module_1 = __webpack_require__(12);
-const parametros_module_1 = __webpack_require__(91);
+const parametros_module_1 = __webpack_require__(92);
 let InvoicesModule = class InvoicesModule {
 };
 exports.InvoicesModule = InvoicesModule;
@@ -15688,7 +15774,7 @@ exports.InvoicesModule = InvoicesModule = __decorate([
 
 
 /***/ }),
-/* 95 */
+/* 96 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -15740,16 +15826,16 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InvoicesService = void 0;
 const common_1 = __webpack_require__(2);
 const prisma_service_1 = __webpack_require__(8);
-const facturae_xml_util_1 = __webpack_require__(96);
-const xades_sign_util_1 = __webpack_require__(98);
-const facturae_service_1 = __webpack_require__(102);
-const pdf_generator_service_1 = __webpack_require__(104);
-const fs = __importStar(__webpack_require__(49));
-const crypto = __importStar(__webpack_require__(20));
-const pdf_lib_1 = __webpack_require__(107);
-const QRCode = __importStar(__webpack_require__(106));
-const invoice_audit_service_1 = __webpack_require__(108);
-const invoice_status_constants_1 = __webpack_require__(109);
+const facturae_xml_util_1 = __webpack_require__(97);
+const xades_sign_util_1 = __webpack_require__(99);
+const facturae_service_1 = __webpack_require__(103);
+const pdf_generator_service_1 = __webpack_require__(105);
+const fs = __importStar(__webpack_require__(50));
+const crypto = __importStar(__webpack_require__(21));
+const pdf_lib_1 = __webpack_require__(108);
+const QRCode = __importStar(__webpack_require__(107));
+const invoice_audit_service_1 = __webpack_require__(109);
+const invoice_status_constants_1 = __webpack_require__(110);
 let InvoicesService = InvoicesService_1 = class InvoicesService {
     constructor(prisma, pdfGeneratorService, invoiceAuditService) {
         this.prisma = prisma;
@@ -16761,7 +16847,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
     async generateInvoicePdfProfessionalVectorial(invoice) {
         try {
             this.logger.log('Generando PDF profesional vectorial (compatible con Railway)');
-            const { PDFDocument, rgb, StandardFonts } = await Promise.resolve().then(() => __importStar(__webpack_require__(107)));
+            const { PDFDocument, rgb, StandardFonts } = await Promise.resolve().then(() => __importStar(__webpack_require__(108)));
             const pdfDoc = await PDFDocument.create();
             const page = pdfDoc.addPage([595, 842]);
             const { width, height } = page.getSize();
@@ -16959,7 +17045,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
                 color: darkGray
             });
             try {
-                const QRCode = await Promise.resolve().then(() => __importStar(__webpack_require__(106)));
+                const QRCode = await Promise.resolve().then(() => __importStar(__webpack_require__(107)));
                 const qrData = [
                     `NIF:${invoice.emisor?.email || ''}`,
                     `NUM:${invoice.numeroFactura || ''}`,
@@ -17122,7 +17208,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
         }
     }
     async htmlToPdfWithPuppeteer(htmlContent) {
-        const puppeteer = await Promise.resolve().then(() => __importStar(__webpack_require__(105)));
+        const puppeteer = await Promise.resolve().then(() => __importStar(__webpack_require__(106)));
         let browser;
         try {
             this.logger.log('[PUPPETEER] Iniciando Puppeteer...');
@@ -17656,7 +17742,7 @@ let InvoicesService = InvoicesService_1 = class InvoicesService {
             `HASH:${invoiceHash}`
         ].join('|');
         console.log('🔍 [generateInvoiceHtml] QR Data generado:', qrData);
-        const qrImageDataUrl = await (await Promise.resolve().then(() => __importStar(__webpack_require__(106)))).toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
+        const qrImageDataUrl = await (await Promise.resolve().then(() => __importStar(__webpack_require__(107)))).toDataURL(qrData, { errorCorrectionLevel: 'M', width: 200, margin: 2 });
         if (invoice.facturaOriginalId) {
             console.log('🔄 [generateInvoiceHtml] Es factura rectificativa, obteniendo datos de factura original');
             const facturaOriginal = await this.prisma.invoice.findUnique({
@@ -17831,14 +17917,14 @@ exports.InvoicesService = InvoicesService = InvoicesService_1 = __decorate([
 
 
 /***/ }),
-/* 96 */
+/* 97 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.generateFacturaeXML = generateFacturaeXML;
 exports.generateFacturaeXMLFromInvoice = generateFacturaeXMLFromInvoice;
-const xmlbuilder2_1 = __webpack_require__(97);
+const xmlbuilder2_1 = __webpack_require__(98);
 function generateFacturaeXML(data) {
     const root = (0, xmlbuilder2_1.create)({ version: '1.0', encoding: 'UTF-8' })
         .ele('Facturae', {
@@ -18255,13 +18341,13 @@ function generateFacturaeXMLFromInvoice(invoice) {
 
 
 /***/ }),
-/* 97 */
+/* 98 */
 /***/ ((module) => {
 
 module.exports = require("xmlbuilder2");
 
 /***/ }),
-/* 98 */
+/* 99 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -18306,9 +18392,9 @@ exports.validateCertificate = validateCertificate;
 exports.checkCertificateStatus = checkCertificateStatus;
 exports.getTimestamp = getTimestamp;
 exports.validateSignature = validateSignature;
-const xadesjs = __importStar(__webpack_require__(99));
-const webcrypto_1 = __webpack_require__(100);
-const xmldom_1 = __webpack_require__(101);
+const xadesjs = __importStar(__webpack_require__(100));
+const webcrypto_1 = __webpack_require__(101);
+const xmldom_1 = __webpack_require__(102);
 const webcrypto = new webcrypto_1.Crypto();
 xadesjs.Application.setEngine("OpenSSL", webcrypto);
 var XAdESLevel;
@@ -18482,25 +18568,25 @@ function validateSignature(xmlContent) {
 
 
 /***/ }),
-/* 99 */
+/* 100 */
 /***/ ((module) => {
 
 module.exports = require("xadesjs");
 
 /***/ }),
-/* 100 */
+/* 101 */
 /***/ ((module) => {
 
 module.exports = require("@peculiar/webcrypto");
 
 /***/ }),
-/* 101 */
+/* 102 */
 /***/ ((module) => {
 
 module.exports = require("xmldom");
 
 /***/ }),
-/* 102 */
+/* 103 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -18550,11 +18636,11 @@ var FacturaeService_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FacturaeService = void 0;
 const common_1 = __webpack_require__(2);
-const facturae_xml_util_1 = __webpack_require__(96);
-const xades_sign_util_1 = __webpack_require__(98);
-const facturae_validator_util_1 = __webpack_require__(103);
-const fs = __importStar(__webpack_require__(49));
-const path = __importStar(__webpack_require__(50));
+const facturae_xml_util_1 = __webpack_require__(97);
+const xades_sign_util_1 = __webpack_require__(99);
+const facturae_validator_util_1 = __webpack_require__(104);
+const fs = __importStar(__webpack_require__(50));
+const path = __importStar(__webpack_require__(51));
 let FacturaeService = FacturaeService_1 = class FacturaeService {
     constructor() {
         this.logger = new common_1.Logger(FacturaeService_1.name);
@@ -18823,7 +18909,7 @@ exports.FacturaeService = FacturaeService = FacturaeService_1 = __decorate([
 
 
 /***/ }),
-/* 103 */
+/* 104 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -18862,8 +18948,8 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FacturaeValidator = void 0;
-const xmldom_1 = __webpack_require__(101);
-const path = __importStar(__webpack_require__(50));
+const xmldom_1 = __webpack_require__(102);
+const path = __importStar(__webpack_require__(51));
 class FacturaeValidator {
     static validateXML(xmlContent, options = {}) {
         const result = {
@@ -19318,7 +19404,7 @@ FacturaeValidator.FACTURAE_SCHEMA_PATH = path.join(__dirname, '../../schemas/fac
 
 
 /***/ }),
-/* 104 */
+/* 105 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -19369,11 +19455,11 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PdfGeneratorService = void 0;
 const common_1 = __webpack_require__(2);
-const puppeteer = __importStar(__webpack_require__(105));
-const fs = __importStar(__webpack_require__(49));
-const path = __importStar(__webpack_require__(50));
-const QRCode = __importStar(__webpack_require__(106));
-const parametros_service_1 = __webpack_require__(92);
+const puppeteer = __importStar(__webpack_require__(106));
+const fs = __importStar(__webpack_require__(50));
+const path = __importStar(__webpack_require__(51));
+const QRCode = __importStar(__webpack_require__(107));
+const parametros_service_1 = __webpack_require__(93);
 let PdfGeneratorService = PdfGeneratorService_1 = class PdfGeneratorService {
     constructor(parametrosService) {
         this.parametrosService = parametrosService;
@@ -19926,25 +20012,25 @@ exports.PdfGeneratorService = PdfGeneratorService = PdfGeneratorService_1 = __de
 
 
 /***/ }),
-/* 105 */
+/* 106 */
 /***/ ((module) => {
 
 module.exports = require("puppeteer");
 
 /***/ }),
-/* 106 */
+/* 107 */
 /***/ ((module) => {
 
 module.exports = require("qrcode");
 
 /***/ }),
-/* 107 */
+/* 108 */
 /***/ ((module) => {
 
 module.exports = require("pdf-lib");
 
 /***/ }),
-/* 108 */
+/* 109 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -20077,7 +20163,7 @@ exports.InvoiceAuditService = InvoiceAuditService = __decorate([
 
 
 /***/ }),
-/* 109 */
+/* 110 */
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -20189,7 +20275,7 @@ exports.getStatusColor = getStatusColor;
 
 
 /***/ }),
-/* 110 */
+/* 111 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -20243,20 +20329,20 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InvoicesController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const invoices_service_1 = __webpack_require__(95);
-const create_invoice_dto_1 = __webpack_require__(111);
-const update_invoice_dto_1 = __webpack_require__(112);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(35);
-const roles_decorator_1 = __webpack_require__(36);
+const invoices_service_1 = __webpack_require__(96);
+const create_invoice_dto_1 = __webpack_require__(112);
+const update_invoice_dto_1 = __webpack_require__(113);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const roles_guard_1 = __webpack_require__(36);
+const roles_decorator_1 = __webpack_require__(37);
 const client_1 = __webpack_require__(9);
-const express_1 = __webpack_require__(47);
-const invoice_audit_service_1 = __webpack_require__(108);
-const digital_signature_service_1 = __webpack_require__(113);
-const fs = __importStar(__webpack_require__(49));
-const path = __importStar(__webpack_require__(50));
-const platform_express_1 = __webpack_require__(46);
-const multer = __importStar(__webpack_require__(115));
+const express_1 = __webpack_require__(48);
+const invoice_audit_service_1 = __webpack_require__(109);
+const digital_signature_service_1 = __webpack_require__(114);
+const fs = __importStar(__webpack_require__(50));
+const path = __importStar(__webpack_require__(51));
+const platform_express_1 = __webpack_require__(47);
+const multer = __importStar(__webpack_require__(116));
 let InvoicesController = class InvoicesController {
     constructor(invoicesService, invoiceAuditService, digitalSignatureService) {
         this.invoicesService = invoicesService;
@@ -20385,7 +20471,7 @@ let InvoicesController = class InvoicesController {
     async testPdf(id, res, req) {
         try {
             console.log('[TEST-PDF] Generando PDF de prueba...');
-            const { PDFDocument, rgb } = await Promise.resolve().then(() => __importStar(__webpack_require__(107)));
+            const { PDFDocument, rgb } = await Promise.resolve().then(() => __importStar(__webpack_require__(108)));
             const pdfDoc = await PDFDocument.create();
             const page = pdfDoc.addPage([595, 842]);
             const { width, height } = page.getSize();
@@ -21571,7 +21657,7 @@ exports.InvoicesController = InvoicesController = __decorate([
 
 
 /***/ }),
-/* 111 */
+/* 112 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21586,8 +21672,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateInvoiceDto = void 0;
-const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(74);
+const class_validator_1 = __webpack_require__(24);
+const class_transformer_1 = __webpack_require__(75);
 const swagger_1 = __webpack_require__(3);
 class InvoiceItemDto {
 }
@@ -21909,7 +21995,7 @@ __decorate([
 
 
 /***/ }),
-/* 112 */
+/* 113 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21925,8 +22011,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateInvoiceDto = exports.UpdateInvoiceItemDto = void 0;
 const swagger_1 = __webpack_require__(3);
-const class_validator_1 = __webpack_require__(23);
-const class_transformer_1 = __webpack_require__(74);
+const class_validator_1 = __webpack_require__(24);
+const class_transformer_1 = __webpack_require__(75);
 class UpdateInvoiceItemDto {
 }
 exports.UpdateInvoiceItemDto = UpdateInvoiceItemDto;
@@ -22155,7 +22241,7 @@ __decorate([
 
 
 /***/ }),
-/* 113 */
+/* 114 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -22205,9 +22291,9 @@ var DigitalSignatureService_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DigitalSignatureService = void 0;
 const common_1 = __webpack_require__(2);
-const axios_1 = __importDefault(__webpack_require__(114));
-const fs = __importStar(__webpack_require__(49));
-const path = __importStar(__webpack_require__(50));
+const axios_1 = __importDefault(__webpack_require__(115));
+const fs = __importStar(__webpack_require__(50));
+const path = __importStar(__webpack_require__(51));
 let DigitalSignatureService = DigitalSignatureService_1 = class DigitalSignatureService {
     constructor() {
         this.logger = new common_1.Logger(DigitalSignatureService_1.name);
@@ -22399,19 +22485,19 @@ exports.DigitalSignatureService = DigitalSignatureService = DigitalSignatureServ
 
 
 /***/ }),
-/* 114 */
+/* 115 */
 /***/ ((module) => {
 
 module.exports = require("axios");
 
 /***/ }),
-/* 115 */
+/* 116 */
 /***/ ((module) => {
 
 module.exports = require("multer");
 
 /***/ }),
-/* 116 */
+/* 117 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -22465,10 +22551,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FacturaeController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const express_1 = __webpack_require__(47);
-const invoices_service_1 = __webpack_require__(95);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const xades_sign_util_1 = __webpack_require__(98);
+const express_1 = __webpack_require__(48);
+const invoices_service_1 = __webpack_require__(96);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const xades_sign_util_1 = __webpack_require__(99);
 let FacturaeController = class FacturaeController {
     constructor(invoicesService) {
         this.invoicesService = invoicesService;
@@ -22520,7 +22606,7 @@ let FacturaeController = class FacturaeController {
     }
     async validateXML(data) {
         const { xml, checkSignature = true } = data;
-        const { FacturaeValidator } = await Promise.resolve().then(() => __importStar(__webpack_require__(103)));
+        const { FacturaeValidator } = await Promise.resolve().then(() => __importStar(__webpack_require__(104)));
         if (checkSignature) {
             return FacturaeValidator.validateSignedDocument(xml, {
                 validateSchema: true,
@@ -22905,7 +22991,7 @@ exports.FacturaeController = FacturaeController = __decorate([
 
 
 /***/ }),
-/* 117 */
+/* 118 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -22926,8 +23012,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ExternalSystemsController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const external_systems_service_1 = __webpack_require__(118);
-const jwt_auth_guard_1 = __webpack_require__(27);
+const external_systems_service_1 = __webpack_require__(119);
+const jwt_auth_guard_1 = __webpack_require__(28);
 let ExternalSystemsController = class ExternalSystemsController {
     constructor(externalSystemsService) {
         this.externalSystemsService = externalSystemsService;
@@ -23280,7 +23366,7 @@ exports.ExternalSystemsController = ExternalSystemsController = __decorate([
 
 
 /***/ }),
-/* 118 */
+/* 119 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23298,8 +23384,8 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ExternalSystemsService = void 0;
 const common_1 = __webpack_require__(2);
-const facturae_validator_util_1 = __webpack_require__(103);
-const invoices_service_1 = __webpack_require__(95);
+const facturae_validator_util_1 = __webpack_require__(104);
+const invoices_service_1 = __webpack_require__(96);
 let ExternalSystemsService = ExternalSystemsService_1 = class ExternalSystemsService {
     constructor(invoicesService) {
         this.invoicesService = invoicesService;
@@ -23545,7 +23631,7 @@ exports.ExternalSystemsService = ExternalSystemsService = ExternalSystemsService
 
 
 /***/ }),
-/* 119 */
+/* 120 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23558,9 +23644,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProvisionFondosModule = void 0;
 const common_1 = __webpack_require__(2);
-const provision_fondos_controller_1 = __webpack_require__(120);
-const provision_fondos_service_1 = __webpack_require__(121);
-const prisma_module_1 = __webpack_require__(37);
+const provision_fondos_controller_1 = __webpack_require__(121);
+const provision_fondos_service_1 = __webpack_require__(122);
+const prisma_module_1 = __webpack_require__(38);
 let ProvisionFondosModule = class ProvisionFondosModule {
 };
 exports.ProvisionFondosModule = ProvisionFondosModule;
@@ -23575,7 +23661,7 @@ exports.ProvisionFondosModule = ProvisionFondosModule = __decorate([
 
 
 /***/ }),
-/* 120 */
+/* 121 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23596,11 +23682,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProvisionFondosController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const provision_fondos_service_1 = __webpack_require__(121);
-const create_provision_fondos_dto_1 = __webpack_require__(122);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(35);
-const roles_decorator_1 = __webpack_require__(36);
+const provision_fondos_service_1 = __webpack_require__(122);
+const create_provision_fondos_dto_1 = __webpack_require__(123);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const roles_guard_1 = __webpack_require__(36);
+const roles_decorator_1 = __webpack_require__(37);
 const client_1 = __webpack_require__(9);
 let ProvisionFondosController = class ProvisionFondosController {
     constructor(service) {
@@ -23851,7 +23937,7 @@ exports.ProvisionFondosController = ProvisionFondosController = __decorate([
 
 
 /***/ }),
-/* 121 */
+/* 122 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -23985,7 +24071,7 @@ exports.ProvisionFondosService = ProvisionFondosService = __decorate([
 
 
 /***/ }),
-/* 122 */
+/* 123 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -24000,7 +24086,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateProvisionFondosDto = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 class CreateProvisionFondosDto {
 }
@@ -24071,7 +24157,7 @@ __decorate([
 
 
 /***/ }),
-/* 123 */
+/* 124 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -24084,9 +24170,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ContactModule = void 0;
 const common_1 = __webpack_require__(2);
-const contact_controller_1 = __webpack_require__(124);
-const contact_service_1 = __webpack_require__(125);
-const prisma_module_1 = __webpack_require__(37);
+const contact_controller_1 = __webpack_require__(125);
+const contact_service_1 = __webpack_require__(126);
+const prisma_module_1 = __webpack_require__(38);
 const auth_module_1 = __webpack_require__(12);
 let ContactModule = class ContactModule {
 };
@@ -24102,7 +24188,7 @@ exports.ContactModule = ContactModule = __decorate([
 
 
 /***/ }),
-/* 124 */
+/* 125 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -24122,10 +24208,10 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ContactController = void 0;
 const common_1 = __webpack_require__(2);
-const platform_express_1 = __webpack_require__(46);
+const platform_express_1 = __webpack_require__(47);
 const swagger_1 = __webpack_require__(3);
-const contact_service_1 = __webpack_require__(125);
-const jwt_auth_guard_1 = __webpack_require__(27);
+const contact_service_1 = __webpack_require__(126);
+const jwt_auth_guard_1 = __webpack_require__(28);
 let ContactController = class ContactController {
     constructor(contactService) {
         this.contactService = contactService;
@@ -24229,7 +24315,7 @@ exports.ContactController = ContactController = __decorate([
 
 
 /***/ }),
-/* 125 */
+/* 126 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -24281,8 +24367,8 @@ exports.ContactService = void 0;
 const common_1 = __webpack_require__(2);
 const prisma_service_1 = __webpack_require__(8);
 const email_service_1 = __webpack_require__(17);
-const fs = __importStar(__webpack_require__(49));
-const path = __importStar(__webpack_require__(50));
+const fs = __importStar(__webpack_require__(50));
+const path = __importStar(__webpack_require__(51));
 let ContactService = class ContactService {
     constructor(prisma, emailService) {
         this.prisma = prisma;
@@ -24557,7 +24643,7 @@ exports.ContactService = ContactService = __decorate([
 
 
 /***/ }),
-/* 126 */
+/* 127 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -24570,9 +24656,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TeleassistanceModule = void 0;
 const common_1 = __webpack_require__(2);
-const teleassistance_controller_1 = __webpack_require__(127);
-const teleassistance_service_1 = __webpack_require__(128);
-const prisma_module_1 = __webpack_require__(37);
+const teleassistance_controller_1 = __webpack_require__(128);
+const teleassistance_service_1 = __webpack_require__(129);
+const prisma_module_1 = __webpack_require__(38);
 let TeleassistanceModule = class TeleassistanceModule {
 };
 exports.TeleassistanceModule = TeleassistanceModule;
@@ -24587,7 +24673,7 @@ exports.TeleassistanceModule = TeleassistanceModule = __decorate([
 
 
 /***/ }),
-/* 127 */
+/* 128 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -24608,12 +24694,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TeleassistanceController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const teleassistance_service_1 = __webpack_require__(128);
-const create_teleassistance_session_dto_1 = __webpack_require__(129);
-const update_teleassistance_session_dto_1 = __webpack_require__(130);
-const jwt_auth_guard_1 = __webpack_require__(27);
-const roles_guard_1 = __webpack_require__(35);
-const roles_decorator_1 = __webpack_require__(36);
+const teleassistance_service_1 = __webpack_require__(129);
+const create_teleassistance_session_dto_1 = __webpack_require__(130);
+const update_teleassistance_session_dto_1 = __webpack_require__(131);
+const jwt_auth_guard_1 = __webpack_require__(28);
+const roles_guard_1 = __webpack_require__(36);
+const roles_decorator_1 = __webpack_require__(37);
 let TeleassistanceController = class TeleassistanceController {
     constructor(teleassistanceService) {
         this.teleassistanceService = teleassistanceService;
@@ -24883,7 +24969,7 @@ exports.TeleassistanceController = TeleassistanceController = __decorate([
 
 
 /***/ }),
-/* 128 */
+/* 129 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25429,7 +25515,7 @@ exports.TeleassistanceService = TeleassistanceService = __decorate([
 
 
 /***/ }),
-/* 129 */
+/* 130 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25444,7 +25530,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateTeleassistanceSessionDto = exports.RemoteTool = exports.IssueType = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 var IssueType;
 (function (IssueType) {
@@ -25516,7 +25602,7 @@ __decorate([
 
 
 /***/ }),
-/* 130 */
+/* 131 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25531,7 +25617,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateTeleassistanceSessionDto = exports.SessionStatus = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 var SessionStatus;
 (function (SessionStatus) {
@@ -25574,7 +25660,7 @@ __decorate([
 
 
 /***/ }),
-/* 131 */
+/* 132 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25587,10 +25673,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.NotesModule = void 0;
 const common_1 = __webpack_require__(2);
-const notes_controller_1 = __webpack_require__(132);
-const public_notes_controller_1 = __webpack_require__(136);
-const notes_service_1 = __webpack_require__(133);
-const prisma_module_1 = __webpack_require__(37);
+const notes_controller_1 = __webpack_require__(133);
+const public_notes_controller_1 = __webpack_require__(137);
+const notes_service_1 = __webpack_require__(134);
+const prisma_module_1 = __webpack_require__(38);
 let NotesModule = class NotesModule {
 };
 exports.NotesModule = NotesModule;
@@ -25605,7 +25691,7 @@ exports.NotesModule = NotesModule = __decorate([
 
 
 /***/ }),
-/* 132 */
+/* 133 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25626,10 +25712,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.NotesController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const notes_service_1 = __webpack_require__(133);
-const create_note_dto_1 = __webpack_require__(134);
-const update_note_dto_1 = __webpack_require__(135);
-const jwt_auth_guard_1 = __webpack_require__(27);
+const notes_service_1 = __webpack_require__(134);
+const create_note_dto_1 = __webpack_require__(135);
+const update_note_dto_1 = __webpack_require__(136);
+const jwt_auth_guard_1 = __webpack_require__(28);
 let NotesController = class NotesController {
     constructor(notesService) {
         this.notesService = notesService;
@@ -25796,7 +25882,7 @@ exports.NotesController = NotesController = __decorate([
 
 
 /***/ }),
-/* 133 */
+/* 134 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25973,7 +26059,7 @@ exports.NotesService = NotesService = __decorate([
 
 
 /***/ }),
-/* 134 */
+/* 135 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -25988,7 +26074,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateNoteDto = void 0;
-const class_validator_1 = __webpack_require__(23);
+const class_validator_1 = __webpack_require__(24);
 const swagger_1 = __webpack_require__(3);
 class CreateNoteDto {
 }
@@ -26020,21 +26106,21 @@ __decorate([
 
 
 /***/ }),
-/* 135 */
+/* 136 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateNoteDto = void 0;
 const swagger_1 = __webpack_require__(3);
-const create_note_dto_1 = __webpack_require__(134);
+const create_note_dto_1 = __webpack_require__(135);
 class UpdateNoteDto extends (0, swagger_1.PartialType)(create_note_dto_1.CreateNoteDto) {
 }
 exports.UpdateNoteDto = UpdateNoteDto;
 
 
 /***/ }),
-/* 136 */
+/* 137 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -26052,7 +26138,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PublicNotesController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const notes_service_1 = __webpack_require__(133);
+const notes_service_1 = __webpack_require__(134);
 let PublicNotesController = class PublicNotesController {
     constructor(notesService) {
         this.notesService = notesService;
@@ -26092,19 +26178,19 @@ exports.PublicNotesController = PublicNotesController = __decorate([
 
 
 /***/ }),
-/* 137 */
+/* 138 */
 /***/ ((module) => {
 
 module.exports = require("helmet");
 
 /***/ }),
-/* 138 */
+/* 139 */
 /***/ ((module) => {
 
 module.exports = require("express-rate-limit");
 
 /***/ }),
-/* 139 */
+/* 140 */
 /***/ ((module) => {
 
 module.exports = require("compression");
