@@ -97,18 +97,15 @@ async function bootstrap() {
     next();
   });
 
-  // Endpoint de health check usando el adaptador HTTP de NestJS
+  // Endpoint de health check simple usando el adaptador HTTP
   const httpAdapter = app.getHttpAdapter();
-  httpAdapter.getInstance().get('/health', (req: any, res: any) => {
+  const expressInstance = httpAdapter.getInstance();
+  expressInstance.get('/health', (req: any, res: any) => {
     res.status(200).json({
       status: 'OK',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development',
-      cors: {
-        origins: corsOrigins,
-        configured: true
-      }
+      environment: process.env.NODE_ENV || 'development'
     });
   });
 
@@ -126,6 +123,12 @@ async function bootstrap() {
     
     next();
   });
+
+  // Log de configuración del servidor
+  console.log('🚀 [SERVER] Configuración completada, iniciando servidor...');
+  console.log('🚀 [SERVER] Puerto:', process.env.PORT || 3000);
+  console.log('🚀 [SERVER] Entorno:', process.env.NODE_ENV || 'development');
+  console.log('🚀 [SERVER] CORS configurado con orígenes:', corsOrigins);
   
   // Configuración global de pipes
   app.useGlobalPipes(new ValidationPipe({

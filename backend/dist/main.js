@@ -122,16 +122,13 @@ async function bootstrap() {
         next();
     });
     const httpAdapter = app.getHttpAdapter();
-    httpAdapter.getInstance().get('/health', (req, res) => {
+    const expressInstance = httpAdapter.getInstance();
+    expressInstance.get('/health', (req, res) => {
         res.status(200).json({
             status: 'OK',
             timestamp: new Date().toISOString(),
             uptime: process.uptime(),
-            environment: process.env.NODE_ENV || 'development',
-            cors: {
-                origins: corsOrigins,
-                configured: true
-            }
+            environment: process.env.NODE_ENV || 'development'
         });
     });
     app.use((req, res, next) => {
@@ -144,6 +141,10 @@ async function bootstrap() {
         }
         next();
     });
+    console.log('🚀 [SERVER] Configuración completada, iniciando servidor...');
+    console.log('🚀 [SERVER] Puerto:', process.env.PORT || 3000);
+    console.log('🚀 [SERVER] Entorno:', process.env.NODE_ENV || 'development');
+    console.log('🚀 [SERVER] CORS configurado con orígenes:', corsOrigins);
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
         transform: true,
