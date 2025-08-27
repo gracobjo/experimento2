@@ -5844,6 +5844,9 @@ let DocumentsController = class DocumentsController {
     async getDocuments(req) {
         return this.documentsService.findMyDocuments(req.user.id, req.user.role);
     }
+    async getStats(req) {
+        return this.documentsService.getDocumentsStats(req.user.id, req.user.role);
+    }
     async getDocumentById(id, req) {
         return this.documentsService.findOne(id, req.user.id, req.user.role);
     }
@@ -5951,6 +5954,45 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], DocumentsController.prototype, "getDocuments", null);
+__decorate([
+    (0, common_1.Get)('stats'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Obtener estadísticas de documentos',
+        description: 'Devuelve estadísticas de documentos según el rol del usuario'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Estadísticas de documentos',
+        schema: {
+            type: 'object',
+            properties: {
+                total: { type: 'number' },
+                byType: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            mimeType: { type: 'string' },
+                            _count: {
+                                type: 'object',
+                                properties: {
+                                    mimeType: { type: 'number' }
+                                }
+                            }
+                        }
+                    }
+                },
+                userRole: { type: 'string' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], DocumentsController.prototype, "getStats", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.ABOGADO, client_1.Role.CLIENTE),
