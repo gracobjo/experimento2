@@ -1494,6 +1494,7 @@ let EmailService = class EmailService {
         }
         else {
             console.log('[EMAIL] ✅ Configuración de email detectada:', emailUser);
+            console.log('[EMAIL] 🔧 Configurando timeouts extendidos para Railway...');
         }
         this.transporter = nodemailer.createTransport({
             service: 'gmail',
@@ -1501,7 +1502,26 @@ let EmailService = class EmailService {
                 user: emailUser || 'tu-email@gmail.com',
                 pass: emailPassword || 'tu-password-de-aplicacion',
             },
+            connectionTimeout: 60000,
+            greetingTimeout: 30000,
+            socketTimeout: 60000,
+            secure: false,
+            tls: {
+                rejectUnauthorized: false
+            }
         });
+    }
+    async verifyConnection() {
+        try {
+            console.log('[EMAIL] 🔍 Verificando conexión SMTP...');
+            await this.transporter.verify();
+            console.log('[EMAIL] ✅ Conexión SMTP verificada correctamente');
+            return true;
+        }
+        catch (error) {
+            console.error('[EMAIL] ❌ Error verificando conexión SMTP:', error);
+            return false;
+        }
     }
     async sendPasswordResetEmail(email, resetToken, userName) {
         const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
@@ -24086,6 +24106,29 @@ let ContactController = class ContactController {
             emailConfigured: !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD)
         };
     }
+    async testEmailConnection() {
+        try {
+            const connectionOk = await this.contactService.testEmailConnection();
+            return {
+                message: 'Prueba de conexión SMTP completada',
+                timestamp: new Date().toISOString(),
+                smtpConnection: connectionOk ? '✅ CONECTADO' : '❌ FALLO',
+                emailConfigured: !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD),
+                variables: {
+                    hasEmailUser: !!process.env.EMAIL_USER,
+                    hasEmailPassword: !!process.env.EMAIL_PASSWORD,
+                    hasAdminEmail: !!process.env.ADMIN_EMAIL
+                }
+            };
+        }
+        catch (error) {
+            return {
+                message: 'Error en prueba de conexión SMTP',
+                error: error instanceof Error ? error.message : String(error),
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
     async sendLawyerMessage(messageData, files, req) {
         return this.contactService.sendLawyerMessage(messageData, files, req.user);
     }
@@ -24116,6 +24159,14 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], ContactController.prototype, "testContact", null);
+__decorate([
+    (0, common_1.Get)('test-email'),
+    (0, swagger_1.ApiOperation)({ summary: 'Probar conexión SMTP' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Prueba de conexión SMTP' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ContactController.prototype, "testEmailConnection", null);
 __decorate([
     (0, common_1.Post)('lawyer'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
@@ -24198,6 +24249,23 @@ let ContactService = class ContactService {
     constructor(prisma, emailService) {
         this.prisma = prisma;
         this.emailService = emailService;
+    }
+    async testEmailConnection() {
+        try {
+            console.log('[CONTACT] 🧪 Probando conexión de email...');
+            const connectionOk = await this.emailService.verifyConnection();
+            if (connectionOk) {
+                console.log('[CONTACT] ✅ Conexión de email verificada correctamente');
+            }
+            else {
+                console.log('[CONTACT] ❌ Fallo en la verificación de conexión de email');
+            }
+            return connectionOk;
+        }
+        catch (error) {
+            console.error('[CONTACT] ❌ Error probando conexión de email:', error);
+            return false;
+        }
     }
     async submitContactForm(createContactDto) {
         try {

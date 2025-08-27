@@ -69,7 +69,7 @@ export class ContactController {
     } catch (error) {
       return {
         message: 'Error en prueba de conexión SMTP',
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString()
       };
     }
