@@ -51,17 +51,13 @@ export class DocumentsController {
           format: 'binary',
           description: 'Archivo a subir (máximo 5MB)'
         },
-        title: {
-          type: 'string',
-          description: 'Título del documento'
-        },
         description: {
           type: 'string',
           description: 'Descripción del documento'
         },
         expedienteId: {
           type: 'string',
-          description: 'ID del expediente asociado (opcional)'
+          description: 'ID del expediente asociado'
         }
       }
     }
@@ -117,10 +113,9 @@ export class DocumentsController {
         mimeType: file.mimetype,
         originalName: file.originalname,
         uploadedBy: req.user.id,
-        expedienteId: uploadData.expedienteId || 'general',
+        expedienteId: uploadData.expedienteId,
         description: uploadData.description,
-        title: uploadData.title,
-        fileUrl: `/uploads/${uploadData.expedienteId || 'general'}/${uniqueFilename}`
+        fileUrl: `/uploads/${uploadData.expedienteId}/${uniqueFilename}`
       });
 
       return {

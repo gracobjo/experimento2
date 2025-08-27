@@ -3,15 +3,6 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class UploadDocumentDto {
   @ApiProperty({
-    description: 'Título del documento',
-    example: 'Contrato de arrendamiento',
-    type: String,
-  })
-  @IsString()
-  @IsNotEmpty()
-  title: string;
-
-  @ApiProperty({
     description: 'ID del expediente asociado',
     example: 'exp-003',
     type: String,
