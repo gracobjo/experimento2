@@ -289,7 +289,23 @@ export class ParametrosService {
       { clave: 'COOKIE_POLICY', valor: 'Política de Cookies del Despacho Legal...', etiqueta: 'Política de Cookies', tipo: 'html' },
       { clave: 'COPYRIGHT_TEXT', valor: '© 2024 Despacho Legal. Todos los derechos reservados.', etiqueta: 'Texto de Copyright', tipo: 'string' },
       // URL de verificación de facturas
-      { clave: 'VERIFICACION_URL_BASE', valor: 'https://tudominio.com/verificar/', etiqueta: 'URL base de verificación de facturas', tipo: 'url' }
+      { clave: 'VERIFICACION_URL_BASE', valor: 'https://tudominio.com/verificar/', etiqueta: 'URL base de verificación de facturas', tipo: 'url' },
+      
+      // Servicios por defecto
+      { clave: 'SERVICE_1_TITLE', valor: 'Asesoramiento Legal', etiqueta: 'Título del servicio 1', tipo: 'string' },
+      { clave: 'SERVICE_1_DESCRIPTION', valor: 'Consulta inicial y asesoramiento legal personalizado para resolver tus dudas jurídicas', etiqueta: 'Descripción del servicio 1', tipo: 'text' },
+      { clave: 'SERVICE_1_ICON', valor: 'gavel', etiqueta: 'Icono del servicio 1', tipo: 'string' },
+      { clave: 'SERVICE_1_ORDER', valor: '1', etiqueta: 'Orden del servicio 1', tipo: 'number' },
+      
+      { clave: 'SERVICE_2_TITLE', valor: 'Gestión de Expedientes', etiqueta: 'Título del servicio 2', tipo: 'string' },
+      { clave: 'SERVICE_2_DESCRIPTION', valor: 'Seguimiento completo de tu caso legal con actualizaciones regulares y gestión documental', etiqueta: 'Descripción del servicio 2', tipo: 'text' },
+      { clave: 'SERVICE_2_ICON', valor: 'folder-open', etiqueta: 'Icono del servicio 2', tipo: 'string' },
+      { clave: 'SERVICE_2_ORDER', valor: '2', etiqueta: 'Orden del servicio 2', tipo: 'number' },
+      
+      { clave: 'SERVICE_3_TITLE', valor: 'Representación Legal', etiqueta: 'Título del servicio 3', tipo: 'string' },
+      { clave: 'SERVICE_3_DESCRIPTION', valor: 'Representación legal profesional en juicios, audiencias y procedimientos administrativos', etiqueta: 'Descripción del servicio 3', tipo: 'text' },
+      { clave: 'SERVICE_3_ICON', valor: 'balance-scale', etiqueta: 'Icono del servicio 3', tipo: 'string' },
+      { clave: 'SERVICE_3_ORDER', valor: '3', etiqueta: 'Orden del servicio 3', tipo: 'number' }
     ];
 
     for (const param of defaultParams) {
