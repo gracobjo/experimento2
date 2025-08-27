@@ -5798,10 +5798,9 @@ let DocumentsController = class DocumentsController {
                 mimeType: file.mimetype,
                 originalName: file.originalname,
                 uploadedBy: req.user.id,
-                expedienteId: uploadData.expedienteId || 'general',
+                expedienteId: uploadData.expedienteId,
                 description: uploadData.description,
-                title: uploadData.title,
-                fileUrl: `/uploads/${uploadData.expedienteId || 'general'}/${uniqueFilename}`
+                fileUrl: `/uploads/${uploadData.expedienteId}/${uniqueFilename}`
             });
             return {
                 message: 'Documento subido exitosamente',
@@ -5895,17 +5894,13 @@ __decorate([
                     format: 'binary',
                     description: 'Archivo a subir (máximo 5MB)'
                 },
-                title: {
-                    type: 'string',
-                    description: 'Título del documento'
-                },
                 description: {
                     type: 'string',
                     description: 'Descripción del documento'
                 },
                 expedienteId: {
                     type: 'string',
-                    description: 'ID del expediente asociado (opcional)'
+                    description: 'ID del expediente asociado'
                 }
             }
         }
@@ -6073,16 +6068,6 @@ const swagger_1 = __webpack_require__(3);
 class UploadDocumentDto {
 }
 exports.UploadDocumentDto = UploadDocumentDto;
-__decorate([
-    (0, swagger_1.ApiProperty)({
-        description: 'Título del documento',
-        example: 'Contrato de arrendamiento',
-        type: String,
-    }),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], UploadDocumentDto.prototype, "title", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
         description: 'ID del expediente asociado',

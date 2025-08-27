@@ -135,3 +135,4 @@ Si encuentras algún problema:
 **Estado**: ✅ **IMPLEMENTADO Y LISTO PARA DESPLIEGUE**
 **Fecha**: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
 **Backend**: `experimento2-production-54c0.up.railway.app`
+

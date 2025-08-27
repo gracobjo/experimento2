@@ -183,3 +183,4 @@ async function testDocumentProxyWithAuth() {
 
 // Ejecutar la prueba
 testDocumentProxyWithAuth();
+

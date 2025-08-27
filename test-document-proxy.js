@@ -104,3 +104,4 @@ async function testDocumentProxy() {
 
 // Ejecutar la prueba
 testDocumentProxy();
+
