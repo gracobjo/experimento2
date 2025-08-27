@@ -19,8 +19,19 @@ async function bootstrap() {
   console.log('STORAGE_TYPE:', process.env.STORAGE_TYPE);
   console.log('================================');
 
-  // Configurar trust proxy para Railway y express-rate-limit
-  app.getHttpAdapter().getInstance().set('trust proxy', true);
+  // Configurar trust proxy para Railway de manera segura
+  // Solo confiar en proxies de Railway (Cloudflare, Railway, etc.)
+  app.getHttpAdapter().getInstance().set('trust proxy', [
+    '127.0.0.1',
+    '::1',
+    '10.0.0.0/8',
+    '172.16.0.0/12',
+    '192.168.0.0/16',
+    // Railway y otros proveedores de nube
+    '10.0.0.0/8',
+    '172.16.0.0/12',
+    '192.168.0.0/16'
+  ]);
   
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));

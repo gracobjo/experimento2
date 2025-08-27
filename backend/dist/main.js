@@ -59,7 +59,16 @@ async function bootstrap() {
     console.log('CLOUDINARY_API_SECRET:', process.env.CLOUDINARY_API_SECRET ? 'CONFIGURADO' : 'NO CONFIGURADO');
     console.log('STORAGE_TYPE:', process.env.STORAGE_TYPE);
     console.log('================================');
-    app.getHttpAdapter().getInstance().set('trust proxy', true);
+    app.getHttpAdapter().getInstance().set('trust proxy', [
+        '127.0.0.1',
+        '::1',
+        '10.0.0.0/8',
+        '172.16.0.0/12',
+        '192.168.0.0/16',
+        '10.0.0.0/8',
+        '172.16.0.0/12',
+        '192.168.0.0/16'
+    ]);
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     app.use((req, res, next) => {
