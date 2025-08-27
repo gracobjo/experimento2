@@ -441,6 +441,15 @@
                 padding: 4px 8px;
             }
             
+            /* Asegurar separación entre totales y QR */
+            .totals-container {
+                margin-bottom: 15px;
+            }
+            
+            .qr-integrated {
+                padding: 12px;
+            }
+            
             /* Mejoras para pantallas pequeñas */
             .totals-container {
                 min-width: 280px;
@@ -538,7 +547,7 @@
             position: absolute;
             left: 0;
             bottom: 0;
-            padding: 0 32px 16px 32px;
+            padding: 0 32px 20px 32px;
             box-sizing: border-box;
             text-align: left;
             color: #666;
@@ -548,7 +557,7 @@
         /* Estilos específicos para visualización web */
         @media screen {
             .footer {
-                padding: 0 20px 12px 20px;
+                padding: 0 20px 16px 20px;
                 font-size: 0.85rem;
             }
         }
@@ -572,7 +581,11 @@
             .firma-block {
                 height: 1.8cm;
                 font-size: 0.8rem;
-                margin-top: 6px;
+                margin-top: 12px;
+            }
+            
+            .totals-section {
+                margin-bottom: 25px !important;
             }
         }
         /* Responsive */
@@ -736,7 +749,7 @@
         {{/if}}
         
         <!-- Totales y descuentos -->
-        <div class="totals-section">
+        <div class="totals-section" style="margin-bottom: 20px;">
             <div class="totals-container">
                 {{#if descuento}}
                 <div class="total-row-item discount-row">
@@ -780,7 +793,7 @@
             <div style="font-size:0.93rem; color:#003366; margin-top:1px;">Verifica la autenticidad en: <span style="text-decoration:underline;">{{verificacionUrl}}</span></div>
         </div>
         <!-- QR y espacio para firma/certificado -->
-        <div class="firma-block" style="margin-top: 8px;">
+        <div class="firma-block" style="margin-top: 16px;">
             <div class="qr-integrated">
                 <div class="firma-text">
                     Espacio reservado para certificado/firma
