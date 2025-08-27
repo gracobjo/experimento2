@@ -5,7 +5,7 @@ import * as nodemailer from 'nodemailer';
 export class EmailService {
   private transporter: nodemailer.Transporter;
 
-  constructor() {
+    constructor() {
     // Configuración para Gmail con fallback a variables alternativas
     const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
     const emailPassword = process.env.EMAIL_PASSWORD || process.env.SMTP_PASS;
@@ -15,6 +15,7 @@ export class EmailService {
       console.warn('[EMAIL] Configura EMAIL_USER y EMAIL_PASSWORD en Railway para habilitar emails.');
     } else {
       console.log('[EMAIL] ✅ Configuración de email detectada:', emailUser);
+      console.log('[EMAIL] 🔧 Configurando timeouts extendidos para Railway...');
     }
     
     this.transporter = nodemailer.createTransport({
@@ -23,7 +24,29 @@ export class EmailService {
         user: emailUser || 'tu-email@gmail.com',
         pass: emailPassword || 'tu-password-de-aplicacion',
       },
+      // Configuración para Railway - aumentar timeouts
+      connectionTimeout: 60000, // 60 segundos
+      greetingTimeout: 30000,   // 30 segundos
+      socketTimeout: 60000,     // 60 segundos
+      // Configuración adicional para Gmail
+      secure: false,            // Usar STARTTLS
+      tls: {
+        rejectUnauthorized: false // Para Railway
+      }
     });
+  }
+
+  // Método para verificar la conexión SMTP
+  async verifyConnection() {
+    try {
+      console.log('[EMAIL] 🔍 Verificando conexión SMTP...');
+      await this.transporter.verify();
+      console.log('[EMAIL] ✅ Conexión SMTP verificada correctamente');
+      return true;
+    } catch (error) {
+      console.error('[EMAIL] ❌ Error verificando conexión SMTP:', error);
+      return false;
+    }
   }
 
   async sendPasswordResetEmail(email: string, resetToken: string, userName: string) {

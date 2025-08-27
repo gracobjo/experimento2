@@ -12,6 +12,25 @@ export class ContactService {
     private readonly emailService: EmailService
   ) {}
 
+  // Método para probar la conexión de email
+  async testEmailConnection() {
+    try {
+      console.log('[CONTACT] 🧪 Probando conexión de email...');
+      const connectionOk = await this.emailService.verifyConnection();
+      
+      if (connectionOk) {
+        console.log('[CONTACT] ✅ Conexión de email verificada correctamente');
+      } else {
+        console.log('[CONTACT] ❌ Fallo en la verificación de conexión de email');
+      }
+      
+      return connectionOk;
+    } catch (error) {
+      console.error('[CONTACT] ❌ Error probando conexión de email:', error);
+      return false;
+    }
+  }
+
   async submitContactForm(createContactDto: CreateContactDto) {
     try {
       // Guardar en la base de datos

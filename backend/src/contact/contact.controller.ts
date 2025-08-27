@@ -47,6 +47,34 @@ export class ContactController {
     };
   }
 
+  @Get('test-email')
+  @ApiOperation({ summary: 'Probar conexión SMTP' })
+  @ApiResponse({ status: 200, description: 'Prueba de conexión SMTP' })
+  async testEmailConnection() {
+    try {
+      // Verificar conexión SMTP
+      const connectionOk = await this.contactService.testEmailConnection();
+      
+      return {
+        message: 'Prueba de conexión SMTP completada',
+        timestamp: new Date().toISOString(),
+        smtpConnection: connectionOk ? '✅ CONECTADO' : '❌ FALLO',
+        emailConfigured: !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD),
+        variables: {
+          hasEmailUser: !!process.env.EMAIL_USER,
+          hasEmailPassword: !!process.env.EMAIL_PASSWORD,
+          hasAdminEmail: !!process.env.ADMIN_EMAIL
+        }
+      };
+    } catch (error) {
+      return {
+        message: 'Error en prueba de conexión SMTP',
+        error: error.message,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
   @Post('lawyer')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FilesInterceptor('files', 10)) // Máximo 10 archivos
