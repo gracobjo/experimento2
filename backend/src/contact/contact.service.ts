@@ -104,6 +104,7 @@ export class ContactService {
 
   async sendContactMessage(contactData: any) {
     try {
+      console.log('[CONTACT] 🚀 INICIO: sendContactMessage ejecutándose...');
       console.log('[CONTACT] Recibiendo mensaje de contacto:', {
         nombre: contactData.nombre,
         email: contactData.email,
@@ -141,9 +142,12 @@ export class ContactService {
         };
       }
 
+      console.log('[CONTACT] 🧪 Intentando enviar email de notificación...');
+
       // Enviar email de notificación al administrador (no bloquear si falla)
       let adminEmailSent = false;
       try {
+        console.log('[CONTACT] 📧 Enviando email de notificación al admin...');
         await this.emailService.sendContactNotification({
           nombre: contactData.nombre,
           email: contactData.email,
