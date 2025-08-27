@@ -6,6 +6,15 @@ export class ParametrosService {
   constructor(private prisma: PrismaService) {}
 
   async findAll() {
+    // Verificar si hay parámetros en la base de datos
+    const count = await this.prisma.parametro.count();
+    
+    // Si no hay parámetros, inicializar los por defecto
+    if (count === 0) {
+      console.log('[PARAMETROS] No se encontraron parámetros, inicializando por defecto...');
+      await this.initializeDefaultParams();
+    }
+    
     return this.prisma.parametro.findMany();
   }
 
@@ -32,7 +41,8 @@ export class ParametrosService {
   }
 
   async findContactParams() {
-    return this.prisma.parametro.findMany({
+    // Verificar si hay parámetros de contacto
+    const contactParams = await this.prisma.parametro.findMany({
       where: {
         clave: {
           in: [
@@ -48,6 +58,31 @@ export class ParametrosService {
         }
       }
     });
+    
+    // Si no hay parámetros de contacto, inicializar los por defecto
+    if (contactParams.length === 0) {
+      console.log('[PARAMETROS] No se encontraron parámetros de contacto, inicializando por defecto...');
+      await this.initializeDefaultParams();
+      // Volver a buscar después de la inicialización
+      return this.prisma.parametro.findMany({
+        where: {
+          clave: {
+            in: [
+              'CONTACT_EMAIL',
+              'CONTACT_PHONE',
+              'CONTACT_PHONE_PREFIX',
+              'CONTACT_INFO',
+              'SOCIAL_FACEBOOK',
+              'SOCIAL_TWITTER',
+              'SOCIAL_LINKEDIN',
+              'SOCIAL_INSTAGRAM'
+            ]
+          }
+        }
+      });
+    }
+    
+    return contactParams;
   }
 
   async findLegalContent() {
@@ -61,6 +96,23 @@ export class ParametrosService {
         clave: 'asc'
       }
     });
+
+    // Si no hay contenido legal, inicializar los parámetros por defecto
+    if (legalParams.length === 0) {
+      console.log('[PARAMETROS] No se encontró contenido legal, inicializando parámetros por defecto...');
+      await this.initializeDefaultParams();
+      // Volver a buscar después de la inicialización
+      return this.prisma.parametro.findMany({
+        where: {
+          clave: {
+            startsWith: 'LEGAL_'
+          }
+        },
+        orderBy: {
+          clave: 'asc'
+        }
+      });
+    }
 
     return legalParams;
   }
@@ -216,6 +268,8 @@ export class ParametrosService {
   }
 
   async initializeDefaultParams() {
+    console.log('[PARAMETROS] Inicializando parámetros por defecto...');
+    
     const defaultParams = [
       // Parámetros de contacto
       { clave: 'CONTACT_EMAIL', valor: 'info@despacholegal.com', etiqueta: 'Email de contacto', tipo: 'email' },
@@ -245,9 +299,46 @@ export class ParametrosService {
           update: { valor: param.valor, etiqueta: param.etiqueta, tipo: param.tipo },
           create: param
         });
+        console.log(`[PARAMETROS] ✅ Parámetro ${param.clave} inicializado`);
       } catch (error) {
-        console.error(`Error al inicializar parámetro ${param.clave}:`, error);
+        console.error(`[PARAMETROS] ❌ Error al inicializar parámetro ${param.clave}:`, error);
       }
     }
+    
+    console.log('[PARAMETROS] 🎉 Inicialización de parámetros completada');
+  }
+
+  /**
+   * Verifica si los parámetros están inicializados
+   */
+  async checkInitializationStatus() {
+    const count = await this.prisma.parametro.count();
+    const contactParams = await this.findContactParams();
+    const legalParams = await this.findLegalContent();
+    
+    return {
+      totalParams: count,
+      contactParamsCount: contactParams.length,
+      legalParamsCount: legalParams.length,
+      isInitialized: count > 0,
+      hasContactParams: contactParams.length > 0,
+      hasLegalContent: legalParams.length > 0
+    };
+  }
+
+  /**
+   * Fuerza la reinicialización de todos los parámetros
+   */
+  async forceReinitialize() {
+    console.log('[PARAMETROS] Forzando reinicialización de parámetros...');
+    
+    // Eliminar todos los parámetros existentes
+    await this.prisma.parametro.deleteMany({});
+    console.log('[PARAMETROS] Parámetros existentes eliminados');
+    
+    // Inicializar de nuevo
+    await this.initializeDefaultParams();
+    
+    return { message: 'Parámetros reinicializados correctamente' };
   }
 } 

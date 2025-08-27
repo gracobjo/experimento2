@@ -14684,6 +14684,11 @@ let ParametrosService = class ParametrosService {
         this.prisma = prisma;
     }
     async findAll() {
+        const count = await this.prisma.parametro.count();
+        if (count === 0) {
+            console.log('[PARAMETROS] No se encontraron parámetros, inicializando por defecto...');
+            await this.initializeDefaultParams();
+        }
         return this.prisma.parametro.findMany();
     }
     async findOne(id) {
@@ -14704,7 +14709,7 @@ let ParametrosService = class ParametrosService {
         return parametro;
     }
     async findContactParams() {
-        return this.prisma.parametro.findMany({
+        const contactParams = await this.prisma.parametro.findMany({
             where: {
                 clave: {
                     in: [
@@ -14720,6 +14725,27 @@ let ParametrosService = class ParametrosService {
                 }
             }
         });
+        if (contactParams.length === 0) {
+            console.log('[PARAMETROS] No se encontraron parámetros de contacto, inicializando por defecto...');
+            await this.initializeDefaultParams();
+            return this.prisma.parametro.findMany({
+                where: {
+                    clave: {
+                        in: [
+                            'CONTACT_EMAIL',
+                            'CONTACT_PHONE',
+                            'CONTACT_PHONE_PREFIX',
+                            'CONTACT_INFO',
+                            'SOCIAL_FACEBOOK',
+                            'SOCIAL_TWITTER',
+                            'SOCIAL_LINKEDIN',
+                            'SOCIAL_INSTAGRAM'
+                        ]
+                    }
+                }
+            });
+        }
+        return contactParams;
     }
     async findLegalContent() {
         const legalParams = await this.prisma.parametro.findMany({
@@ -14732,6 +14758,20 @@ let ParametrosService = class ParametrosService {
                 clave: 'asc'
             }
         });
+        if (legalParams.length === 0) {
+            console.log('[PARAMETROS] No se encontró contenido legal, inicializando parámetros por defecto...');
+            await this.initializeDefaultParams();
+            return this.prisma.parametro.findMany({
+                where: {
+                    clave: {
+                        startsWith: 'LEGAL_'
+                    }
+                },
+                orderBy: {
+                    clave: 'asc'
+                }
+            });
+        }
         return legalParams;
     }
     async findServices() {
@@ -14852,6 +14892,7 @@ let ParametrosService = class ParametrosService {
         return this.prisma.parametro.delete({ where: { id } });
     }
     async initializeDefaultParams() {
+        console.log('[PARAMETROS] Inicializando parámetros por defecto...');
         const defaultParams = [
             { clave: 'CONTACT_EMAIL', valor: 'info@despacholegal.com', etiqueta: 'Email de contacto', tipo: 'email' },
             { clave: 'CONTACT_PHONE', valor: '123 456 789', etiqueta: 'Teléfono de contacto', tipo: 'string' },
@@ -14874,11 +14915,33 @@ let ParametrosService = class ParametrosService {
                     update: { valor: param.valor, etiqueta: param.etiqueta, tipo: param.tipo },
                     create: param
                 });
+                console.log(`[PARAMETROS] ✅ Parámetro ${param.clave} inicializado`);
             }
             catch (error) {
-                console.error(`Error al inicializar parámetro ${param.clave}:`, error);
+                console.error(`[PARAMETROS] ❌ Error al inicializar parámetro ${param.clave}:`, error);
             }
         }
+        console.log('[PARAMETROS] 🎉 Inicialización de parámetros completada');
+    }
+    async checkInitializationStatus() {
+        const count = await this.prisma.parametro.count();
+        const contactParams = await this.findContactParams();
+        const legalParams = await this.findLegalContent();
+        return {
+            totalParams: count,
+            contactParamsCount: contactParams.length,
+            legalParamsCount: legalParams.length,
+            isInitialized: count > 0,
+            hasContactParams: contactParams.length > 0,
+            hasLegalContent: legalParams.length > 0
+        };
+    }
+    async forceReinitialize() {
+        console.log('[PARAMETROS] Forzando reinicialización de parámetros...');
+        await this.prisma.parametro.deleteMany({});
+        console.log('[PARAMETROS] Parámetros existentes eliminados');
+        await this.initializeDefaultParams();
+        return { message: 'Parámetros reinicializados correctamente' };
     }
 };
 exports.ParametrosService = ParametrosService;
@@ -14977,6 +15040,12 @@ let ParametrosController = class ParametrosController {
     }
     initializeDefaultParams() {
         return this.parametrosService.initializeDefaultParams();
+    }
+    checkInitializationStatus() {
+        return this.parametrosService.checkInitializationStatus();
+    }
+    forceReinitialize() {
+        return this.parametrosService.forceReinitialize();
     }
     addService(serviceData) {
         return this.parametrosService.addService(serviceData);
@@ -15377,6 +15446,38 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], ParametrosController.prototype, "initializeDefaultParams", null);
+__decorate([
+    (0, common_1.Get)('status'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Verificar estado de inicialización',
+        description: 'Verifica si los parámetros están inicializados correctamente'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Estado de inicialización' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "checkInitializationStatus", null);
+__decorate([
+    (0, common_1.Post)('reinitialize'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Reinicializar parámetros',
+        description: 'Elimina todos los parámetros existentes y los crea de nuevo'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Parámetros reinicializados exitosamente' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'No autorizado' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Acceso prohibido' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ParametrosController.prototype, "forceReinitialize", null);
 __decorate([
     (0, common_1.Post)('services'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

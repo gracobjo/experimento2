@@ -101,29 +101,82 @@ const ParametrosConfigPage: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto py-8">
       <h1 className="text-2xl font-bold mb-6">Configuración de Parámetros Globales</h1>
-      <div className="mb-4 flex justify-between items-center">
-        <button
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-          onClick={async () => {
-            if (!window.confirm('¿Desea inicializar los parámetros por defecto? Esto creará o actualizará los parámetros básicos del sistema.')) return;
-            try {
-              if (!token) throw new Error('No autenticado');
-              await fetch(`${(import.meta as any).env.VITE_API_URL}/api/parametros/initialize`, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-                }
-              });
-              await fetchParametros();
-              alert('Parámetros inicializados correctamente');
-            } catch (err: any) {
-              setError(err.response?.data?.message || err.message || 'Error al inicializar parámetros');
-            }
-          }}
-        >
-          🔧 Inicializar Parámetros
-        </button>
+      <div className="mb-4 flex flex-wrap gap-2 justify-between items-center">
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            onClick={async () => {
+              if (!window.confirm('¿Desea inicializar los parámetros por defecto? Esto creará o actualizará los parámetros básicos del sistema.')) return;
+              try {
+                if (!token) throw new Error('No autenticado');
+                await fetch(`${(import.meta as any).env.VITE_API_URL}/api/parametros/initialize`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  }
+                });
+                await fetchParametros();
+                alert('Parámetros inicializados correctamente');
+              } catch (err: any) {
+                setError(err.response?.data?.message || err.message || 'Error al inicializar parámetros');
+              }
+            }}
+          >
+            🔧 Inicializar Parámetros
+          </button>
+          
+          <button
+            className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700"
+            onClick={async () => {
+              if (!window.confirm('⚠️ ATENCIÓN: ¿Desea reinicializar TODOS los parámetros? Esto eliminará todos los parámetros existentes y los creará de nuevo. Esta acción no se puede deshacer.')) return;
+              try {
+                if (!token) throw new Error('No autenticado');
+                await fetch(`${(import.meta as any).env.VITE_API_URL}/api/parametros/reinitialize`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  }
+                });
+                await fetchParametros();
+                alert('Parámetros reinicializados correctamente');
+              } catch (err: any) {
+                setError(err.response?.data?.message || err.message || 'Error al reinicializar parámetros');
+              }
+            }}
+          >
+            🔄 Reinicializar Parámetros
+          </button>
+          
+          <button
+            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+            onClick={async () => {
+              try {
+                if (!token) throw new Error('No autenticado');
+                const response = await fetch(`${(import.meta as any).env.VITE_API_URL}/api/parametros/status`, {
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  }
+                });
+                const status = await response.json();
+                alert(`Estado de Parámetros:\n\n` +
+                      `📊 Total: ${status.totalParams}\n` +
+                      `📞 Contacto: ${status.contactParamsCount}\n` +
+                      `⚖️ Legal: ${status.legalParamsCount}\n` +
+                      `✅ Inicializado: ${status.isInitialized ? 'SÍ' : 'NO'}\n` +
+                      `📞 Tiene Contacto: ${status.hasContactParams ? 'SÍ' : 'NO'}\n` +
+                      `⚖️ Tiene Legal: ${status.hasLegalContent ? 'SÍ' : 'NO'}`);
+              } catch (err: any) {
+                setError(err.response?.data?.message || err.message || 'Error al verificar estado');
+              }
+            }}
+          >
+            📊 Ver Estado
+          </button>
+        </div>
+        
         <button
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           onClick={() => openModal()}

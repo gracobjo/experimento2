@@ -407,6 +407,36 @@ export class ParametrosController {
     return this.parametrosService.initializeDefaultParams();
   }
 
+  @Get('status')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ 
+    summary: 'Verificar estado de inicialización',
+    description: 'Verifica si los parámetros están inicializados correctamente'
+  })
+  @ApiResponse({ status: 200, description: 'Estado de inicialización' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Acceso prohibido' })
+  checkInitializationStatus() {
+    return this.parametrosService.checkInitializationStatus();
+  }
+
+  @Post('reinitialize')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ 
+    summary: 'Reinicializar parámetros',
+    description: 'Elimina todos los parámetros existentes y los crea de nuevo'
+  })
+  @ApiResponse({ status: 200, description: 'Parámetros reinicializados exitosamente' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Acceso prohibido' })
+  forceReinitialize() {
+    return this.parametrosService.forceReinitialize();
+  }
+
 
 
   @Post('services')
