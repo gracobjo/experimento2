@@ -35,6 +35,14 @@ export class EmailService {
       sgMail.setApiKey(sendgridApiKey);
       this.useSendGrid = true;
       this.fromEmail = fromEmail;
+      
+      // Inicializar transporter dummy para evitar errores
+      this.transporter = {
+        sendMail: async () => {
+          throw new Error('SendGrid debe usar sgMail.send(), no transporter.sendMail()');
+        },
+        verify: async () => true
+      } as any;
     }
   }
 

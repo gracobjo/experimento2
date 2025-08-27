@@ -1519,11 +1519,14 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.EmailService = void 0;
 const common_1 = __webpack_require__(2);
 const nodemailer = __importStar(__webpack_require__(18));
-const sgMail = __importStar(__webpack_require__(19));
+const mail_1 = __importDefault(__webpack_require__(19));
 let EmailService = class EmailService {
     constructor() {
         this.useSendGrid = false;
@@ -1546,9 +1549,15 @@ let EmailService = class EmailService {
         else {
             console.log('[EMAIL] ✅ Configuración de SendGrid detectada');
             console.log('[EMAIL] 📧 Email de origen configurado:', fromEmail);
-            sgMail.setApiKey(sendgridApiKey);
+            mail_1.default.setApiKey(sendgridApiKey);
             this.useSendGrid = true;
             this.fromEmail = fromEmail;
+            this.transporter = {
+                sendMail: async () => {
+                    throw new Error('SendGrid debe usar sgMail.send(), no transporter.sendMail()');
+                },
+                verify: async () => true
+            };
         }
     }
     setupGmailFallback(emailUser, emailPassword) {
@@ -1666,7 +1675,7 @@ let EmailService = class EmailService {
             </div>
           `,
                 };
-                await sgMail.send(msg);
+                await mail_1.default.send(msg);
                 console.log('[EMAIL] ✅ Email enviado exitosamente con SendGrid');
                 return true;
             }
