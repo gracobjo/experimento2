@@ -30,6 +30,7 @@ const Layout = () => {
   const [showAccessibilityTester, setShowAccessibilityTester] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const isAdmin = user?.role === 'ADMIN';
   const isLawyer = user?.role === 'ABOGADO';
@@ -206,6 +207,11 @@ const Layout = () => {
     fetchContactParams();
   }, []);
 
+  // Cerrar menú móvil al cambiar de ruta
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
   // Consultar el total de mensajes no leídos
   useEffect(() => {
     const fetchUnreadCount = async () => {
@@ -252,7 +258,21 @@ const Layout = () => {
                 {siteName}
               </Link>
             </div>
-            <div className="flex items-center space-x-4 relative">
+            {/* Menú hamburguesa para móvil */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="text-white hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-300 p-2"
+                aria-label="Abrir menú de navegación"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Menú de escritorio */}
+            <div className="hidden md:flex items-center space-x-4 relative">
               {user ? (
                 <>
                   {/* Menú dinámico */}
@@ -301,6 +321,60 @@ const Layout = () => {
           </div>
         </div>
       </nav>
+
+      {/* Menú móvil desplegable */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden bg-blue-800 text-white border-t border-blue-700">
+          <div className="px-4 py-2 space-y-2">
+            {user ? (
+              <>
+                {/* Menú de navegación móvil */}
+                <div className="space-y-2">
+                  {currentMenuItems.map((item, index) => (
+                    <div key={item.id || item.label || `mobile-menu-item-${index}`}>
+                      {renderMenuItem(item)}
+                    </div>
+                  ))}
+                </div>
+                
+                <hr className="border-blue-600 my-4" />
+                
+                {/* Información del usuario móvil */}
+                <div className="text-sm font-medium text-white bg-blue-900 rounded px-3 py-2 mb-2">
+                  {user.name} {user.email && <span className="text-gray-300">({user.email})</span>}
+                </div>
+                
+                {/* Botones de acción móvil */}
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setShowAccessibilityTester(true)}
+                    className="hover:text-blue-200 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-blue-700"
+                    aria-label="Abrir tester de accesibilidad"
+                  >
+                    ♿ Accesibilidad
+                  </button>
+                  
+                  <button
+                    onClick={logout}
+                    className="hover:text-blue-200 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-red-600"
+                  >
+                    Cerrar Sesión
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="block hover:text-blue-200 py-2">
+                  Iniciar Sesión
+                </Link>
+                <Link to="/register" className="block hover:text-blue-200 py-2">
+                  Registro
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Spacer para header fijo */}
       {headerFixed && <div className="h-16"></div>}
