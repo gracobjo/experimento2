@@ -57,6 +57,8 @@ async function bootstrap() {
         /^https:\/\/.*\.railway\.app$/
       ];
 
+  console.log('🌐 [CORS] Configurando CORS con orígenes:', corsOrigins);
+
   app.enableCors({
     origin: corsOrigins,
     credentials: true,
@@ -64,6 +66,50 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
     preflightContinue: false,
     optionsSuccessStatus: 204,
+  });
+
+  // Middleware adicional de CORS para asegurar que funcione
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    console.log('🌐 [CORS] Request origin:', origin);
+    
+    if (origin && corsOrigins.some(allowedOrigin => {
+      if (typeof allowedOrigin === 'string') {
+        return allowedOrigin === origin;
+      } else if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin);
+      }
+      return false;
+    })) {
+      res.header('Access-Control-Allow-Origin', origin);
+      console.log('🌐 [CORS] Origin permitido:', origin);
+    }
+    
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Origin, Accept');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    if (req.method === 'OPTIONS') {
+      res.status(200).end();
+      return;
+    }
+    
+    next();
+  });
+
+  // Endpoint de health check usando el adaptador HTTP de NestJS
+  const httpAdapter = app.getHttpAdapter();
+  httpAdapter.getInstance().get('/health', (req: any, res: any) => {
+    res.status(200).json({
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      cors: {
+        origins: corsOrigins,
+        configured: true
+      }
+    });
   });
 
   // Middleware de logging para debug
