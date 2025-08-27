@@ -239,6 +239,43 @@ export class DocumentsController {
     }
   }
 
+  @Get('stats')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ 
+    summary: 'Obtener estadísticas de documentos',
+    description: 'Devuelve estadísticas de documentos según el rol del usuario'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Estadísticas de documentos',
+    schema: {
+      type: 'object',
+      properties: {
+        total: { type: 'number' },
+        byType: { 
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              mimeType: { type: 'string' },
+              _count: {
+                type: 'object',
+                properties: {
+                  mimeType: { type: 'number' }
+                }
+              }
+            }
+          }
+        },
+        userRole: { type: 'string' }
+      }
+    }
+  })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  async getStats(@Request() req) {
+    return this.documentsService.getDocumentsStats(req.user.id, req.user.role);
+  }
+
   @Get('health')
   getHealth() {
     return {
