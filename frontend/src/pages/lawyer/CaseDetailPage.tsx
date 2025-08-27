@@ -56,7 +56,7 @@ const CaseDetailPage = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploadForm, setUploadForm] = useState({ title: '', description: '' });
+  const [uploadForm, setUploadForm] = useState({ description: '' });
 
   useEffect(() => {
 
@@ -146,18 +146,13 @@ const CaseDetailPage = () => {
   const closeUploadModal = () => {
     setShowUploadModal(false);
     setSelectedFiles([]);
-    setUploadForm({ title: '', description: '' });
+    setUploadForm({ description: '' });
     setUploadError(null);
   };
 
   const handleUpload = async () => {
     if (selectedFiles.length === 0) {
       setUploadError('Por favor selecciona archivos para subir');
-      return;
-    }
-
-    if (!uploadForm.title.trim()) {
-      setUploadError('Por favor ingresa un título para el documento');
       return;
     }
 
@@ -168,7 +163,6 @@ const CaseDetailPage = () => {
       const uploadPromises = selectedFiles.map(file => {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('title', uploadForm.title);
         formData.append('expedienteId', caseData!.id);
         if (uploadForm.description) {
           formData.append('description', uploadForm.description);
@@ -495,19 +489,6 @@ const CaseDetailPage = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Título del documento *
-                  </label>
-                  <input
-                    type="text"
-                    value={uploadForm.title}
-                    onChange={(e) => setUploadForm(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Título del documento..."
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Descripción (opcional)
                   </label>
                   <textarea
@@ -554,7 +535,7 @@ const CaseDetailPage = () => {
                 </button>
                 <button
                   onClick={handleUpload}
-                  disabled={uploading || selectedFiles.length === 0 || !uploadForm.title.trim()}
+                  disabled={uploading || selectedFiles.length === 0}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {uploading ? 'Subiendo...' : 'Subir Documentos'}
